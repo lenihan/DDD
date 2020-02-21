@@ -3,25 +3,20 @@ using System.Diagnostics;
 
 namespace DDD
 {
-    public class Point
+    [Serializable()]
+    public struct Point
     {
         public double X;
         public double Y;
         public double Z;
 
-        public Point()
-        {
-            X = 0;
-            Y = 0;
-            Z = 0;
-        }
         public Point(Point p)
         {
             X = p.X;
             Y = p.Y;
             Z = p.Z;
         }
-        public Point(double x, double y, double z)
+        public Point(double x = 0, double y = 0, double z = 0)
         {
             this.X = x;
             this.Y = y;
