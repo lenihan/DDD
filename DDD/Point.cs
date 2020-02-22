@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 
 namespace DDD
 {
@@ -16,20 +15,20 @@ namespace DDD
             Y = p.Y;
             Z = p.Z;
         }
-        public Point(double x = 0, double y = 0, double z = 0)
+        public Point(double x, double y, double z)
         {
-            this.X = x;
-            this.Y = y;
-            this.Z = z;
+            X = x;
+            Y = y;
+            Z = z;
         }
-        public Point(double[] array)
+        public Point(double[] arr)
         {
             X = 0;
             Y = 0;
             Z = 0;
-            if (array.Length > 0) { X = array[0]; }
-            if (array.Length > 1) { Y = array[1]; }
-            if (array.Length > 2) { Z = array[2]; }
+            if (arr.Length > 0) { X = arr[0]; }
+            if (arr.Length > 1) { Y = arr[1]; }
+            if (arr.Length > 2) { Z = arr[2]; }
         }
         public Point(string str)
         {
@@ -56,6 +55,9 @@ namespace DDD
         public static Point operator +(Point p1, Point p2) => new Point(p1.X + p2.X,
                                                                         p1.Y + p2.Y,
                                                                         p1.Z + p2.Z);
+        public static Vector operator -(Point p1, Point p2) => new Vector(p1.X - p2.X,
+                                                                          p1.Y - p2.Y,
+                                                                          p1.Z - p2.Z);
         public static Point operator *(double s, Point p) => new Point(s * p.X,
                                                                        s * p.Y,
                                                                        s * p.Z);

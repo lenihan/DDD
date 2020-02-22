@@ -142,6 +142,13 @@ namespace UnitTest_Point
             Assert.IsTrue((p1 + p2).ToString() == "(4 4 4)\n");
         }
         [TestMethod]
+        public void TestSubtract()
+        {
+            DDD.Point p1 = new DDD.Point(1, 2, 3);
+            DDD.Point p2 = new DDD.Point(3, 2, 1);
+            Assert.IsTrue((p1 - p2).ToString() == "(-2 0 2)\n");
+        }
+        [TestMethod]
         public void TestMultiplyPre()
         {
             DDD.Point p = new DDD.Point(1, 2, 3);
