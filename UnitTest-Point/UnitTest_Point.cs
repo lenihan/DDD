@@ -146,7 +146,7 @@ namespace UnitTest_Point
         {
             DDD.Point p1 = new DDD.Point(1, 2, 3);
             DDD.Point p2 = new DDD.Point(3, 2, 1);
-            Assert.IsTrue((p1 - p2).ToString() == "(-2 0 2)\n");
+            Assert.IsTrue((p1 - p2).ToString() == "[-2 0 2]\n");
         }
         [TestMethod]
         public void TestMultiplyPre()
