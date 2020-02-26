@@ -1,9 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace UnitTest_Point
+namespace DDD_UnitTest
 {
     [TestClass]
-    public class UnitTest_Point
+    public class Point
     {
         [TestMethod]
         public void ConstructorNoArgs()
@@ -124,7 +124,7 @@ namespace UnitTest_Point
         [TestMethod]
         public void ConstructorWithtStringTrimCharacters()
         {
-            string str = "  (   11 22 33   )  ";
+            string str = "  <{([   11 22 33   ])}>  ";
             DDD.Point p = new DDD.Point(str);
             Assert.IsTrue(p.ToString() == "(11 22 33)\n");
         }

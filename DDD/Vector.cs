@@ -23,9 +23,25 @@ namespace DDD
         }
         public Vector(double[] arr)
         {
-            X = arr[0];
-            Y = arr[1];
-            Z = arr[2];
+            X = 0;
+            Y = 0;
+            Z = 0;
+            if (arr.Length > 0) { X = arr[0]; }
+            if (arr.Length > 1) { Y = arr[1]; }
+            if (arr.Length > 2) { Z = arr[2]; }
+        }
+        public Vector(string str)
+        {
+            char[] delimiterChars = { ' ', ',', '\t' };
+            char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>',  };
+
+            string[] values = str.Trim(trimChars).Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+            X = 0;
+            Y = 0;
+            Z = 0;
+            if (values.Length > 0) { X = double.Parse(values[0]); }
+            if (values.Length > 1) { Y = double.Parse(values[1]); }
+            if (values.Length > 2) { Z = double.Parse(values[2]); }
         }
         public override string ToString()
         {

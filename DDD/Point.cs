@@ -33,7 +33,7 @@ namespace DDD
         public Point(string str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
-            char[] trimChars = { ' ', '(', ')' };
+            char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
 
             string[] values = str.Trim(trimChars).Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             X = 0;
