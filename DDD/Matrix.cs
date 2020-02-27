@@ -56,7 +56,7 @@ namespace DDD
                 M11 = arr[0]; M12 = arr[1]; M13 = arr[2]; M14 = 0;
                 M21 = arr[3]; M22 = arr[4]; M23 = arr[5]; M24 = 0;
                 M31 = arr[6]; M32 = arr[7]; M33 = arr[8]; M34 = 0;
-                M41 =        0; M42 =        0; M43 =        0; M44 = 1;
+                M41 =      0; M42 =      0; M43 =      0; M44 = 1;
             }
         }
         public Matrix(Vector xAxis, Vector yAxis, Vector zAxis)
@@ -79,53 +79,6 @@ namespace DDD
             string row3 = String.Format("{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M31, M32, M33, M34);
             string row4 = String.Format("{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M41, M42, M43, M44);
             return row1 + row2 + row3 + row4;
-        }
-        public Matrix Translate(double x, double y, double z)
-        {
-            // https://en.wikipedia.org/wiki/Translation_(geometry)
-            M14 += x;
-            M24 += y;
-            M34 += z;
-            return this;
-        }
-        public Matrix Translate(Vector v)
-        {
-            Translate(v.X, v.Y, v.Z);
-            return this;
-        }
-        public Matrix Scale(double x, double y, double z)
-        {
-            // https://en.wikipedia.org/wiki/Scaling_(geometry)
-            M11 *= x; M12 *= y; M13 *= z; 
-            M21 *= x; M22 *= y; M23 *= z; 
-            M31 *= x; M32 *= y; M33 *= z; 
-            M41 *= x; M42 *= y; M43 *= z; 
-
-            return this;
-        }
-        public Matrix RotateX(double degreesCCW)
-        {
-            // https://en.wikipedia.org/wiki/Rotation_matrix
-            double radians = degreesCCW * Math.PI / 180.0; 
-            M22 = Math.Cos(radians); M23 = -Math.Sin(radians);
-            M32 = Math.Sin(radians); M33 =  Math.Cos(radians);
-            return this;
-        }
-        public Matrix RotateY(double degreesCCW)
-        {
-            // https://en.wikipedia.org/wiki/Rotation_matrix
-            double radians = degreesCCW*Math.PI / 180.0; 
-            M11 =  Math.Cos(radians); M13 = Math.Sin(radians);
-            M31 = -Math.Sin(radians); M33 = Math.Cos(radians);
-            return this;
-        }
-        public Matrix RotateZ(double degreesCCW)
-        {
-            // https://en.wikipedia.org/wiki/Rotation_matrix
-            double radians = degreesCCW * Math.PI / 180.0; 
-            M11 = Math.Cos(radians); M12 = -Math.Sin(radians);
-            M21 = Math.Sin(radians); M22 =  Math.Cos(radians);
-            return this;
         }
         public double Determinate() => Determinate4x4(M11, M12, M13, M14,
                                                       M21, M22, M23, M24,
@@ -291,48 +244,52 @@ namespace DDD
                                                       0, 1, 0, 0,
                                                       0, 0, 1, 0,
                                                       0, 0, 0, 1);
-        public static Matrix Translation(double x, double y, double z)
+        public static Matrix Translate(double x, double y, double z)
         {
+            // https://en.wikipedia.org/wiki/Translation_(geometry)
             Matrix m = Identity();
-            m.Translate(x, y, z);
+            m.M14 += x;
+            m.M24 += y;
+            m.M34 += z;
             return m;
         }
-        public static Matrix Translation(Vector v) => Translation(v.X, v.Y, v.Z);
-        public static Matrix Scaling(double x, double y, double z)
+        public static Matrix Translate(Vector v) => Translate(v.X, v.Y, v.Z);
+        public static Matrix Scale(double x, double y, double z)
         {
+            // https://en.wikipedia.org/wiki/Scaling_(geometry)
             Matrix m = Identity();
-            m.Scale(x, y, z);
+            m.M11 *= x; m.M12 *= y; m.M13 *= z;
+            m.M21 *= x; m.M22 *= y; m.M23 *= z;
+            m.M31 *= x; m.M32 *= y; m.M33 *= z;
+            m.M41 *= x; m.M42 *= y; m.M43 *= z;
             return m;
         }
-        public static Matrix RotationX(double degreesCCW) 
+        public static Matrix RotateX(double degreesCCW) 
         {
+            // https://en.wikipedia.org/wiki/Rotation_matrix
+            double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
-            m.RotateX(degreesCCW);
+            m.M22 = Math.Cos(radians); m.M23 = -Math.Sin(radians);
+            m.M32 = Math.Sin(radians); m.M33 =  Math.Cos(radians);
             return m;
         }
-        public static Matrix RotationY(double degreesCCW)
+        public static Matrix RotateY(double degreesCCW)
         {
+            // https://en.wikipedia.org/wiki/Rotation_matrix
+            double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
-            m.RotateY(degreesCCW);
+            m.M11 =  Math.Cos(radians); m.M13 = Math.Sin(radians);
+            m.M31 = -Math.Sin(radians); m.M33 = Math.Cos(radians);
             return m;
         }
-        public static Matrix RotationZ(double degreesCCW)
+        public static Matrix RotateZ(double degreesCCW)
         {
+            // https://en.wikipedia.org/wiki/Rotation_matrix
+            double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
-            m.RotateZ(degreesCCW);
+            m.M11 = Math.Cos(radians); m.M12 = -Math.Sin(radians);
+            m.M21 = Math.Sin(radians); m.M22 =  Math.Cos(radians);
             return m;
-        }
-        public static Matrix Transpose(Matrix m)
-        {
-            Matrix n = new Matrix(m);
-            n.Transpose();
-            return n;
-        }
-        public static Matrix Invert(Matrix m)
-        {
-            Matrix n = new Matrix(m);
-            n.Invert();
-            return n;
         }
         public static double Determinant2x2(double a, double b,
                                             double c, double d)

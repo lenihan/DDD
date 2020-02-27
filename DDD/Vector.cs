@@ -9,17 +9,17 @@ namespace DDD
         public double Y;
         public double Z;
 
-        public Vector(Vector v)
-        {
-            X = v.X;
-            Y = v.Y;
-            Z = v.Z;
-        }
         public Vector(double x, double y, double z)
         {
             X = x;
             Y = y;
             Z = z;
+        }
+        public Vector(Vector v)
+        {
+            X = v.X;
+            Y = v.Y;
+            Z = v.Z;
         }
         public Vector(double[] arr)
         {

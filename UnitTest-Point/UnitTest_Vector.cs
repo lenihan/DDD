@@ -12,16 +12,16 @@ namespace DDD_UnitTest
             Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
         [TestMethod]
-        public void ConstructorWithVector()
-        {
-            DDD.Vector v = new DDD.Vector(new DDD.Vector(1,2,3));
-            Assert.IsTrue(v.ToString() == "[1 2 3]\n");
-        }
-        [TestMethod]
         public void ConstructorWithXYZ()
         {
             DDD.Vector v = new DDD.Vector(4, 2, 1);
             Assert.IsTrue(v.ToString() == "[4 2 1]\n");
+        }
+        [TestMethod]
+        public void ConstructorWithVector()
+        {
+            DDD.Vector v = new DDD.Vector(new DDD.Vector(1,2,3));
+            Assert.IsTrue(v.ToString() == "[1 2 3]\n");
         }
         [TestMethod]
         public void ConstructorWithEmptyArray()

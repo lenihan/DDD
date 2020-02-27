@@ -9,17 +9,17 @@ namespace DDD
         public double Y;
         public double Z;
 
-        public Point(Point p)
-        {
-            X = p.X;
-            Y = p.Y;
-            Z = p.Z;
-        }
         public Point(double x, double y, double z)
         {
             X = x;
             Y = y;
             Z = z;
+        }
+        public Point(Point p)
+        {
+            X = p.X;
+            Y = p.Y;
+            Z = p.Z;
         }
         public Point(double[] arr)
         {

@@ -12,16 +12,16 @@ namespace DDD_UnitTest
             Assert.IsTrue(p.ToString() == "(0 0 0)\n");
         }
         [TestMethod]
-        public void ConstructorWithPoint()
-        {
-            DDD.Point p = new DDD.Point(new DDD.Point(1,2,3));
-            Assert.IsTrue(p.ToString() == "(1 2 3)\n");
-        }
-        [TestMethod]
         public void ConstructorWithXYZ()
         {
             DDD.Point p = new DDD.Point(4, 2, 1);
             Assert.IsTrue(p.ToString() == "(4 2 1)\n");
+        }
+        [TestMethod]
+        public void ConstructorWithPoint()
+        {
+            DDD.Point p = new DDD.Point(new DDD.Point(1,2,3));
+            Assert.IsTrue(p.ToString() == "(1 2 3)\n");
         }
         [TestMethod]
         public void ConstructorWithEmptyArray()
