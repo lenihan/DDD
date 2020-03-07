@@ -24,17 +24,23 @@ function New-IdentityMatrix {
 function New-IdentityMatrix {
     return [DDD.Matrix]::Zero()
 }
-function New-RotateXMatrix ($degrees) {
-    return [DDD.Matrix]::RotateX($degrees)
+function New-RotateXMatrix ($DegreesCCW) {
+    return [DDD.Matrix]::RotateX($DegreesCCW)
 }
-function New-RotateYMatrix ($degrees) {
-    return [DDD.Matrix]::RotateY($degrees)
+function New-RotateYMatrix ($DegreesCCW) {
+    return [DDD.Matrix]::RotateY($DegreesCCW)
 }
-function New-RotateZMatrix ($degrees) {
-    return [DDD.Matrix]::RotateZ($degrees)
+function New-RotateZMatrix ($DegreesCCW) {
+    return [DDD.Matrix]::RotateZ($DegreesCCW)
 }
-function New-ScaleMatrix ($xScale, $yScale, $zScale) {
-    return [DDD.Matrix]::Scale($xScale, $yScale, $zScale)
+function New-ScaleMatrix ($X, $Y, $Z) {
+    return [DDD.Matrix]::Scale($X, $Y, $Z)
+}
+function New-TranslateMatrix ($X, $Y, $Z) {
+    return [DDD.Matrix]::Translate($X, $Y, $Z)
+}
+function New-TranslateMatrix ($Vector) {
+    return [DDD.Matrix]::Translate($Vector)
 }
 
 
