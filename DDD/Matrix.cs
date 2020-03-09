@@ -29,7 +29,7 @@ namespace DDD
             M11 = m11; M12 = m12; M13 = m13; M14 = 0;
             M21 = m21; M22 = m22; M23 = m23; M24 = 0;
             M31 = m31; M32 = m32; M33 = m33; M34 = 0;
-            M41 = 0;   M42 = 0;   M43 = 0;   M44 = 1;
+            M41 = 0; M42 = 0; M43 = 0; M44 = 1;
         }
         public Matrix(Matrix mat)
         {
@@ -44,11 +44,15 @@ namespace DDD
             M21 = 0; M22 = 0; M23 = 0; M24 = 0;
             M31 = 0; M32 = 0; M33 = 0; M34 = 0;
             M41 = 0; M42 = 0; M43 = 0; M44 = 0;
-            if (arr.Length == 16)
+            if (arr == null)
             {
-                M11 = arr[ 0]; M12 = arr[ 1]; M13 = arr[ 2]; M14 = arr[ 3];
-                M21 = arr[ 4]; M22 = arr[ 5]; M23 = arr[ 6]; M24 = arr[ 7];
-                M31 = arr[ 8]; M32 = arr[ 9]; M33 = arr[10]; M34 = arr[11];
+                return;
+            }
+            else if (arr.Length == 16)
+            {
+                M11 = arr[0]; M12 = arr[1]; M13 = arr[2]; M14 = arr[3];
+                M21 = arr[4]; M22 = arr[5]; M23 = arr[6]; M24 = arr[7];
+                M31 = arr[8]; M32 = arr[9]; M33 = arr[10]; M34 = arr[11];
                 M41 = arr[12]; M42 = arr[13]; M43 = arr[14]; M44 = arr[15];
             }
             else if (arr.Length == 9)
@@ -56,7 +60,7 @@ namespace DDD
                 M11 = arr[0]; M12 = arr[1]; M13 = arr[2]; M14 = 0;
                 M21 = arr[3]; M22 = arr[4]; M23 = arr[5]; M24 = 0;
                 M31 = arr[6]; M32 = arr[7]; M33 = arr[8]; M34 = 0;
-                M41 =      0; M42 =      0; M43 =      0; M44 = 1;
+                M41 = 0; M42 = 0; M43 = 0; M44 = 1;
             }
         }
         public Matrix(Vector xAxis, Vector yAxis, Vector zAxis)
@@ -64,7 +68,7 @@ namespace DDD
             M11 = xAxis.X; M12 = yAxis.X; M13 = zAxis.X; M14 = 0;
             M21 = xAxis.Y; M22 = yAxis.Y; M23 = zAxis.Y; M24 = 0;
             M31 = xAxis.Z; M32 = yAxis.Z; M33 = zAxis.Z; M34 = 0;
-            M41 = 0;       M42 = 0;       M43 = 0;       M44 = 1;
+            M41 = 0; M42 = 0; M43 = 0; M44 = 1;
         }
         public override string ToString()
         {
@@ -109,7 +113,7 @@ namespace DDD
             M41 = d; M42 = h; M43 = l; M44 = p;
             return this;
         }
-        public Matrix Adjugate()       
+        public Matrix Adjugate()
         {
             // https://en.wikipedia.org/wiki/Adjugate_matrix
             double a = M11; double b = M12; double c = M13; double d = M14;
@@ -154,7 +158,7 @@ namespace DDD
                                          e, f, g,
                                          m, n, o);
             double detM = Determinant3x3(b, c, d,
-                                         f, g, h, 
+                                         f, g, h,
                                          j, k, l);
             double detN = Determinant3x3(a, c, d,
                                          e, g, h,
@@ -203,7 +207,7 @@ namespace DDD
                               c31, c32, c33, c34,
                               c41, c42, c43, c44);
         }
-        public static Matrix operator *(Matrix m, double s) 
+        public static Matrix operator *(Matrix m, double s)
         {
             double n11 = m.M11 * s; double n12 = m.M12 * s; double n13 = m.M13 * s; double n14 = m.M14 * s;
             double n21 = m.M21 * s; double n22 = m.M22 * s; double n23 = m.M23 * s; double n24 = m.M24 * s;
@@ -212,7 +216,7 @@ namespace DDD
             return new Matrix(n11, n12, n13, n14,
                               n21, n22, n23, n24,
                               n31, n32, n33, n34,
-                              n41, n42, n43, n44);  
+                              n41, n42, n43, n44);
         }
         public static Matrix operator *(double s, Matrix m) => m * s;
         public static Vector operator *(Matrix m, Vector v)
@@ -264,13 +268,13 @@ namespace DDD
             m.M41 *= x; m.M42 *= y; m.M43 *= z;
             return m;
         }
-        public static Matrix RotateX(double degreesCCW) 
+        public static Matrix RotateX(double degreesCCW)
         {
             // https://en.wikipedia.org/wiki/Rotation_matrix
             double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
             m.M22 = Math.Cos(radians); m.M23 = -Math.Sin(radians);
-            m.M32 = Math.Sin(radians); m.M33 =  Math.Cos(radians);
+            m.M32 = Math.Sin(radians); m.M33 = Math.Cos(radians);
             return m;
         }
         public static Matrix RotateY(double degreesCCW)
@@ -278,7 +282,7 @@ namespace DDD
             // https://en.wikipedia.org/wiki/Rotation_matrix
             double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
-            m.M11 =  Math.Cos(radians); m.M13 = Math.Sin(radians);
+            m.M11 = Math.Cos(radians); m.M13 = Math.Sin(radians);
             m.M31 = -Math.Sin(radians); m.M33 = Math.Cos(radians);
             return m;
         }
@@ -288,14 +292,14 @@ namespace DDD
             double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
             m.M11 = Math.Cos(radians); m.M12 = -Math.Sin(radians);
-            m.M21 = Math.Sin(radians); m.M22 =  Math.Cos(radians);
+            m.M21 = Math.Sin(radians); m.M22 = Math.Cos(radians);
             return m;
         }
         public static double Determinant2x2(double a, double b,
                                             double c, double d)
         {
             // https://en.wikipedia.org/wiki/Determinant
-            return a * d - b * c;  
+            return a * d - b * c;
         }
         public static double Determinant3x3(double a, double b, double c,
                                             double d, double e, double f,

@@ -26,22 +26,24 @@ namespace DDD
             X = 0;
             Y = 0;
             Z = 0;
-            if (arr.Length > 0) { X = arr[0]; }
-            if (arr.Length > 1) { Y = arr[1]; }
-            if (arr.Length > 2) { Z = arr[2]; }
+            if (arr == null) return;
+            if (arr.Length > 0) X = arr[0];
+            if (arr.Length > 1) Y = arr[1];
+            if (arr.Length > 2) Z = arr[2];
         }
         public Vector(string str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
-            char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>',  };
+            char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
 
-            string[] values = str.Trim(trimChars).Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             X = 0;
             Y = 0;
             Z = 0;
-            if (values.Length > 0) { X = double.Parse(values[0]); }
-            if (values.Length > 1) { Y = double.Parse(values[1]); }
-            if (values.Length > 2) { Z = double.Parse(values[2]); }
+            if (str == null) return;
+            string[] values = str.Trim(trimChars).Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+            if (values.Length > 0) X = double.Parse(values[0]);
+            if (values.Length > 1) Y = double.Parse(values[1]);
+            if (values.Length > 2) Z = double.Parse(values[2]);
         }
         public override string ToString()
         {
@@ -81,8 +83,8 @@ namespace DDD
                                                                           v.Y / s,
                                                                           v.Z / s);
 
-        public static Vector operator -(Vector v) => new Vector(-v.X, 
-                                                                -v.Y, 
+        public static Vector operator -(Vector v) => new Vector(-v.X,
+                                                                -v.Y,
                                                                 -v.Z);
         public static double Dot(Vector a, Vector b)
         {
@@ -92,9 +94,9 @@ namespace DDD
         }
         public static Vector Cross(Vector a, Vector b)
         {
-            return new Vector(a.Y *b.Z - a.Z *b.Y,
-                              a.Z *b.X - a.X *b.Z,
-                              a.X *b.Y - a.Y *b.X);
+            return new Vector(a.Y * b.Z - a.Z * b.Y,
+                              a.Z * b.X - a.X * b.Z,
+                              a.X * b.Y - a.Y * b.X);
         }
         public static Vector Normalize(Vector v)
         {

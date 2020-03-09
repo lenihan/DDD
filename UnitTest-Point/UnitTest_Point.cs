@@ -20,41 +20,41 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithPoint()
         {
-            DDD.Point p = new DDD.Point(new DDD.Point(1,2,3));
+            DDD.Point p = new DDD.Point(new DDD.Point(1, 2, 3));
             Assert.IsTrue(p.ToString() == "(1 2 3)\n");
         }
         [TestMethod]
         public void ConstructorWithEmptyArray()
         {
-            double[] arr = {};
+            double[] arr = { };
             DDD.Point p = new DDD.Point(arr);
             Assert.IsTrue(p.ToString() == "(0 0 0)\n");
         }
         [TestMethod]
         public void ConstructorWith1ElementArray()
         {
-            double[] arr = {10};
+            double[] arr = { 10 };
             DDD.Point p = new DDD.Point(arr);
             Assert.IsTrue(p.ToString() == "(10 0 0)\n");
         }
         [TestMethod]
         public void ConstructorWith2ElementArray()
         {
-            double[] arr = {10, 20};
+            double[] arr = { 10, 20 };
             DDD.Point p = new DDD.Point(arr);
             Assert.IsTrue(p.ToString() == "(10 20 0)\n");
         }
         [TestMethod]
         public void ConstructorWith3ElementArray()
         {
-            double[] arr = {30, 20, 10};
+            double[] arr = { 30, 20, 10 };
             DDD.Point p = new DDD.Point(arr);
             Assert.IsTrue(p.ToString() == "(30 20 10)\n");
         }
         [TestMethod]
         public void ConstructorWith4ElementArray()
         {
-            double[] arr = {40, 30, 20, 10};
+            double[] arr = { 40, 30, 20, 10 };
             DDD.Point p = new DDD.Point(arr);
             Assert.IsTrue(p.ToString() == "(40 30 20)\n");
         }
@@ -140,6 +140,7 @@ namespace DDD_UnitTest
             DDD.Point p1 = new DDD.Point(1, 2, 3);
             DDD.Point p2 = new DDD.Point(3, 2, 1);
             Assert.IsTrue((p1 + p2).ToString() == "(4 4 4)\n");
+            Assert.IsTrue(DDD.Point.Add(p1,p2).ToString() == "(4 4 4)\n");            
         }
         [TestMethod]
         public void TestSubtract()

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Management.Automation;             //Windows PowerShell namespace
+﻿using System.Management.Automation;             //Windows PowerShell namespace
 
 namespace DDD
 {

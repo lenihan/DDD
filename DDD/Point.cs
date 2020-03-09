@@ -3,7 +3,9 @@
 namespace DDD
 {
     [Serializable()]
+#pragma warning disable CA1815 // Override equals and operator equals on value types
     public struct Point
+#pragma warning restore CA1815 // Override equals and operator equals on value types
     {
         public double X;
         public double Y;
@@ -26,22 +28,23 @@ namespace DDD
             X = 0;
             Y = 0;
             Z = 0;
-            if (arr.Length > 0) { X = arr[0]; }
-            if (arr.Length > 1) { Y = arr[1]; }
-            if (arr.Length > 2) { Z = arr[2]; }
+            if (arr == null) return;
+            if (arr.Length > 0) X = arr[0]; 
+            if (arr.Length > 1) Y = arr[1]; 
+            if (arr.Length > 2) Z = arr[2]; 
         }
         public Point(string str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
             char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
-
-            string[] values = str.Trim(trimChars).Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             X = 0;
             Y = 0;
             Z = 0;
-            if (values.Length > 0) { X = double.Parse(values[0]); }
-            if (values.Length > 1) { Y = double.Parse(values[1]); }
-            if (values.Length > 2) { Z = double.Parse(values[2]); }
+            if (str == null) return;
+            string[] values = str.Trim(trimChars).Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+            if (values.Length > 0) X = double.Parse(values[0], System.Globalization.CultureInfo.InvariantCulture);
+            if (values.Length > 1) Y = double.Parse(values[1], System.Globalization.CultureInfo.InvariantCulture);
+            if (values.Length > 2) Z = double.Parse(values[2], System.Globalization.CultureInfo.InvariantCulture);
         }
         public override string ToString()
         {
@@ -50,11 +53,14 @@ namespace DDD
             //   0:    Index
             //   #,0   Group integers in 3's with commas, do not hide zero
             //   .##   Show at most 2 decimals, or nothing if no decimal point
-            return String.Format("({0:#,0.##} {1:#,0.##} {2:#,0.##})\n", X, Y, Z);
+            return String.Format(System.Globalization.CultureInfo.InvariantCulture, "({0:#,0.##} {1:#,0.##} {2:#,0.##})\n", X, Y, Z);
         }
         public static Point operator +(Point p1, Point p2) => new Point(p1.X + p2.X,
                                                                         p1.Y + p2.Y,
                                                                         p1.Z + p2.Z);
+        public static Point Add(Point p1, Point p2) => new Point(p1.X + p2.X,
+                                                                 p1.Y + p2.Y,
+                                                                 p1.Z + p2.Z);
         public static Vector operator -(Point p1, Point p2) => new Vector(p1.X - p2.X,
                                                                           p1.Y - p2.Y,
                                                                           p1.Z - p2.Z);

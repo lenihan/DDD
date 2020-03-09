@@ -20,41 +20,41 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithVector()
         {
-            DDD.Vector v = new DDD.Vector(new DDD.Vector(1,2,3));
+            DDD.Vector v = new DDD.Vector(new DDD.Vector(1, 2, 3));
             Assert.IsTrue(v.ToString() == "[1 2 3]\n");
         }
         [TestMethod]
         public void ConstructorWithEmptyArray()
         {
-            double[] arr = {};
+            double[] arr = { };
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
         [TestMethod]
         public void ConstructorWith1ElementArray()
         {
-            double[] arr = {10};
+            double[] arr = { 10 };
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[10 0 0]\n");
         }
         [TestMethod]
         public void ConstructorWith2ElementArray()
         {
-            double[] arr = {10, 20};
+            double[] arr = { 10, 20 };
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[10 20 0]\n");
         }
         [TestMethod]
         public void ConstructorWith3ElementArray()
         {
-            double[] arr = {30, 20, 10};
+            double[] arr = { 30, 20, 10 };
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[30 20 10]\n");
         }
         [TestMethod]
         public void ConstructorWith4ElementArray()
         {
-            double[] arr = {40, 30, 20, 10};
+            double[] arr = { 40, 30, 20, 10 };
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[40 30 20]\n");
         }

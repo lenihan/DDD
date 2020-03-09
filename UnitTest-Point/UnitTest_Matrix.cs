@@ -18,9 +18,9 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithValues()
         {
-            DDD.Matrix m = new DDD.Matrix( 0,  1,  2,  3,
-                                           4,  5,  6,  7,
-                                           8,  9, 10, 11,
+            DDD.Matrix m = new DDD.Matrix(0, 1, 2, 3,
+                                           4, 5, 6, 7,
+                                           8, 9, 10, 11,
                                           12, 13, 14, 15);
             string ans = "               0                1                2                3\n" +
                          "               4                5                6                7\n" +
@@ -31,9 +31,9 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithMatrix()
         {
-            DDD.Matrix m1 = new DDD.Matrix( 0,  1,  2,  3,
-                                            4,  5,  6,  7,
-                                            8,  9, 10, 11,
+            DDD.Matrix m1 = new DDD.Matrix(0, 1, 2, 3,
+                                            4, 5, 6, 7,
+                                            8, 9, 10, 11,
                                            12, 13, 14, 15);
             DDD.Matrix m2 = new DDD.Matrix(m1);
             string ans = "               0                1                2                3\n" +
@@ -46,7 +46,7 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithEmptyArray()
         {
-            double[] arr = {};
+            double[] arr = { };
             DDD.Matrix m = new DDD.Matrix(arr);
             string ans = "               0                0                0                0\n" +
                          "               0                0                0                0\n" +
@@ -57,7 +57,7 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWith3ElementArray()
         {
-            double[] arr = {1, 2, 3};
+            double[] arr = { 1, 2, 3 };
             DDD.Matrix m = new DDD.Matrix(arr);
             string ans = "               0                0                0                0\n" +
                          "               0                0                0                0\n" +
@@ -175,8 +175,8 @@ namespace DDD_UnitTest
         [TestMethod]
         public void Determinate()
         {
-            DDD.Matrix m = new DDD.Matrix( 1,  2,  3,  4,
-                                           5,  6,  7,  8,
+            DDD.Matrix m = new DDD.Matrix(1, 2, 3, 4,
+                                           5, 6, 7, 8,
                                            9, 10, 11, 12,
                                           13, 14, 15, 16);
             Assert.IsTrue(m.Determinate() == 0);
@@ -224,14 +224,14 @@ namespace DDD_UnitTest
         [TestMethod]
         public void MultiplyMatrixByMatrix()
         {
-            DDD.Matrix m1 = new DDD.Matrix( 1,  2,  3,  4,
-                                            5,  6,  7,  8,
+            DDD.Matrix m1 = new DDD.Matrix(1, 2, 3, 4,
+                                            5, 6, 7, 8,
                                             9, 10, 11, 12,
                                            13, 14, 15, 16);
-            DDD.Matrix m2 = new DDD.Matrix( 3, 11,  -3,   2,
-                                           -2,  2,  99,  18,
+            DDD.Matrix m2 = new DDD.Matrix(3, 11, -3, 2,
+                                           -2, 2, 99, 18,
                                            59, 17, 121, 112,
-                                            3,  4,  -5, 106);
+                                            3, 4, -5, 106);
             // answer verified by http://matrix.reshish.com/multCalculation.php
             string ans = "             188               82              538              798\n" +
                          "             440              218            1,386            1,750\n" +
@@ -278,11 +278,11 @@ namespace DDD_UnitTest
         [TestMethod]
         public void AddMatrixToMatrix()
         {
-            var m1 = new DDD.Matrix( 1,  2,  3,  4,
-                                     5,  6,  7,  8,
+            var m1 = new DDD.Matrix(1, 2, 3, 4,
+                                     5, 6, 7, 8,
                                      9, 10, 11, 12,
                                     13, 14, 15, 16);
-            var m2 = new DDD.Matrix( 2,  4,  6,  8,
+            var m2 = new DDD.Matrix(2, 4, 6, 8,
                                     10, 12, 14, 16,
                                     18, 20, 22, 24,
                                     26, 28, 30, 32);
