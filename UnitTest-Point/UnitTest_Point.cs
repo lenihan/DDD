@@ -24,6 +24,13 @@ namespace DDD_UnitTest
             Assert.IsTrue(p.ToString() == "(1 2 3)\n");
         }
         [TestMethod]
+        public void ConstructorWithNullArray()
+        {
+            double[] arr = null;
+            DDD.Point p = new DDD.Point(arr);
+            Assert.IsTrue(p.ToString() == "(0 0 0)\n");
+        }
+        [TestMethod]
         public void ConstructorWithEmptyArray()
         {
             double[] arr = { };
@@ -57,6 +64,13 @@ namespace DDD_UnitTest
             double[] arr = { 40, 30, 20, 10 };
             DDD.Point p = new DDD.Point(arr);
             Assert.IsTrue(p.ToString() == "(40 30 20)\n");
+        }
+        [TestMethod]
+        public void ConstructorWithNullString()
+        {
+            string str = null;
+            DDD.Point p = new DDD.Point(str);
+            Assert.IsTrue(p.ToString() == "(0 0 0)\n");
         }
         [TestMethod]
         public void ConstructorWithEmptyString()
@@ -128,6 +142,37 @@ namespace DDD_UnitTest
             DDD.Point p = new DDD.Point(str);
             Assert.IsTrue(p.ToString() == "(11 22 33)\n");
         }
+        
+        [TestMethod]
+        public void TestEquals()
+        {
+            DDD.Point? p1 = new DDD.Point(1, 2, 3);
+            DDD.Point? p2 = null;
+            DDD.Point? p3 = new DDD.Point(1, 2, 3);
+            DDD.Point? p4 = new DDD.Point(4, 5, 6);
+            DDD.Point? p5 = null;
+
+            Assert.IsTrue(p1.Equals(p3));
+            Assert.IsTrue(!p1.Equals(p4));
+            
+            Assert.IsTrue(!p1.Equals((object)p2));
+            Assert.IsTrue(!p1.Equals((object)123));
+            Assert.IsTrue(p1.Equals((object)p3));
+            Assert.IsTrue(!p1.Equals((object)p4));
+
+            Assert.IsTrue(p2 == p5);
+            Assert.IsTrue(p1 == p3);
+            
+            Assert.IsTrue(p1 != p2);
+            Assert.IsTrue(p1 != p4);
+        }
+        [TestMethod]
+        public void TestGetHashCode()
+        {
+            DDD.Point p = new DDD.Point(2, 3, 4);
+            int ans = 5; // 2 ^ 3 ^ 4;
+            Assert.IsTrue(p.GetHashCode() == ans);
+        }
         [TestMethod]
         public void TestToString()
         {
@@ -148,24 +193,28 @@ namespace DDD_UnitTest
             DDD.Point p1 = new DDD.Point(1, 2, 3);
             DDD.Point p2 = new DDD.Point(3, 2, 1);
             Assert.IsTrue((p1 - p2).ToString() == "[-2 0 2]\n");
+            Assert.IsTrue(DDD.Point.Subtract(p1, p2).ToString() == "[-2 0 2]\n");
         }
         [TestMethod]
         public void TestMultiplyPre()
         {
             DDD.Point p = new DDD.Point(1, 2, 3);
             Assert.IsTrue((p * 2).ToString() == "(2 4 6)\n");
+            Assert.IsTrue(DDD.Point.Multiply(p, 2).ToString() == "(2 4 6)\n");
         }
         [TestMethod]
         public void TestMultiplyPost()
         {
             DDD.Point p = new DDD.Point(1, 2, 3);
             Assert.IsTrue((2 * p).ToString() == "(2 4 6)\n");
+            Assert.IsTrue(DDD.Point.Multiply(2, p).ToString() == "(2 4 6)\n");
         }
         [TestMethod]
         public void TestDivide()
         {
             DDD.Point p = new DDD.Point(10, 20, 30);
             Assert.IsTrue((p / 10).ToString() == "(1 2 3)\n");
+            Assert.IsTrue(DDD.Point.Divide(p, 10).ToString() == "(1 2 3)\n");
         }
     }
 }
