@@ -3,7 +3,7 @@
 namespace DDD
 {
     [Serializable()]
-    public struct Matrix
+    public struct Matrix : IEquatable<Matrix>
     {
         // Storing Matrix in row major: mXY. For example, m23 is the second row, third column
         public double M11, M12, M13, M14;
@@ -29,7 +29,7 @@ namespace DDD
             M11 = m11; M12 = m12; M13 = m13; M14 = 0;
             M21 = m21; M22 = m22; M23 = m23; M24 = 0;
             M31 = m31; M32 = m32; M33 = m33; M34 = 0;
-            M41 = 0; M42 = 0; M43 = 0; M44 = 1;
+            M41 = 0;   M42 = 0;   M43 = 0;   M44 = 1;
         }
         public Matrix(Matrix mat)
         {
@@ -50,9 +50,9 @@ namespace DDD
             }
             else if (arr.Length == 16)
             {
-                M11 = arr[0]; M12 = arr[1]; M13 = arr[2]; M14 = arr[3];
-                M21 = arr[4]; M22 = arr[5]; M23 = arr[6]; M24 = arr[7];
-                M31 = arr[8]; M32 = arr[9]; M33 = arr[10]; M34 = arr[11];
+                M11 = arr[0];  M12 = arr[1];  M13 = arr[2];  M14 = arr[3];
+                M21 = arr[4];  M22 = arr[5];  M23 = arr[6];  M24 = arr[7];
+                M31 = arr[8];  M32 = arr[9];  M33 = arr[10]; M34 = arr[11];
                 M41 = arr[12]; M42 = arr[13]; M43 = arr[14]; M44 = arr[15];
             }
             else if (arr.Length == 9)
@@ -70,6 +70,30 @@ namespace DDD
             M31 = xAxis.Z; M32 = yAxis.Z; M33 = zAxis.Z; M34 = 0;
             M41 = 0; M42 = 0; M43 = 0; M44 = 1;
         }
+        public bool Equals(Matrix m) => m == null ? false : (M11 == m.M11) && (M12 == m.M12) && (M13 == m.M13) && (M14 == m.M14) &&
+                                                            (M21 == m.M21) && (M22 == m.M22) && (M23 == m.M23) && (M24 == m.M24) &&
+                                                            (M31 == m.M31) && (M32 == m.M32) && (M33 == m.M33) && (M34 == m.M34) &&
+                                                            (M41 == m.M41) && (M42 == m.M42) && (M43 == m.M43) && (M44 == m.M44);
+        public override bool Equals(object obj)
+        {
+            if ((obj is null) || !GetType().Equals(obj.GetType()))
+            {
+                return false;
+            }
+            else
+            {
+                return Equals((Matrix)obj);
+            }
+        }
+        public override int GetHashCode()
+        {
+            int row1 = (int)M11 ^ (int)M12 ^ (int)M13 ^ (int)M14;
+            int row2 = (int)M21 ^ (int)M22 ^ (int)M23 ^ (int)M24;
+            int row3 = (int)M31 ^ (int)M32 ^ (int)M33 ^ (int)M34;
+            int row4 = (int)M41 ^ (int)M42 ^ (int)M43 ^ (int)M44;
+            return row1 ^ row2 ^ row3 ^ row4;
+        }
+
         public override string ToString()
         {
             // https://ss64.com/ps/syntax-f-operator.html
@@ -78,12 +102,14 @@ namespace DDD
             //   ,16   Use at least 16 characters, right justified. Chose 16 to fit 1,234,567,890.12
             //   #,0   Group integers in 3's with commas, do not hide zero
             //   .##   Show at most 2 decimals, or nothing if no decimal point
-            string row1 = String.Format("{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M11, M12, M13, M14);
-            string row2 = String.Format("{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M21, M22, M23, M24);
-            string row3 = String.Format("{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M31, M32, M33, M34);
-            string row4 = String.Format("{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M41, M42, M43, M44);
+            string row1 = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M11, M12, M13, M14);
+            string row2 = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M21, M22, M23, M24);
+            string row3 = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M31, M32, M33, M34);
+            string row4 = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0,16:#,0.##} {1,16:#,0.##} {2,16:#,0.##} {3,16:#,0.##}\n", M41, M42, M43, M44);
             return row1 + row2 + row3 + row4;
         }
+        public static bool operator ==(Matrix? a, Matrix? b) => a is null ? b is null : a.Equals(b);
+        public static bool operator !=(Matrix? a, Matrix? b) => !(a == b);
         public double Determinate() => Determinate4x4(M11, M12, M13, M14,
                                                       M21, M22, M23, M24,
                                                       M31, M32, M33, M34,
@@ -207,6 +233,8 @@ namespace DDD
                               c31, c32, c33, c34,
                               c41, c42, c43, c44);
         }
+        public static Matrix Multiply(Matrix a, Matrix b) => a * b;
+
         public static Matrix operator *(Matrix m, double s)
         {
             double n11 = m.M11 * s; double n12 = m.M12 * s; double n13 = m.M13 * s; double n14 = m.M14 * s;
@@ -218,7 +246,9 @@ namespace DDD
                               n31, n32, n33, n34,
                               n41, n42, n43, n44);
         }
+        public static Matrix Multiply(Matrix m, double s) => m * s;
         public static Matrix operator *(double s, Matrix m) => m * s;
+        public static Matrix Multiply(double s, Matrix m) => s * m;
         public static Vector operator *(Matrix m, Vector v)
         {
             double x = m.M11 * v.X + m.M12 * v.Y + m.M13 * v.Z + m.M14 * 1;
@@ -226,6 +256,7 @@ namespace DDD
             double z = m.M31 * v.X + m.M32 * v.Y + m.M33 * v.Z + m.M34 * 1;
             return new Vector(x, y, z);
         }
+        public static Vector Multiply(Matrix m, Vector v) => m * v;
         public static Point operator *(Matrix m, Point p)
         {
             double x = m.M11 * p.X + m.M12 * p.Y + m.M13 * p.Z + m.M14 * 1;
@@ -233,6 +264,7 @@ namespace DDD
             double z = m.M31 * p.X + m.M32 * p.Y + m.M33 * p.Z + m.M34 * 1;
             return new Point(x, y, z);
         }
+        public static Point Multiply(Matrix m, Point p) => m * p;
         public static Matrix operator +(Matrix a, Matrix b)
         {
             return new Matrix(a.M11 + b.M11, a.M12 + b.M12, a.M13 + b.M13, a.M14 + b.M14,
@@ -240,6 +272,7 @@ namespace DDD
                               a.M31 + b.M31, a.M32 + b.M32, a.M33 + b.M33, a.M34 + b.M34,
                               a.M41 + b.M41, a.M42 + b.M42, a.M43 + b.M43, a.M44 + b.M44);
         }
+        public static Matrix Add(Matrix a, Matrix b) => a + b;
         public static Matrix Zero() => new Matrix(0, 0, 0, 0,
                                                   0, 0, 0, 0,
                                                   0, 0, 0, 0,
@@ -274,7 +307,7 @@ namespace DDD
             double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
             m.M22 = Math.Cos(radians); m.M23 = -Math.Sin(radians);
-            m.M32 = Math.Sin(radians); m.M33 = Math.Cos(radians);
+            m.M32 = Math.Sin(radians); m.M33 =  Math.Cos(radians);
             return m;
         }
         public static Matrix RotateY(double degreesCCW)
@@ -282,7 +315,7 @@ namespace DDD
             // https://en.wikipedia.org/wiki/Rotation_matrix
             double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
-            m.M11 = Math.Cos(radians); m.M13 = Math.Sin(radians);
+            m.M11 =  Math.Cos(radians); m.M13 = Math.Sin(radians);
             m.M31 = -Math.Sin(radians); m.M33 = Math.Cos(radians);
             return m;
         }
@@ -292,7 +325,7 @@ namespace DDD
             double radians = degreesCCW * Math.PI / 180.0;
             Matrix m = Identity();
             m.M11 = Math.Cos(radians); m.M12 = -Math.Sin(radians);
-            m.M21 = Math.Sin(radians); m.M22 = Math.Cos(radians);
+            m.M21 = Math.Sin(radians); m.M22 =  Math.Cos(radians);
             return m;
         }
         public static double Determinant2x2(double a, double b,

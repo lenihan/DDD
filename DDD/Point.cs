@@ -34,7 +34,7 @@ namespace DDD
         public Point(string str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
-            char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
+            char[] trimChars      = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
             X = 0;
             Y = 0;
             Z = 0;
@@ -47,15 +47,13 @@ namespace DDD
         public bool Equals(Point p) => p == null ? false : (X == p.X) && (Y == p.Y) && (Z == p.Z);
         public override bool Equals(object obj)
         {
-            //Check for null and compare run-time types.
-            if ((obj == null) || !GetType().Equals(obj.GetType()))
+            if ((obj is null) || !GetType().Equals(obj.GetType()))
             {
                 return false;
             }
             else
             {
-                Point p = (Point)obj;
-                return (X == p.X) && (Y == p.Y) && (Z == p.Z);
+                return Equals((Point)obj);
             }
         }
         public override int GetHashCode() => (int)X ^ (int)Y ^ (int)Z;
@@ -68,20 +66,16 @@ namespace DDD
             //   .##   Show at most 2 decimals, or nothing if no decimal point
             return String.Format(System.Globalization.CultureInfo.InvariantCulture, "({0:#,0.##} {1:#,0.##} {2:#,0.##})\n", X, Y, Z);
         }
-        public static bool operator ==(Point p1, Point p2)
-        {
-            if ((object)p1 == null) return (object)p2 == null;
-            return p1.Equals(p2);
-        }
-        public static bool operator !=(Point p1, Point p2) => !(p1 == p2);
-        public static Point operator +(Point p1, Point p2) => new Point(p1.X + p2.X,
-                                                                        p1.Y + p2.Y,
-                                                                        p1.Z + p2.Z);
-        public static Point Add(Point p1, Point p2) => p1 + p2;
-        public static Vector operator -(Point p1, Point p2) => new Vector(p1.X - p2.X,
-                                                                          p1.Y - p2.Y,
-                                                                          p1.Z - p2.Z);
-        public static Vector Subtract(Point p1, Point p2) => p1 - p2;
+        public static bool operator ==(Point? a, Point? b) => a is null ? b is null : a.Equals(b);
+        public static bool operator !=(Point? a, Point? b) => !(a == b);
+        public static Point operator +(Point a, Point b) => new Point(a.X + b.X,
+                                                                      a.Y + b.Y,
+                                                                      a.Z + b.Z);
+        public static Point Add(Point a, Point b) => a + b;
+        public static Vector operator -(Point a, Point b) => new Vector(a.X - b.X,
+                                                                        a.Y - b.Y,
+                                                                        a.Z - b.Z);
+        public static Vector Subtract(Point a, Point b) => a - b;
         public static Point operator *(double s, Point p) => new Point(s * p.X,
                                                                        s * p.Y,
                                                                        s * p.Z);

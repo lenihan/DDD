@@ -34,7 +34,7 @@ namespace DDD
         public Vector(string str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
-            char[] trimChars = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
+            char[] trimChars      = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
 
             X = 0;
             Y = 0;
@@ -48,15 +48,13 @@ namespace DDD
         public bool Equals(Vector v) => v == null ? false : (X == v.X) && (Y == v.Y) && (Z == v.Z);
         public override bool Equals(object obj)
         {
-            //Check for null and compare run-time types.
-            if ((obj == null) || !GetType().Equals(obj.GetType()))
+            if ((obj is null) || !GetType().Equals(obj.GetType()))
             {
                 return false;
             }
             else
             {
-                Vector v = (Vector)obj;
-                return (X == v.X) && (Y == v.Y) && (Z == v.Z);
+                return Equals((Vector)obj);
             }
         }
         public override int GetHashCode() => (int)X ^ (int)Y ^ (int)Z;
@@ -69,12 +67,8 @@ namespace DDD
             //   .##   Show at most 2 decimals, or nothing if no decimal point
             return String.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0:#,0.##} {1:#,0.##} {2:#,0.##}]\n", X, Y, Z);
         }
-        public static bool operator ==(Vector v1, Vector v2)
-        {
-            if ((object)v1 == null) return (object)v2 == null;
-            return v1.Equals(v2);
-        }
-        public static bool operator !=(Vector v1, Vector v2) => !(v1 == v2);
+        public static bool operator ==(Vector? a, Vector? b) => a is null ? b is null : a.Equals(b);
+        public static bool operator !=(Vector? a, Vector? b) => !(a == b);
         public double Length() => Math.Sqrt(X * X +
                                             Y * Y +
                                             Z * Z);
@@ -86,21 +80,21 @@ namespace DDD
             Z /= length;
             return this;
         }
-        public static Vector operator +(Vector v1, Vector v2) => new Vector(v1.X + v2.X,
-                                                                            v1.Y + v2.Y,
-                                                                            v1.Z + v2.Z);
-        public static Vector Add(Vector v1, Vector v2) => v1 + v2;
+        public static Vector operator +(Vector a, Vector b) => new Vector(a.X + b.X,
+                                                                            a.Y + b.Y,
+                                                                            a.Z + b.Z);
+        public static Vector Add(Vector a, Vector b) => a + b;
         public static Point operator +(Point p, Vector v) => v + p;
         public static Point Add(Point p, Vector v) => p + v;
         public static Point operator +(Vector v, Point p) => new Point(v.X + p.X,
                                                                        v.Y + p.Y,
                                                                        v.Z + p.Z);
         public static Point Add(Vector v, Point p) => v + p;
-        public static Vector operator -(Vector v1, Vector v2) => new Vector(v1.X - v2.X,
-                                                                            v1.Y - v2.Y,
-                                                                            v1.Z - v2.Z);
+        public static Vector operator -(Vector a, Vector b) => new Vector(a.X - b.X,
+                                                                          a.Y - b.Y,
+                                                                          a.Z - b.Z);
 
-        public static Vector Subtract(Vector v1, Vector v2) => v1 - v2;
+        public static Vector Subtract(Vector a, Vector b) => a - b;
         public static Vector operator *(Vector v, double s) => new Vector(v.X * s,
                                                                           v.Y * s,
                                                                           v.Z * s);
