@@ -260,7 +260,7 @@ namespace DDD_UnitTest
         {
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             Assert.IsTrue((-v).ToString() == "[-1 -2 -3]\n");
-            Assert.IsTrue(DDD.Vector.Negate(-v).ToString() == "[-1 -2 -3]\n");
+            Assert.IsTrue(DDD.Vector.Negate(v).ToString() == "[-1 -2 -3]\n");
         }
         [TestMethod]
         public void TestDot()
