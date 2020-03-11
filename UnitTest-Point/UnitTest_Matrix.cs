@@ -18,10 +18,10 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithValues()
         {
-            DDD.Matrix m = new DDD.Matrix(0, 1, 2, 3,
-                                           4, 5, 6, 7,
-                                           8, 9, 10, 11,
-                                          12, 13, 14, 15);
+            DDD.Matrix m = new DDD.Matrix(  0,  1,  2,  3,
+                                            4,  5,  6,  7,
+                                            8,  9, 10, 11,
+                                           12, 13, 14, 15);
             string ans = "               0                1                2                3\n" +
                          "               4                5                6                7\n" +
                          "               8                9               10               11\n" +
@@ -31,9 +31,9 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithMatrix()
         {
-            DDD.Matrix m1 = new DDD.Matrix(0, 1, 2, 3,
-                                            4, 5, 6, 7,
-                                            8, 9, 10, 11,
+            DDD.Matrix m1 = new DDD.Matrix( 0, 1,   2,  3,
+                                            4, 5,   6,  7,
+                                            8, 9,  10, 11,
                                            12, 13, 14, 15);
             DDD.Matrix m2 = new DDD.Matrix(m1);
             string ans = "               0                1                2                3\n" +
@@ -44,6 +44,16 @@ namespace DDD_UnitTest
         }
 
         [TestMethod]
+        public void ConstructorWithNullArray()
+        {
+            double[] arr = null;
+            DDD.Matrix m = new DDD.Matrix(arr);
+            string ans = "               0                0                0                0\n" +
+                         "               0                0                0                0\n" +
+                         "               0                0                0                0\n" +
+                         "               0                0                0                0\n";
+            Assert.IsTrue(m.ToString() == ans);
+        }
         public void ConstructorWithEmptyArray()
         {
             double[] arr = { };
@@ -112,6 +122,52 @@ namespace DDD_UnitTest
             Assert.IsTrue(m.ToString() == ans);
         }
         [TestMethod]
+        public void TestEquals()
+        {
+            DDD.Matrix? m1 = DDD.Matrix.Identity();
+            DDD.Matrix? m2 = null;
+            DDD.Matrix? m3 = DDD.Matrix.Identity();
+            DDD.Matrix? m4 = DDD.Matrix.Zero();
+            DDD.Matrix? m5 = null;
+
+            Assert.IsTrue(m1.Equals(m3));
+            Assert.IsTrue(!m1.Equals(m4));
+
+            Assert.IsTrue(!m1.Equals((object)m2));
+            Assert.IsTrue(!m1.Equals((object)123));
+            Assert.IsTrue(m1.Equals((object)m3));
+            Assert.IsTrue(!m1.Equals((object)m4));
+
+            Assert.IsTrue(m2 == m5);
+            Assert.IsTrue(m1 == m3);
+
+            Assert.IsTrue(m1 != m2);
+            Assert.IsTrue(m1 != m4);
+        }
+        [TestMethod]
+        public void TestGetHashCode()
+        {
+            DDD.Matrix m = new DDD.Matrix(1, 2, 3, 4,
+                                          5, 6, 7, 8,
+                                          9, 10, 11, 12,
+                                         13, 14, 15, 16);
+            int ans = 16; // 1 ^ 2 ^ 3 ^ 4 ^ 5 ^ 6 ^ 7 ^ 8 ^ 9 ^ 10 ^ 11 ^ 12 ^ 13 ^ 14 ^ 15 ^ 16;
+            Assert.IsTrue(m.GetHashCode() == ans);
+        }
+        [TestMethod]
+        public void TestToString()
+        {
+            DDD.Matrix m = new DDD.Matrix((double)1/3,    (double)-1/3, (double)+1/3, 123.456789,
+                                          (double)1/2,    (double)-1/2, (double)+1/2,          8,
+                                                  0.0,            -0.0,         +0.0, 1234567890,
+                                         -.1234567890, -00001234567890,      000.000,      -01.0);
+            string ans = "            0.33            -0.33             0.33           123.46\n" +
+                         "             0.5             -0.5              0.5                8\n" +
+                         "               0               -0                0    1,234,567,890\n" +
+                         "           -0.12   -1,234,567,890                0               -1\n";
+            Assert.IsTrue(m.ToString() == ans);
+        }
+        [TestMethod]
         public void TranslateXYZ()
         {
             DDD.Matrix m = DDD.Matrix.Translate(1, 2, 3);
@@ -175,8 +231,8 @@ namespace DDD_UnitTest
         [TestMethod]
         public void Determinate()
         {
-            DDD.Matrix m = new DDD.Matrix(1, 2, 3, 4,
-                                           5, 6, 7, 8,
+            DDD.Matrix m = new DDD.Matrix( 1,  2,  3,  4,
+                                           5,  6,  7,  8,
                                            9, 10, 11, 12,
                                           13, 14, 15, 16);
             Assert.IsTrue(m.Determinate() == 0);
@@ -224,20 +280,21 @@ namespace DDD_UnitTest
         [TestMethod]
         public void MultiplyMatrixByMatrix()
         {
-            DDD.Matrix m1 = new DDD.Matrix(1, 2, 3, 4,
-                                            5, 6, 7, 8,
+            DDD.Matrix m1 = new DDD.Matrix( 1,  2,  3,  4,
+                                            5,  6,  7,  8,
                                             9, 10, 11, 12,
                                            13, 14, 15, 16);
-            DDD.Matrix m2 = new DDD.Matrix(3, 11, -3, 2,
-                                           -2, 2, 99, 18,
-                                           59, 17, 121, 112,
-                                            3, 4, -5, 106);
+            DDD.Matrix m2 = new DDD.Matrix(  3, 11,  -3,   2,
+                                            -2,  2,  99,  18,
+                                            59, 17, 121, 112,
+                                             3,  4,  -5, 106);
             // answer verified by http://matrix.reshish.com/multCalculation.php
             string ans = "             188               82              538              798\n" +
                          "             440              218            1,386            1,750\n" +
                          "             692              354            2,234            2,702\n" +
                          "             944              490            3,082            3,654\n";
             Assert.IsTrue((m1 * m2).ToString() == ans);
+            Assert.IsTrue(DDD.Matrix.Multiply(m1, m2).ToString() == ans);
         }
         [TestMethod]
         public void MultiplyMatrixByScaler()
@@ -248,6 +305,7 @@ namespace DDD_UnitTest
                          "               0                0                3                0\n" +
                          "               0                0                0                3\n";
             Assert.IsTrue((m * 3.0).ToString() == ans);
+            Assert.IsTrue(DDD.Matrix.Multiply(m, 3.0).ToString() == ans);
         }
         [TestMethod]
         public void MultiplyScalerByMatrix()
@@ -258,6 +316,7 @@ namespace DDD_UnitTest
                          "               0                0                3                0\n" +
                          "               0                0                0                3\n";
             Assert.IsTrue((3.0 * m).ToString() == ans);
+            Assert.IsTrue(DDD.Matrix.Multiply(3.0, m).ToString() == ans);
         }
         [TestMethod]
         public void MultiplyMatrixByVector()
@@ -266,6 +325,7 @@ namespace DDD_UnitTest
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             string ans = "[1 2 3]\n";
             Assert.IsTrue((m * v).ToString() == ans);
+            Assert.IsTrue(DDD.Matrix.Multiply(m, v).ToString() == ans);
         }
         [TestMethod]
         public void MultiplyMatrixByPoint()
@@ -274,15 +334,16 @@ namespace DDD_UnitTest
             DDD.Point p = new DDD.Point(3, 2, 1);
             string ans = "(3 2 1)\n";
             Assert.IsTrue((m * p).ToString() == ans);
+            Assert.IsTrue(DDD.Matrix.Multiply(m, p).ToString() == ans);
         }
         [TestMethod]
         public void AddMatrixToMatrix()
         {
-            var m1 = new DDD.Matrix(1, 2, 3, 4,
-                                     5, 6, 7, 8,
+            var m1 = new DDD.Matrix( 1,  2,  3,  4,
+                                     5,  6,  7,  8,
                                      9, 10, 11, 12,
                                     13, 14, 15, 16);
-            var m2 = new DDD.Matrix(2, 4, 6, 8,
+            var m2 = new DDD.Matrix(2,  4,   6,  8,
                                     10, 12, 14, 16,
                                     18, 20, 22, 24,
                                     26, 28, 30, 32);
@@ -291,6 +352,7 @@ namespace DDD_UnitTest
                          "              27               30               33               36\n" +
                          "              39               42               45               48\n";
             Assert.IsTrue((m1 + m2).ToString() == ans);
+            Assert.IsTrue(DDD.Matrix.Add(m1, m2).ToString() == ans);
         }
         [TestMethod]
         public void Zero()
