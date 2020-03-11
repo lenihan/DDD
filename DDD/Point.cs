@@ -44,7 +44,7 @@ namespace DDD
             if (values.Length > 1) Y = double.Parse(values[1], System.Globalization.CultureInfo.InvariantCulture);
             if (values.Length > 2) Z = double.Parse(values[2], System.Globalization.CultureInfo.InvariantCulture);
         }
-        public bool Equals(Point p) => p == null ? false : (X == p.X) && (Y == p.Y);
+        public bool Equals(Point p) => p == null ? false : (X == p.X) && (Y == p.Y) && (Z == p.Z);
         public override bool Equals(object obj)
         {
             //Check for null and compare run-time types.
@@ -55,7 +55,7 @@ namespace DDD
             else
             {
                 Point p = (Point)obj;
-                return (X == p.X) && (Y == p.Y);
+                return (X == p.X) && (Y == p.Y) && (Z == p.Z);
             }
         }
         public override int GetHashCode() => (int)X ^ (int)Y ^ (int)Z;
@@ -77,28 +77,20 @@ namespace DDD
         public static Point operator +(Point p1, Point p2) => new Point(p1.X + p2.X,
                                                                         p1.Y + p2.Y,
                                                                         p1.Z + p2.Z);
-        public static Point Add(Point p1, Point p2) => new Point(p1.X + p2.X,
-                                                                 p1.Y + p2.Y,
-                                                                 p1.Z + p2.Z);
+        public static Point Add(Point p1, Point p2) => p1 + p2;
         public static Vector operator -(Point p1, Point p2) => new Vector(p1.X - p2.X,
                                                                           p1.Y - p2.Y,
                                                                           p1.Z - p2.Z);
-        public static Vector Subtract(Point p1, Point p2) => new Vector(p1.X - p2.X,
-                                                                        p1.Y - p2.Y,
-                                                                        p1.Z - p2.Z);
+        public static Vector Subtract(Point p1, Point p2) => p1 - p2;
         public static Point operator *(double s, Point p) => new Point(s * p.X,
                                                                        s * p.Y,
                                                                        s * p.Z);
-        public static Point Multiply(double s, Point p) => new Point(s * p.X,
-                                                                     s * p.Y,
-                                                                     s * p.Z);
+        public static Point Multiply(double s, Point p) => s * p;
         public static Point operator *(Point p, double s) => s * p;
-        public static Point Multiply(Point p, double s) => s * p;
+        public static Point Multiply(Point p, double s) => p * s;
         public static Point operator /(Point p, double s) => new Point(p.X / s,
                                                                        p.Y / s,
                                                                        p.Z / s);
-        public static Point Divide(Point p, double s) => new Point(p.X / s,
-                                                                   p.Y / s,
-                                                                   p.Z / s);
+        public static Point Divide(Point p, double s) => p / s;
     }
 }

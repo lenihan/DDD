@@ -24,6 +24,12 @@ namespace DDD_UnitTest
             Assert.IsTrue(v.ToString() == "[1 2 3]\n");
         }
         [TestMethod]
+        public void ConstructorWithNullArray()
+        {
+            double[] arr = null;
+            DDD.Vector v = new DDD.Vector(arr);
+            Assert.IsTrue(v.ToString() == "[0 0 0]\n");
+        }
         public void ConstructorWithEmptyArray()
         {
             double[] arr = { };
@@ -57,6 +63,13 @@ namespace DDD_UnitTest
             double[] arr = { 40, 30, 20, 10 };
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[40 30 20]\n");
+        }
+        [TestMethod]
+        public void ConstructorWithNullString()
+        {
+            string str = null;
+            DDD.Vector v = new DDD.Vector(str);
+            Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
         [TestMethod]
         public void ConstructorWithEmptyString()
@@ -129,6 +142,36 @@ namespace DDD_UnitTest
             Assert.IsTrue(v.ToString() == "[11 22 33]\n");
         }
         [TestMethod]
+        public void TestEquals()
+        {
+            DDD.Vector? v1 = new DDD.Vector(1, 2, 3);
+            DDD.Vector? v2 = null;
+            DDD.Vector? v3 = new DDD.Vector(1, 2, 3);
+            DDD.Vector? v4 = new DDD.Vector(4, 5, 6);
+            DDD.Vector? v5 = null;
+
+            Assert.IsTrue(v1.Equals(v3));
+            Assert.IsTrue(!v1.Equals(v4));
+
+            Assert.IsTrue(!v1.Equals((object)v2));
+            Assert.IsTrue(!v1.Equals((object)123));
+            Assert.IsTrue(v1.Equals((object)v3));
+            Assert.IsTrue(!v1.Equals((object)v4));
+
+            Assert.IsTrue(v2 == v5);
+            Assert.IsTrue(v1 == v3);
+
+            Assert.IsTrue(v1 != v2);
+            Assert.IsTrue(v1 != v4);
+        }
+        [TestMethod]
+        public void TestGetHashCode()
+        {
+            DDD.Vector p = new DDD.Vector(2, 3, 4);
+            int ans = 5; // 2 ^ 3 ^ 4;
+            Assert.IsTrue(p.GetHashCode() == ans);
+        }
+        [TestMethod]
         public void TestToString()
         {
             DDD.Vector v = new DDD.Vector(123456789, 123456789.12345, 1000000000000);
@@ -165,6 +208,7 @@ namespace DDD_UnitTest
             DDD.Vector v1 = new DDD.Vector(1, 2, 3);
             DDD.Vector v2 = new DDD.Vector(6, -2, 8);
             Assert.IsTrue((v1 + v2).ToString() == "[7 0 11]\n");
+            Assert.IsTrue(DDD.Vector.Add(v1, v2).ToString() == "[7 0 11]\n");
         }
         [TestMethod]
         public void TestAddVectorPoint()
@@ -172,6 +216,7 @@ namespace DDD_UnitTest
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             DDD.Point p = new DDD.Point(1, 2, 3);
             Assert.IsTrue((v + p).ToString() == "(2 4 6)\n");
+            Assert.IsTrue(DDD.Vector.Add(v, p).ToString() == "(2 4 6)\n");
         }
         [TestMethod]
         public void TestAddPointVector()
@@ -179,6 +224,7 @@ namespace DDD_UnitTest
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             DDD.Point p = new DDD.Point(1, 2, 3);
             Assert.IsTrue((p + v).ToString() == "(2 4 6)\n");
+            Assert.IsTrue(DDD.Vector.Add(p, v).ToString() == "(2 4 6)\n");
         }
         [TestMethod]
         public void TestSubtractVectorVector()
@@ -186,30 +232,35 @@ namespace DDD_UnitTest
             DDD.Vector v1 = new DDD.Vector(4, 5, 6);
             DDD.Vector v2 = new DDD.Vector(3, 2, 1);
             Assert.IsTrue((v1 - v2).ToString() == "[1 3 5]\n");
+            Assert.IsTrue(DDD.Vector.Subtract(v1, v2).ToString() == "[1 3 5]\n");
         }
         [TestMethod]
         public void TestMultiplyVectorScaler()
         {
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             Assert.IsTrue((v * 2).ToString() == "[2 4 6]\n");
+            Assert.IsTrue(DDD.Vector.Multiply(v, 2).ToString() == "[2 4 6]\n");
         }
         [TestMethod]
         public void TestMultiplyScalerVector()
         {
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             Assert.IsTrue((2 * v).ToString() == "[2 4 6]\n");
+            Assert.IsTrue(DDD.Vector.Multiply(2, v).ToString() == "[2 4 6]\n");
         }
         [TestMethod]
         public void TestDivideVectorScaler()
         {
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             Assert.IsTrue((v / 2).ToString() == "[0.5 1 1.5]\n");
+            Assert.IsTrue(DDD.Vector.Divide(v, 2).ToString() == "[0.5 1 1.5]\n");
         }
         [TestMethod]
         public void TestNegate()
         {
             DDD.Vector v = new DDD.Vector(1, 2, 3);
             Assert.IsTrue((-v).ToString() == "[-1 -2 -3]\n");
+            Assert.IsTrue(DDD.Vector.Negate(-v).ToString() == "[-1 -2 -3]\n");
         }
         [TestMethod]
         public void TestDot()
