@@ -20,7 +20,7 @@ try {
 } 
 catch {
     Write-Host $_.Exception.Message -ForegroundColor Red
-    Write-Host "Try 'exit' to free file." -ForegroundColor Yellow
+    Write-Host "Kill process to free file." -ForegroundColor Yellow
     return
 }
 Copy-Item $root\assets\functions.ps1 $root\publish\DDD
@@ -43,7 +43,7 @@ if ($PowerShellGallery) {
 }
 else {
     # Publish locally for testing
-    Write-Host "# Creating new pwsh. Exit to release files in use." -ForegroundColor Green
     Write-Host "# Import-Module -Force -Verbose $root\publish\DDD" -ForegroundColor Green
-    pwsh -NoExit -Command Import-Module -Force -Verbose $root\publish\DDD
+    # Creating new pwsh in a window. Exit to release files in use.
+    Start-Process -FilePath "pwsh" -ArgumentList "-NoExit -Command Import-Module -Force -Verbose $root\publish\DDD"
 }
