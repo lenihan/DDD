@@ -1,5 +1,6 @@
 ﻿using System.Management.Automation;             //Windows PowerShell namespace
 using System.Diagnostics;
+using System;
 // Defining input from the pipeline
 // https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/adding-parameters-that-process-pipeline-input?view=powershell-7
 
@@ -11,43 +12,71 @@ namespace DDD
     [Cmdlet(VerbsData.Out, "3d")]
     public class Out3dCommand : Cmdlet
     {
-        private DDD.Point[] p;
-        private DDD.Vector[] v;
-        private DDD.Matrix[] m;
+
         [Parameter(
             ValueFromPipeline = true,
             ValueFromPipelineByPropertyName = true)]
-        // [ValidateNotNullOrEmpty]
-        public DDD.Point[] Point
+        public ValueType InputValue;
+
+        protected override void BeginProcessing()
         {
-            get { return this.p; }
-            set { this.p = value; }
-        }
-        [Parameter(
-            ValueFromPipeline = true,
-            ValueFromPipelineByPropertyName = true)]
-        // [ValidateNotNullOrEmpty]
-        public DDD.Vector[] Vector
-        {
-            get { return this.v; }
-            set { this.v = value; }
-        }
-        [Parameter(
-            ValueFromPipeline = true,
-            ValueFromPipelineByPropertyName = true)]
-        // [ValidateNotNullOrEmpty]
-        public DDD.Matrix[] Matrix
-        {
-            get { return this.m; }
-            set { this.m = value; }
+        // Replace the WriteObject method with the logic required by your cmdlet.
+        WriteObject("This is a test of the BeginProcessing template.");
         }
         protected override void ProcessRecord()
         {
             WriteObject("ProcessRecord");
-            if (p != null) WriteObject(p);
-            if (v != null) WriteObject(v);
-            if (m != null) WriteObject(m);
-        }        
+            WriteObject(InputValue.GetType());
+            WriteObject(InputValue);
+        }
+        protected override void EndProcessing()
+        {
+        // Replace the WriteObject method with the logic required by your cmdlet.
+        WriteObject("This is a test of the EndProcessing template.");
+        }
+
+
+
+        // private DDD.Point[] p;
+        // private DDD.Vector[] v;
+        // private DDD.Matrix[] m;
+        // [Parameter(
+        //     ValueFromPipeline = true,
+        //     ValueFromPipelineByPropertyName = true)]
+        // // [ValidateNotNullOrEmpty]
+        // public DDD.Point[] Point
+        // {
+        //     get { return this.p; }
+        //     set { this.p = value; }
+        // }
+        // [Parameter(
+        //     ValueFromPipeline = true,
+        //     ValueFromPipelineByPropertyName = true)]
+        // // [ValidateNotNullOrEmpty]
+        // public DDD.Vector[] Vector
+        // {
+        //     get { return this.v; }
+        //     set { this.v = value; }
+        // }
+        // [Parameter(
+        //     ValueFromPipeline = true,
+        //     ValueFromPipelineByPropertyName = true)]
+        // // [ValidateNotNullOrEmpty]
+        // public DDD.Matrix[] Matrix
+        // {
+        //     get { return this.m; }
+        //     set { this.m = value; }
+        // }
+        // protected override void ProcessRecord()
+        // {
+        //     WriteObject("ProcessRecord");
+        //     if (p != null) WriteObject(p);
+        //     if (v != null) WriteObject(v);
+        //     if (m != null) WriteObject(m);
+        // }
+
+
+
         // private DDD.Point p;
         // [Parameter(
         //     Position = 0,
