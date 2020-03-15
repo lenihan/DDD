@@ -1,7 +1,7 @@
-# VERBS
-# New       = n     (from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7)
-# Get       = g     (from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7)
-# Out       = o     (from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7)
+# VERBS - from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7
+# New       = n     
+# Get       = g     
+# Out       = o     
 
 # NOUNS
 # Point     = pt
