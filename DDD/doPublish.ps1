@@ -54,10 +54,6 @@ $manifestArgs = [ordered]@{
     CmdletsToExport    = $cmdlets                                                
     Tags               = $tags
 }
-Write-Host '# $manifestArgs = @{' -ForegroundColor Green
-foreach ($k in $manifestArgs.Keys) {
-    Write-Host "#     $k = '$($manifestArgs[$k])'" -ForegroundColor Green
-}
 Write-Host '# $manifestArgs contents: ' -ForegroundColor Green
 $manifestArgs
 
@@ -66,7 +62,6 @@ Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
 
 if ($PowerShellGallery) {
-    # Publish-Module -Name $root\publish\DDD -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca
     $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca"
     Write-Host "# $cmd" -ForegroundColor Green
     Invoke-Expression $cmd   
