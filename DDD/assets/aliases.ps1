@@ -1,5 +1,9 @@
+# VERBS
 # New       = n     (from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7)
 # Get       = g     (from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7)
+# Out       = o     (from https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/approved-verbs-for-windows-powershell-commands?view=powershell-7)
+
+# NOUNS
 # Point     = pt
 # Vector    = vec
 # Matrix    = mat
@@ -36,3 +40,5 @@ Set-Alias -Name cross -Value Get-CrossProduct
 
 Set-Alias -Name gdp -Value Get-DotProduct
 Set-Alias -Name dot -Value Get-DotProduct
+
+Set-Alias -Name o3d -Value Out-3d
