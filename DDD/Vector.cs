@@ -57,7 +57,7 @@ namespace DDD
                 return Equals((Vector)obj);
             }
         }
-        public override int GetHashCode() => (int)X ^ (int)Y ^ (int)Z;
+        public override int GetHashCode() => X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode();
         public override string ToString()
         {
             // https://ss64.com/ps/syntax-f-operator.html

@@ -30,9 +30,9 @@ namespace DDD_UnitTest
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
-        public void ConstructorWithEmptyArray()
+        static public void ConstructorWithEmptyArray()
         {
-            double[] arr = { };
+            double[] arr = System.Array.Empty<double>();
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
@@ -167,8 +167,8 @@ namespace DDD_UnitTest
         [TestMethod]
         public void TestGetHashCode()
         {
-            DDD.Vector p = new DDD.Vector(2, 3, 4);
-            int ans = 5; // 2 ^ 3 ^ 4;
+            DDD.Vector p = new DDD.Vector(2.3, -3.112, 4.123);
+            int ans = 1370492436; // from previous run
             Assert.IsTrue(p.GetHashCode() == ans);
         }
         [TestMethod]

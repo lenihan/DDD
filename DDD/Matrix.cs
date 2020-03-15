@@ -87,10 +87,10 @@ namespace DDD
         }
         public override int GetHashCode()
         {
-            int row1 = (int)M11 ^ (int)M12 ^ (int)M13 ^ (int)M14;
-            int row2 = (int)M21 ^ (int)M22 ^ (int)M23 ^ (int)M24;
-            int row3 = (int)M31 ^ (int)M32 ^ (int)M33 ^ (int)M34;
-            int row4 = (int)M41 ^ (int)M42 ^ (int)M43 ^ (int)M44;
+            int row1 = M11.GetHashCode() ^ M12.GetHashCode() ^ M13.GetHashCode() ^ M14.GetHashCode();
+            int row2 = M21.GetHashCode() ^ M22.GetHashCode() ^ M23.GetHashCode() ^ M24.GetHashCode();
+            int row3 = M31.GetHashCode() ^ M32.GetHashCode() ^ M33.GetHashCode() ^ M34.GetHashCode();
+            int row4 = M41.GetHashCode() ^ M42.GetHashCode() ^ M43.GetHashCode() ^ M44.GetHashCode();
             return row1 ^ row2 ^ row3 ^ row4;
         }
 

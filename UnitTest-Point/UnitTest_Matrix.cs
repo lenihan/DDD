@@ -31,10 +31,10 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithMatrix()
         {
-            DDD.Matrix m1 = new DDD.Matrix( 0, 1,   2,  3,
-                                            4, 5,   6,  7,
-                                            8, 9,  10, 11,
-                                           12, 13, 14, 15);
+            DDD.Matrix m1 = new DDD.Matrix(  0, 1,   2,  3,
+                                             4, 5,   6,  7,
+                                             8, 9,  10, 11,
+                                            12, 13, 14, 15);
             DDD.Matrix m2 = new DDD.Matrix(m1);
             string ans = "               0                1                2                3\n" +
                          "               4                5                6                7\n" +
@@ -54,9 +54,9 @@ namespace DDD_UnitTest
                          "               0                0                0                0\n";
             Assert.IsTrue(m.ToString() == ans);
         }
-        public void ConstructorWithEmptyArray()
+        static public void ConstructorWithEmptyArray()
         {
-            double[] arr = { };
+            double[] arr = System.Array.Empty<double>();
             DDD.Matrix m = new DDD.Matrix(arr);
             string ans = "               0                0                0                0\n" +
                          "               0                0                0                0\n" +
@@ -147,11 +147,11 @@ namespace DDD_UnitTest
         [TestMethod]
         public void TestGetHashCode()
         {
-            DDD.Matrix m = new DDD.Matrix(1, 2, 3, 4,
-                                          5, 6, 7, 8,
-                                          9, 10, 11, 12,
-                                         13, 14, 15, 16);
-            int ans = 16; // 1 ^ 2 ^ 3 ^ 4 ^ 5 ^ 6 ^ 7 ^ 8 ^ 9 ^ 10 ^ 11 ^ 12 ^ 13 ^ 14 ^ 15 ^ 16;
+            DDD.Matrix m = new DDD.Matrix(   0.0,     .2,        .3,  4.0294,
+                                          5.1232,  6.482,      7.22, 8.24342,
+                                           9.123,     10, -11.12322, 12.9053,
+                                              13, 14.123,    15.122,  16.123);
+            int ans = -455996391; // from previous run
             Assert.IsTrue(m.GetHashCode() == ans);
         }
         [TestMethod]
