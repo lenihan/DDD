@@ -31,8 +31,8 @@ namespace DDD
         }
         protected override void EndProcessing()
         {
-        // Replace the WriteObject method with the logic required by your cmdlet.
-        WriteObject("This is a test of the EndProcessing template.");
+            // Replace the WriteObject method with the logic required by your cmdlet.
+            WriteObject("This is a test of the EndProcessing template.");
         }
 
 
