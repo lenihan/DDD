@@ -13,37 +13,66 @@ $tags           = @('3D', 'ply', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
 $cmdlets        = @('Out-3d')
 
-dotnet build $root\DDD.csproj --configuration Release
-$null = mkdir $root\publish\DDD -Force
+$cmd = "dotnet build '$root\DDD.csproj' --configuration Release"
+Write-Host "# $cmd" -ForegroundColor Green
+Invoke-Expression $cmd
+
+$cmd = "mkdir '$root\publish\DDD' -Force | Out-Null"
+Write-Host "# $cmd" -ForegroundColor Green
+Invoke-Expression $cmd
+
 try {
-    Copy-Item $root\bin\Release\netcoreapp3.1\DDD.dll $root\publish\DDD -ErrorAction Stop
+    $cmd = "Copy-Item '$root\bin\Release\netcoreapp3.1\DDD.dll' '$root\publish\DDD' -ErrorAction Stop"
+    Write-Host "# $cmd" -ForegroundColor Green
+    Invoke-Expression $cmd
+    
 } 
 catch {
     Write-Host $_.Exception.Message -ForegroundColor Red
     Write-Host "Kill process to free file." -ForegroundColor Yellow
     return
 }
-Copy-Item $root\assets\functions.ps1 $root\publish\DDD
-Copy-Item $root\assets\aliases.ps1 $root\publish\DDD
-New-ModuleManifest                                                              `
-    -Path               $root\publish\DDD\DDD.psd1                              `
-    -RootModule         $moduleName                                             `
-    -ModuleVersion      $version                                                `
-    -Author             $name                                                   `
-    -CompanyName        $name                                                   `
-    -Copyright          "Copyright = '(c) $name. All rights reserved.'"         `
-    -Description        $description                                            `
-    -RequiredAssemblies $reqAssemblies                                          `
-    -ScriptsToProcess   $scripts                                                `
-    -CmdletsToExport    $cmdlets                                                `
-    -Tags               $tags
+
+$cmd = "Copy-Item '$root\assets\functions.ps1' '$root\publish\DDD'"
+Write-Host "# $cmd" -ForegroundColor Green
+Invoke-Expression $cmd
+
+$cmd = "Copy-Item '$root\assets\aliases.ps1' '$root\publish\DDD'"
+Write-Host "# $cmd" -ForegroundColor Green
+Invoke-Expression $cmd
+
+$manifestArgs = [ordered]@{
+    Path               = "$root\publish\DDD\DDD.psd1"
+    RootModule         = $moduleName                                             
+    ModuleVersion      = $version                                                
+    Author             = $name                                                   
+    CompanyName        = $name                                                   
+    Copyright          = "Copyright = '(c) $name. All rights reserved.'"         
+    Description        = $description                                            
+    RequiredAssemblies = $reqAssemblies                                          
+    ScriptsToProcess   = $scripts                                                
+    CmdletsToExport    = $cmdlets                                                
+    Tags               = $tags
+}
+Write-Host '# $manifestArgs = @{' -ForegroundColor Green
+foreach ($k in $manifestArgs.Keys) {
+    Write-Host "#     $k = '$($manifestArgs[$k])'" -ForegroundColor Green
+}
+Write-Host '# $manifestArgs contents: ' -ForegroundColor Green
+$manifestArgs
+
+$cmd = "New-ModuleManifest @manifestArgs"
+Write-Host "# $cmd" -ForegroundColor Green
+Invoke-Expression $cmd
 
 if ($PowerShellGallery) {
-    Publish-Module -Name $root\publish\DDD -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca
+    # Publish-Module -Name $root\publish\DDD -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca
+    $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca"
+    Write-Host "# $cmd" -ForegroundColor Green
+    Invoke-Expression $cmd   
 }
 else {
-    # Publish locally for testing
-    Write-Host "# Import-Module -Force -Verbose $root\publish\DDD" -ForegroundColor Green
-    # Creating new pwsh in a window. Exit to release files in use.
-    Start-Process -FilePath "pwsh" -ArgumentList "-NoExit -Command Import-Module -Force -Verbose $root\publish\DDD"
+    $cmd = "Start-Process -FilePath 'pwsh' -ArgumentList '-NoExit -Command Import-Module -Force -Verbose $root\publish\DDD'"
+    Write-Host "# $cmd" -ForegroundColor Green
+    Invoke-Expression $cmd   
 }
