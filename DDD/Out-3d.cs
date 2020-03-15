@@ -12,8 +12,9 @@ namespace DDD
     public class Out3dCommand : Cmdlet
     {
         private DDD.Point[] p;
+        private DDD.Vector[] v;
+        private DDD.Matrix[] m;
         [Parameter(
-            Position = 0,
             ValueFromPipeline = true,
             ValueFromPipelineByPropertyName = true)]
         // [ValidateNotNullOrEmpty]
@@ -22,9 +23,30 @@ namespace DDD
             get { return this.p; }
             set { this.p = value; }
         }
+        [Parameter(
+            ValueFromPipeline = true,
+            ValueFromPipelineByPropertyName = true)]
+        // [ValidateNotNullOrEmpty]
+        public DDD.Vector[] Vector
+        {
+            get { return this.v; }
+            set { this.v = value; }
+        }
+        [Parameter(
+            ValueFromPipeline = true,
+            ValueFromPipelineByPropertyName = true)]
+        // [ValidateNotNullOrEmpty]
+        public DDD.Matrix[] Matrix
+        {
+            get { return this.m; }
+            set { this.m = value; }
+        }
         protected override void ProcessRecord()
         {
-            WriteObject(p);
+            WriteObject("ProcessRecord");
+            if (p != null) WriteObject(p);
+            if (v != null) WriteObject(v);
+            if (m != null) WriteObject(m);
         }        
         // private DDD.Point p;
         // [Parameter(
