@@ -1,4 +1,4 @@
-﻿using System.Management.Automation;             //Windows PowerShell namespace
+﻿using System.Management.Automation;             // Windows PowerShell namespace
 using System.Diagnostics;
 using System;
 // Defining input from the pipeline
@@ -16,23 +16,40 @@ namespace DDD
         [Parameter(
             ValueFromPipeline = true,
             ValueFromPipelineByPropertyName = true)]
-        public ValueType InputValue;
+        public ValueType[] InputValue;
 
         protected override void BeginProcessing()
         {
-        // Replace the WriteObject method with the logic required by your cmdlet.
-        WriteObject("This is a test of the BeginProcessing template.");
+            Console.WriteLine("BeginProcessing");
         }
+        
         protected override void ProcessRecord()
         {
-            WriteObject("ProcessRecord");
-            WriteObject(InputValue.GetType());
+            Console.WriteLine("ProcessRecord");            
+            if (InputValue is null) 
+            {
+                Console.WriteLine("Got null");
+            }
+            else if (InputValue.Length == 0)
+            {
+                Console.WriteLine("Got empty array");
+                Console.WriteLine(InputValue[0].GetType().ToString());
+            }
+            else if (InputValue.Length == 1) 
+            {
+                Console.WriteLine("Got array length 1");
+                Console.WriteLine(InputValue[0].GetType().ToString());
+            }
+            else 
+            {                
+                Console.WriteLine(String.Format(System.Globalization.CultureInfo.InvariantCulture, "Got array length {0}", InputValue.Length));
+                Console.WriteLine(InputValue[0].GetType().ToString());
+            }
             WriteObject(InputValue);
         }
         protected override void EndProcessing()
         {
-            // Replace the WriteObject method with the logic required by your cmdlet.
-            WriteObject("This is a test of the EndProcessing template.");
+            Console.WriteLine("EndProcessing");
         }
 
 

@@ -16,6 +16,10 @@ $cmdlets        = @('Out-3d')
 $cmd = "dotnet build '$root\DDD.csproj' --configuration Release"
 Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "# Fix errors and re-run." -ForegroundColor Green
+    return
+}
 
 $cmd = "mkdir '$root\publish\DDD' -Force | Out-Null"
 Write-Host "# $cmd" -ForegroundColor Green
@@ -24,8 +28,7 @@ Invoke-Expression $cmd
 try {
     $cmd = "Copy-Item '$root\bin\Release\netcoreapp3.1\DDD.dll' '$root\publish\DDD' -ErrorAction Stop"
     Write-Host "# $cmd" -ForegroundColor Green
-    Invoke-Expression $cmd
-    
+    Invoke-Expression $cmd    
 } 
 catch {
     Write-Host $_.Exception.Message -ForegroundColor Red
