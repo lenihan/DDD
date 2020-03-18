@@ -37,7 +37,7 @@ display()
 }
 
 
-LONG WINAPI
+LRESULT WINAPI
 WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     static PAINTSTRUCT ps;
@@ -90,7 +90,7 @@ WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         return 0;
     }
-
+    
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
