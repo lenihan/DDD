@@ -21,6 +21,8 @@ namespace DDD
         protected override void BeginProcessing()
         {
             Console.WriteLine("BeginProcessing");
+            // var form = new System.Windows.Forms.Form();
+            // form.Show();
         }
         
         protected override void ProcessRecord()
