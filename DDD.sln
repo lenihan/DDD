@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Win32-OpenGL", "Win32-OpenGL\Win32-OpenGL.vcxproj", "{2D69347A-B1F1-4087-8F9E-9B0596F32E75}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNetCore-OpenGL", "DotNetCore-OpenGL\DotNetCore-OpenGL.csproj", "{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Win32-OpenGL-DLL", "Win32-OpenGL-DLL\Win32-OpenGL-DLL.vcxproj", "{9CCE90DA-C194-479F-8026-7D3CF7C13396}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +62,28 @@ Global
 		{2D69347A-B1F1-4087-8F9E-9B0596F32E75}.Release|x64.Build.0 = Release|x64
 		{2D69347A-B1F1-4087-8F9E-9B0596F32E75}.Release|x86.ActiveCfg = Release|Win32
 		{2D69347A-B1F1-4087-8F9E-9B0596F32E75}.Release|x86.Build.0 = Release|Win32
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Debug|x64.Build.0 = Debug|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Debug|x86.Build.0 = Debug|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Release|x64.ActiveCfg = Release|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Release|x64.Build.0 = Release|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Release|x86.ActiveCfg = Release|Any CPU
+		{E7FE1D1B-4FA1-41F0-870E-B8DCD76EA666}.Release|x86.Build.0 = Release|Any CPU
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Debug|x64.ActiveCfg = Debug|x64
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Debug|x64.Build.0 = Debug|x64
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Debug|x86.ActiveCfg = Debug|Win32
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Debug|x86.Build.0 = Debug|Win32
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Release|Any CPU.ActiveCfg = Release|Win32
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Release|x64.ActiveCfg = Release|x64
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Release|x64.Build.0 = Release|x64
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Release|x86.ActiveCfg = Release|Win32
+		{9CCE90DA-C194-479F-8026-7D3CF7C13396}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
