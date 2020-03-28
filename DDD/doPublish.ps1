@@ -12,6 +12,7 @@ $reqAssemblies  = @('DDD.dll')
 $tags           = @('3D', 'ply', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
 $cmdlets        = @('Out-3d')
+$aliases        = @('o3d')
 
 $cmd = "dotnet build '$root\DDD.csproj' --configuration Release"
 Write-Host "# $cmd" -ForegroundColor Green
@@ -56,6 +57,7 @@ $manifestArgs = [ordered]@{
     ScriptsToProcess   = $scripts                                                
     CmdletsToExport    = $cmdlets                                                
     Tags               = $tags
+    AliasesToExport    = $aliases
 }
 Write-Host '# $manifestArgs contents: ' -ForegroundColor Green
 $manifestArgs

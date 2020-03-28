@@ -13,9 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Management.Automation" Version="7.0.0"/> 
+  <!--
     <Reference Include="System.Management.Automation">
       <HintPath>\Program Files\PowerShell\7\System.Management.Automation.dll</HintPath>
     </Reference>
+
+  -->
   </ItemGroup>
 
 </Project>

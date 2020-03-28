@@ -40,5 +40,3 @@ Set-Alias -Name cross -Value Get-CrossProduct
 
 Set-Alias -Name gdp -Value Get-DotProduct
 Set-Alias -Name dot -Value Get-DotProduct
-
-Set-Alias -Name o3d -Value Out-3d
