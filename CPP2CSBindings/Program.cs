@@ -30,13 +30,11 @@ namespace CPP2CSBindings
         {
             var options = driver.Options;
             options.GeneratorKind = GeneratorKind.CSharp;
-            //options.OutputDir = "DDDCppSharp-Windows";
-
-            var module = options.AddModule("DDDCppSharp-Windows");
-            module.IncludeDirs.Add(@"C:\Program Files(x86)\Windows Kits\10\Include\10.0.18362.0\um");
-            module.Headers.Add("windows.h");
-            module.LibraryDirs.Add(@"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.18362.0\um\x64");
-            module.Libraries.Add("User32.lib");
+            var module = options.AddModule("Sample");
+            module.IncludeDirs.Add(@"C:\Users\David\src\DDD\Win32-OpenGL-DLL");
+            module.Headers.Add("Win32-OpenGL-DLL.h");
+            module.LibraryDirs.Add(@"C:\Users\David\src\DDD\x64\Debug");
+            module.Libraries.Add("Win32-OpenGL-DLL.lib");
         }
         // Setup your passes here.
         public void SetupPasses(Driver driver) { }
