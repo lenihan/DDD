@@ -31,10 +31,15 @@ namespace CPP2CSBindings
             var options = driver.Options;
             options.GeneratorKind = GeneratorKind.CSharp;
             var module = options.AddModule("Sample");
-            module.IncludeDirs.Add(@"C:\Users\David\src\DDD\Win32-OpenGL-DLL");
-            module.Headers.Add("Win32-OpenGL-DLL.h");
-            module.LibraryDirs.Add(@"C:\Users\David\src\DDD\x64\Debug");
-            module.Libraries.Add("Win32-OpenGL-DLL.lib");
+            //module.IncludeDirs.Add(@"C:\Users\David\src\DDD\Win32-OpenGL-DLL");
+            module.Headers.Add(@"C:\Users\David\src\DDD\Win32-OpenGL-DLL\Win32-OpenGL-DLL.h");
+            //module.LibraryDirs.Add(@"C:\Users\David\src\DDD\x64\Debug");
+            //module.Libraries.Add("Win32-OpenGL-DLL.lib");
+
+            //module.Headers.Add(@"C:\Program Files(x86)\Windows Kits\10\Include\10.0.18362.0\um\WinUser.h");
+            module.IncludeDirs.Add(@"C:\Program Files(x86)\Windows Kits\10\Include\10.0.18362.0\um");
+            module.Headers.Add("WinUser.h");
+            module.Headers.
         }
         // Setup your passes here.
         public void SetupPasses(Driver driver) { }
