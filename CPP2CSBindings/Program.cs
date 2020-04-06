@@ -39,7 +39,6 @@ namespace CPP2CSBindings
             //module.Headers.Add(@"C:\Program Files(x86)\Windows Kits\10\Include\10.0.18362.0\um\WinUser.h");
             module.IncludeDirs.Add(@"C:\Program Files(x86)\Windows Kits\10\Include\10.0.18362.0\um");
             module.Headers.Add("WinUser.h");
-            module.Headers.
         }
         // Setup your passes here.
         public void SetupPasses(Driver driver) { }
