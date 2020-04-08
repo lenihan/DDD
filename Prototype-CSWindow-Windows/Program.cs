@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Cache;
 using System.Runtime.InteropServices;
 
 namespace Prototype_CSWindow_Windows
@@ -6,25 +7,81 @@ namespace Prototype_CSWindow_Windows
     class Program
     {
         // From C:\Users\David\src\Avalonia\src\Windows\Avalonia.Win32\Interop\UnmanagedMethods.cs
-        public struct POINT
-        {
-            public int X;
-            public int Y;
-        }
-        public struct MSG
-        {
-            public IntPtr hwnd;
-            public uint message;
-            public IntPtr wParam;
-            public IntPtr lParam;
-            public uint time;
-            public POINT pt;
-        }
-
-
+        
+        // const
         public const int CW_USEDEFAULT = unchecked((int)0x80000000);
         public const int PM_NOREMOVE = 0x00000000;
 
+        // enum
+        [Flags]
+        public enum ClassStyles : uint
+        {
+            CS_VREDRAW = 0x0001,
+            CS_HREDRAW = 0x0002,
+            CS_DBLCLKS = 0x0008,
+            CS_OWNDC = 0x0020,
+            CS_CLASSDC = 0x0040,
+            CS_PARENTDC = 0x0080,
+            CS_NOCLOSE = 0x0200,
+            CS_SAVEBITS = 0x0800,
+            CS_BYTEALIGNCLIENT = 0x1000,
+            CS_BYTEALIGNWINDOW = 0x2000,
+            CS_GLOBALCLASS = 0x4000,
+            CS_IME = 0x00010000,
+            CS_DROPSHADOW = 0x00020000
+        }
+        [Flags]
+        public enum WindowStyles : uint
+        {
+            WS_BORDER = 0x800000,
+            WS_CAPTION = 0xc00000,
+            WS_CHILD = 0x40000000,
+            WS_CLIPCHILDREN = 0x2000000,
+            WS_CLIPSIBLINGS = 0x4000000,
+            WS_DISABLED = 0x8000000,
+            WS_DLGFRAME = 0x400000,
+            WS_GROUP = 0x20000,
+            WS_HSCROLL = 0x100000,
+            WS_MAXIMIZE = 0x1000000,
+            WS_MAXIMIZEBOX = 0x10000,
+            WS_MINIMIZE = 0x20000000,
+            WS_MINIMIZEBOX = 0x20000,
+            WS_OVERLAPPED = 0x0,
+            WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_SIZEFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
+            WS_POPUP = 0x80000000u,
+            WS_POPUPWINDOW = WS_POPUP | WS_BORDER | WS_SYSMENU,
+            WS_SIZEFRAME = 0x40000,
+            WS_SYSMENU = 0x80000,
+            WS_TABSTOP = 0x10000,
+            WS_VISIBLE = 0x10000000,
+            WS_VSCROLL = 0x200000,
+            WS_EX_DLGMODALFRAME = 0x00000001,
+            WS_EX_NOPARENTNOTIFY = 0x00000004,
+            WS_EX_TOPMOST = 0x00000008,
+            WS_EX_ACCEPTFILES = 0x00000010,
+            WS_EX_TRANSPARENT = 0x00000020,
+            WS_EX_MDICHILD = 0x00000040,
+            WS_EX_TOOLWINDOW = 0x00000080,
+            WS_EX_WINDOWEDGE = 0x00000100,
+            WS_EX_CLIENTEDGE = 0x00000200,
+            WS_EX_CONTEXTHELP = 0x00000400,
+            WS_EX_RIGHT = 0x00001000,
+            WS_EX_LEFT = 0x00000000,
+            WS_EX_RTLREADING = 0x00002000,
+            WS_EX_LTRREADING = 0x00000000,
+            WS_EX_LEFTSCROLLBAR = 0x00004000,
+            WS_EX_RIGHTSCROLLBAR = 0x00000000,
+            WS_EX_CONTROLPARENT = 0x00010000,
+            WS_EX_STATICEDGE = 0x00020000,
+            WS_EX_APPWINDOW = 0x00040000,
+            WS_EX_OVERLAPPEDWINDOW = WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE,
+            WS_EX_PALETTEWINDOW = WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+            WS_EX_LAYERED = 0x00080000,
+            WS_EX_NOINHERITLAYOUT = 0x00100000,
+            WS_EX_LAYOUTRTL = 0x00400000,
+            WS_EX_COMPOSITED = 0x02000000,
+            WS_EX_NOACTIVATE = 0x08000000
+        }
         public enum WindowsMessage : uint
         {
             WM_NULL = 0x0000,
@@ -258,17 +315,62 @@ namespace Prototype_CSWindow_Windows
 
             WM_DISPATCH_WORK_ITEM = WM_USER,
         }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
+        public enum ShowWindowCommand
         {
-            public int Left;        // x position of upper-left corner
-            public int Top;         // y position of upper-left corner
-            public int Right;       // x position of lower-right corner
-            public int Bottom;      // y position of lower-right corner
+            Hide = 0,
+            Normal = 1,
+            ShowMinimized = 2,
+            Maximize = 3,
+            ShowMaximized = 3,
+            ShowNoActivate = 4,
+            Show = 5,
+            Minimize = 6,
+            ShowMinNoActive = 7,
+            ShowNA = 8,
+            Restore = 9,
+            ShowDefault = 10,
+            ForceMinimize = 11
+        }
+        public enum PixelType : byte
+        {
+            PFD_TYPE_RGBA = 0,
+            PFD_TYPE_COLORINDEX = 1,
+        }
+        [Flags]
+        public enum PixelFormatDescriptorFlags : uint
+        {
+            PFD_DOUBLEBUFFER = 0x00000001,
+            PFD_STEREO = 0x00000002,
+            PFD_DRAW_TO_WINDOW = 0x00000004,
+            PFD_DRAW_TO_BITMAP = 0x00000008,
+            PFD_SUPPORT_GDI= 0x00000010,
+            PFD_SUPPORT_OPENGL = 0x00000020,
+            PFD_GENERIC_FORMAT = 0x00000040,
+            PFD_NEED_PALETTE = 0x00000080,
+            PFD_NEED_SYSTEM_PALETTE = 0x00000100,
+            PFD_SWAP_EXCHANGE = 0x00000200,
+            PFD_SWAP_COPY = 0x00000400,
+            PFD_SWAP_LAYER_BUFFERS = 0x00000800,
+            PFD_GENERIC_ACCELERATED = 0x00001000,
+            PFD_SUPPORT_DIRECTDRAW = 0x00002000,
+            PFD_DIRECT3D_ACCELERATED = 0x00004000,
+            PFD_SUPPORT_COMPOSITION = 0x00008000,
+            PFD_DEPTH_DONTCARE = 0x20000000,
+            PFD_DOUBLEBUFFER_DONTCARE = 0x40000000,
+            PFD_STEREO_DONTCARE = 0x80000000,
         }
 
+        // struct
         [StructLayout(LayoutKind.Sequential)]
+        public struct MSG
+        {
+            public IntPtr hwnd;
+            public uint message;
+            public IntPtr wParam;
+            public IntPtr lParam;
+            public uint time;
+            public POINT pt;
+        }
         public struct PAINTSTRUCT
         {
             public IntPtr hdc;
@@ -279,81 +381,61 @@ namespace Prototype_CSWindow_Windows
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
             public byte[] rgbReserved;
         }
-
-
-
-
-        [Flags]
-        public enum ClassStyles : uint
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PixelFormatDescriptor
         {
-            CS_VREDRAW = 0x0001,
-            CS_HREDRAW = 0x0002,
-            CS_DBLCLKS = 0x0008,
-            CS_OWNDC = 0x0020,
-            CS_CLASSDC = 0x0040,
-            CS_PARENTDC = 0x0080,
-            CS_NOCLOSE = 0x0200,
-            CS_SAVEBITS = 0x0800,
-            CS_BYTEALIGNCLIENT = 0x1000,
-            CS_BYTEALIGNWINDOW = 0x2000,
-            CS_GLOBALCLASS = 0x4000,
-            CS_IME = 0x00010000,
-            CS_DROPSHADOW = 0x00020000
-        }
-        [Flags]
-        public enum WindowStyles : uint
-        {
-            WS_BORDER = 0x800000,
-            WS_CAPTION = 0xc00000,
-            WS_CHILD = 0x40000000,
-            WS_CLIPCHILDREN = 0x2000000,
-            WS_CLIPSIBLINGS = 0x4000000,
-            WS_DISABLED = 0x8000000,
-            WS_DLGFRAME = 0x400000,
-            WS_GROUP = 0x20000,
-            WS_HSCROLL = 0x100000,
-            WS_MAXIMIZE = 0x1000000,
-            WS_MAXIMIZEBOX = 0x10000,
-            WS_MINIMIZE = 0x20000000,
-            WS_MINIMIZEBOX = 0x20000,
-            WS_OVERLAPPED = 0x0,
-            WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_SIZEFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-            WS_POPUP = 0x80000000u,
-            WS_POPUPWINDOW = WS_POPUP | WS_BORDER | WS_SYSMENU,
-            WS_SIZEFRAME = 0x40000,
-            WS_SYSMENU = 0x80000,
-            WS_TABSTOP = 0x10000,
-            WS_VISIBLE = 0x10000000,
-            WS_VSCROLL = 0x200000,
-            WS_EX_DLGMODALFRAME = 0x00000001,
-            WS_EX_NOPARENTNOTIFY = 0x00000004,
-            WS_EX_TOPMOST = 0x00000008,
-            WS_EX_ACCEPTFILES = 0x00000010,
-            WS_EX_TRANSPARENT = 0x00000020,
-            WS_EX_MDICHILD = 0x00000040,
-            WS_EX_TOOLWINDOW = 0x00000080,
-            WS_EX_WINDOWEDGE = 0x00000100,
-            WS_EX_CLIENTEDGE = 0x00000200,
-            WS_EX_CONTEXTHELP = 0x00000400,
-            WS_EX_RIGHT = 0x00001000,
-            WS_EX_LEFT = 0x00000000,
-            WS_EX_RTLREADING = 0x00002000,
-            WS_EX_LTRREADING = 0x00000000,
-            WS_EX_LEFTSCROLLBAR = 0x00004000,
-            WS_EX_RIGHTSCROLLBAR = 0x00000000,
-            WS_EX_CONTROLPARENT = 0x00010000,
-            WS_EX_STATICEDGE = 0x00020000,
-            WS_EX_APPWINDOW = 0x00040000,
-            WS_EX_OVERLAPPEDWINDOW = WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE,
-            WS_EX_PALETTEWINDOW = WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
-            WS_EX_LAYERED = 0x00080000,
-            WS_EX_NOINHERITLAYOUT = 0x00100000,
-            WS_EX_LAYOUTRTL = 0x00400000,
-            WS_EX_COMPOSITED = 0x02000000,
-            WS_EX_NOACTIVATE = 0x08000000
-        }
-        public delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+            public ushort Size;
+            public ushort Version;
+            public PixelFormatDescriptorFlags Flags;
+            public PixelType PixelType;
+            public byte ColorBits;
+            public byte RedBits;
+            public byte RedShift;
+            public byte GreenBits;
+            public byte GreenShift;
+            public byte BlueBits;
+            public byte BlueShift;
+            public byte AlphaBits;
+            public byte AlphaShift;
+            public byte AccumBits;
+            public byte AccumRedBits;
+            public byte AccumGreenBits;
+            public byte AccumBlueBits;
+            public byte AccumAlphaBits;
+            public byte DepthBits;
+            public byte StencilBits;
+            public byte AuxBuffers;
+            public byte LayerType;
+            private byte Reserved;
+            public uint LayerMask;
+            public uint VisibleMask;
+            public uint DamageMask;
 
+            //Use this function to make a new one with Size and Version already filled in.
+            public static PixelFormatDescriptor Build()
+            {
+                var pfd = new PixelFormatDescriptor
+                {
+                    Size = (ushort)Marshal.SizeOf(typeof(PixelFormatDescriptor)),
+                    Version = 1
+                };
+
+                return pfd;
+            }
+        }
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;        // x position of upper-left corner
+            public int Top;         // y position of upper-left corner
+            public int Right;       // x position of lower-right corner
+            public int Bottom;      // y position of lower-right corner
+        }
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct WNDCLASSEX
         {
@@ -371,15 +453,33 @@ namespace Prototype_CSWindow_Windows
             public IntPtr hIconSm;
         }
 
+        // delegate
+        public delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+
+        // gdi32.dll
+        [DllImport("gdi32.dll")]
+        static extern int ChoosePixelFormat(IntPtr hdc, ref PixelFormatDescriptor pfd);
+        [DllImport("gdi32.dll")]
+        static extern bool SetPixelFormat(IntPtr hdc, int format, in PixelFormatDescriptor pfd);
+        [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
+        public static extern bool TextOut(IntPtr hdc, int nXStart, int nYStart, string lpString, int cbString);
+
+        // kernel32.dll
         [DllImport("kernel32.dll")]
         public static extern int GetLastError();
-
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
-        public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
+
+        // Opengl32.dll
+        [DllImport("Opengl32.dll")]
+        public static extern IntPtr wglCreateContext(IntPtr hDC);
 
 
+
+        // user32.dll
+        [DllImport("user32.dll")]
+        public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern IntPtr CreateWindowEx(
             int dwExStyle,
@@ -394,52 +494,31 @@ namespace Prototype_CSWindow_Windows
             IntPtr hMenu,
             IntPtr hInstance,
             IntPtr lpParam);
-
-        [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
-        public static extern IntPtr DefWindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-        [DllImport("user32.dll")]
-        static extern void PostQuitMessage(int nExitCode);
-
-
-        public enum ShowWindowCommand
-        {
-            Hide = 0,
-            Normal = 1,
-            ShowMinimized = 2,
-            Maximize = 3,
-            ShowMaximized = 3,
-            ShowNoActivate = 4,
-            Show = 5,
-            Minimize = 6,
-            ShowMinNoActive = 7,
-            ShowNA = 8,
-            Restore = 9,
-            ShowDefault = 10,
-            ForceMinimize = 11
-        }
-
-
-        [DllImport("user32.dll")]
-        public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
-        [DllImport("user32.dll")]
-        static extern bool UpdateWindow(IntPtr hWnd);
-        [DllImport("user32.dll", EntryPoint = "GetMessageW")]
-        public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
-        [DllImport("user32.dll")]
-        public static extern bool TranslateMessage(ref MSG lpMsg);
         [DllImport("user32.dll", EntryPoint = "DispatchMessageW")]
         public static extern IntPtr DispatchMessage(ref MSG lpmsg);
-        [DllImport("user32.dll")]
-        public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+        [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
+        public static extern IntPtr DefWindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool DestroyWindow(IntPtr hwnd);
         [DllImport("user32.dll")]
-        public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
-        [DllImport("user32.dll")]
         public static extern bool EndPaint(IntPtr hWnd, ref PAINTSTRUCT lpPaint);
-
-        [DllImport("gdi32.dll", CharSet = CharSet.Auto)]
-        static extern bool TextOut(IntPtr hdc, int nXStart, int nYStart, string lpString, int cbString);
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr GetDC(IntPtr hWnd);
+        [DllImport("user32.dll", EntryPoint = "GetMessageW")]
+        public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+        [DllImport("user32.dll")]
+        public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+        [DllImport("user32.dll")]
+        static extern void PostQuitMessage(int nExitCode);
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
+        public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
+        [DllImport("user32.dll")]
+        public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
+        [DllImport("user32.dll")]
+        public static extern bool TranslateMessage(ref MSG lpMsg);
+        [DllImport("user32.dll")]
+        static extern bool UpdateWindow(IntPtr hWnd);
+        
 
 
 
@@ -500,14 +579,14 @@ namespace Prototype_CSWindow_Windows
         }
         static void Main(string[] args)
         {
+            // Create window
             var wc = new WNDCLASSEX
             {
                 cbSize = Marshal.SizeOf<WNDCLASSEX>(),
-                hInstance = GetModuleHandle(null),
+                //hInstance = GetModuleHandle(null),
                 lpfnWndProc = new WndProc(MyWndProc),
                 lpszClassName = "SimpleWindow",
             };
-
             ushort atom = RegisterClassEx(ref wc);
             if (atom == 0)
             {
@@ -537,6 +616,43 @@ namespace Prototype_CSWindow_Windows
                 Console.WriteLine("CreateWindowEx failed. GetLastError = {0}.", error);
                 return;
             }
+
+            // Set pixel format
+            var pfd = PixelFormatDescriptor.Build();
+            pfd.Flags = PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW | 
+                        PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL | 
+                        PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
+            pfd.PixelType = PixelType.PFD_TYPE_RGBA;
+            pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
+            IntPtr hDC = GetDC(hWnd);
+            int pf = ChoosePixelFormat(hDC, ref pfd);
+            if (pf == 0)
+            {
+                int error = GetLastError();
+                Console.WriteLine("ChoosePixelFormat failed. GetLastError = {0}.", error);
+                return;
+            }
+            bool pixelFormatSet = SetPixelFormat(hDC, pf, in pfd);
+            if (!pixelFormatSet)
+            {
+                int error = GetLastError();
+                Console.WriteLine("SetPixelFormat failed. GetLastError = {0}.", error);
+                return;
+            }
+
+
+
+            IntPtr hRC = wglCreateContext(hDC);
+            if (hRC == IntPtr.Zero)
+            {
+                // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
+                int error = GetLastError();
+                if (error == 2000) Console.WriteLine("wglCreateContext failed. GetLastError = {0}: The pixel format is invalid.", error);
+                else Console.WriteLine("wglCreateContext failed. GetLastError = {0}.", error);
+                return;
+            }
+
+
             ShowWindow(hWnd, ShowWindowCommand.Show);
             //UpdateWindow(hWnd);
 
