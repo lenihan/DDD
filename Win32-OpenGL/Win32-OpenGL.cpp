@@ -38,7 +38,6 @@ display()
     SwapBuffers(hDC);			/* nop if singlebuffered */
 }
 
-
 LRESULT WINAPI
 WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -95,6 +94,7 @@ WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
+
 
 HWND
 CreateOpenGLWindow(char* title, int x, int y, int width, int height,
