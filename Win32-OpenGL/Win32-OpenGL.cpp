@@ -18,6 +18,8 @@ void
 display()
 {
     /* rotate a triangle around */
+
+    //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     if (animate)
         glRotatef(1.0f, 0.0f, 0.0f, 1.0f);
@@ -45,50 +47,50 @@ WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     switch (uMsg) {
     case WM_PAINT:
         display();
-        BeginPaint(hWnd, &ps);
-        EndPaint(hWnd, &ps);
+        //BeginPaint(hWnd, &ps);
+        //EndPaint(hWnd, &ps);
         return 0;
 
     case WM_SIZE:
         glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
-        PostMessage(hWnd, WM_PAINT, 0, 0);
+        //PostMessage(hWnd, WM_PAINT, 0, 0);
         return 0;
 
-    case WM_CHAR:
-        switch (wParam) {
-        case 27:			/* ESC key */
-            PostQuitMessage(0);
-            break;
-        case ' ':
-            animate = !animate;
-            break;
-        }
-        return 0;
+    //case WM_CHAR:
+    //    switch (wParam) {
+    //    case 27:			/* ESC key */
+    //        PostQuitMessage(0);
+    //        break;
+    //    case ' ':
+    //        animate = !animate;
+    //        break;
+    //    }
+    //    return 0;
 
-    case WM_ACTIVATE:
-        if (IsIconic(hWnd))
-            animate = GL_FALSE;
-        else
-            animate = GL_TRUE;
-        return 0;
+    //case WM_ACTIVATE:
+    //    if (IsIconic(hWnd))
+    //        animate = GL_FALSE;
+    //    else
+    //        animate = GL_TRUE;
+    //    return 0;
 
-    case WM_PALETTECHANGED:
-        if (hWnd == (HWND)wParam)
-            break;
-        /* fall through to WM_QUERYNEWPALETTE */
+    //case WM_PALETTECHANGED:
+    //    if (hWnd == (HWND)wParam)
+    //        break;
+    //    /* fall through to WM_QUERYNEWPALETTE */
 
-    case WM_QUERYNEWPALETTE:
-        if (hPalette) {
-            UnrealizeObject(hPalette);
-            SelectPalette(hDC, hPalette, FALSE);
-            RealizePalette(hDC);
-            return TRUE;
-        }
-        return FALSE;
+    //case WM_QUERYNEWPALETTE:
+    //    if (hPalette) {
+    //        UnrealizeObject(hPalette);
+    //        SelectPalette(hDC, hPalette, FALSE);
+    //        RealizePalette(hDC);
+    //        return TRUE;
+    //    }
+    //    return FALSE;
 
-    case WM_CLOSE:
-        PostQuitMessage(0);
-        return 0;
+    //case WM_CLOSE:
+    //    PostQuitMessage(0);
+    //    return 0;
     }
     
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
@@ -160,70 +162,70 @@ CreateOpenGLWindow(char* title, int x, int y, int width, int height,
         return 0;
     }
 
-    DescribePixelFormat(hDC, pf, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+    //DescribePixelFormat(hDC, pf, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
-    if (pfd.dwFlags & PFD_NEED_PALETTE ||
-        pfd.iPixelType == PFD_TYPE_COLORINDEX) {
+    //if (pfd.dwFlags & PFD_NEED_PALETTE ||
+    //    pfd.iPixelType == PFD_TYPE_COLORINDEX) {
 
-        n = 1 << pfd.cColorBits;
-        if (n > 256) n = 256;
+    //    n = 1 << pfd.cColorBits;
+    //    if (n > 256) n = 256;
 
-        lpPal = (LOGPALETTE*)malloc(sizeof(LOGPALETTE) +
-            sizeof(PALETTEENTRY) * n);
-        memset(lpPal, 0, sizeof(LOGPALETTE) + sizeof(PALETTEENTRY) * n);
-        lpPal->palVersion = 0x300;
-        lpPal->palNumEntries = n;
+    //    lpPal = (LOGPALETTE*)malloc(sizeof(LOGPALETTE) +
+    //        sizeof(PALETTEENTRY) * n);
+    //    memset(lpPal, 0, sizeof(LOGPALETTE) + sizeof(PALETTEENTRY) * n);
+    //    lpPal->palVersion = 0x300;
+    //    lpPal->palNumEntries = n;
 
-        GetSystemPaletteEntries(hDC, 0, n, &lpPal->palPalEntry[0]);
+    //    GetSystemPaletteEntries(hDC, 0, n, &lpPal->palPalEntry[0]);
 
-        /* if the pixel type is RGBA, then we want to make an RGB ramp,
-           otherwise (color index) set individual colors. */
-        if (pfd.iPixelType == PFD_TYPE_RGBA) {
-            int redMask = (1 << pfd.cRedBits) - 1;
-            int greenMask = (1 << pfd.cGreenBits) - 1;
-            int blueMask = (1 << pfd.cBlueBits) - 1;
-            int i;
+    //    /* if the pixel type is RGBA, then we want to make an RGB ramp,
+    //       otherwise (color index) set individual colors. */
+    //    if (pfd.iPixelType == PFD_TYPE_RGBA) {
+    //        int redMask = (1 << pfd.cRedBits) - 1;
+    //        int greenMask = (1 << pfd.cGreenBits) - 1;
+    //        int blueMask = (1 << pfd.cBlueBits) - 1;
+    //        int i;
 
-            /* fill in the entries with an RGB color ramp. */
-            for (i = 0; i < n; ++i) {
-                lpPal->palPalEntry[i].peRed =
-                    (((i >> pfd.cRedShift) & redMask) * 255) / redMask;
-                lpPal->palPalEntry[i].peGreen =
-                    (((i >> pfd.cGreenShift) & greenMask) * 255) / greenMask;
-                lpPal->palPalEntry[i].peBlue =
-                    (((i >> pfd.cBlueShift) & blueMask) * 255) / blueMask;
-                lpPal->palPalEntry[i].peFlags = 0;
-            }
-        }
-        else {
-            lpPal->palPalEntry[0].peRed = 0;
-            lpPal->palPalEntry[0].peGreen = 0;
-            lpPal->palPalEntry[0].peBlue = 0;
-            lpPal->palPalEntry[0].peFlags = PC_NOCOLLAPSE;
-            lpPal->palPalEntry[1].peRed = 255;
-            lpPal->palPalEntry[1].peGreen = 0;
-            lpPal->palPalEntry[1].peBlue = 0;
-            lpPal->palPalEntry[1].peFlags = PC_NOCOLLAPSE;
-            lpPal->palPalEntry[2].peRed = 0;
-            lpPal->palPalEntry[2].peGreen = 255;
-            lpPal->palPalEntry[2].peBlue = 0;
-            lpPal->palPalEntry[2].peFlags = PC_NOCOLLAPSE;
-            lpPal->palPalEntry[3].peRed = 0;
-            lpPal->palPalEntry[3].peGreen = 0;
-            lpPal->palPalEntry[3].peBlue = 255;
-            lpPal->palPalEntry[3].peFlags = PC_NOCOLLAPSE;
-        }
+    //        /* fill in the entries with an RGB color ramp. */
+    //        for (i = 0; i < n; ++i) {
+    //            lpPal->palPalEntry[i].peRed =
+    //                (((i >> pfd.cRedShift) & redMask) * 255) / redMask;
+    //            lpPal->palPalEntry[i].peGreen =
+    //                (((i >> pfd.cGreenShift) & greenMask) * 255) / greenMask;
+    //            lpPal->palPalEntry[i].peBlue =
+    //                (((i >> pfd.cBlueShift) & blueMask) * 255) / blueMask;
+    //            lpPal->palPalEntry[i].peFlags = 0;
+    //        }
+    //    }
+    //    else {
+    //        lpPal->palPalEntry[0].peRed = 0;
+    //        lpPal->palPalEntry[0].peGreen = 0;
+    //        lpPal->palPalEntry[0].peBlue = 0;
+    //        lpPal->palPalEntry[0].peFlags = PC_NOCOLLAPSE;
+    //        lpPal->palPalEntry[1].peRed = 255;
+    //        lpPal->palPalEntry[1].peGreen = 0;
+    //        lpPal->palPalEntry[1].peBlue = 0;
+    //        lpPal->palPalEntry[1].peFlags = PC_NOCOLLAPSE;
+    //        lpPal->palPalEntry[2].peRed = 0;
+    //        lpPal->palPalEntry[2].peGreen = 255;
+    //        lpPal->palPalEntry[2].peBlue = 0;
+    //        lpPal->palPalEntry[2].peFlags = PC_NOCOLLAPSE;
+    //        lpPal->palPalEntry[3].peRed = 0;
+    //        lpPal->palPalEntry[3].peGreen = 0;
+    //        lpPal->palPalEntry[3].peBlue = 255;
+    //        lpPal->palPalEntry[3].peFlags = PC_NOCOLLAPSE;
+    //    }
 
-        hPalette = CreatePalette(lpPal);
-        if (hPalette) {
-            SelectPalette(hDC, hPalette, FALSE);
-            RealizePalette(hDC);
-        }
+    //    hPalette = CreatePalette(lpPal);
+    //    if (hPalette) {
+    //        SelectPalette(hDC, hPalette, FALSE);
+    //        RealizePalette(hDC);
+    //    }
 
-        free(lpPal);
-    }
+    //    free(lpPal);
+    //}
 
-    ReleaseDC(hWnd, hDC);
+    //ReleaseDC(hWnd, hDC);
 
     return hWnd;
 }
@@ -238,19 +240,19 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
     DWORD buffer = PFD_DOUBLEBUFFER;	/* buffering type */
     BYTE  color = PFD_TYPE_RGBA;	/* color type */
 
-    if (strstr(lpszCmdLine, "-sb")) {
-        buffer = 0;
-    }
-    if (strstr(lpszCmdLine, "-ci")) {
-        color = PFD_TYPE_COLORINDEX;
-    }
-    if (strstr(lpszCmdLine, "-h")) {
-        MessageBox(NULL, "animate [-ci] [-sb]\n"
-            "  -sb   single buffered\n"
-            "  -ci   color index\n",
-            "Usage help", MB_ICONINFORMATION);
-        exit(0);
-    }
+    //if (strstr(lpszCmdLine, "-sb")) {
+    //    buffer = 0;
+    //}
+    //if (strstr(lpszCmdLine, "-ci")) {
+    //    color = PFD_TYPE_COLORINDEX;
+    //}
+    //if (strstr(lpszCmdLine, "-h")) {
+    //    MessageBox(NULL, "animate [-ci] [-sb]\n"
+    //        "  -sb   single buffered\n"
+    //        "  -ci   color index\n",
+    //        "Usage help", MB_ICONINFORMATION);
+    //    exit(0);
+    //}
 
     hWnd = CreateOpenGLWindow((char *)"animate", 0, 0, 256, 256, color, buffer);
     if (hWnd == NULL)
@@ -261,7 +263,7 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
     wglMakeCurrent(hDC, hRC);
 
     ShowWindow(hWnd, SW_SHOW);
-    UpdateWindow(hWnd);
+    //UpdateWindow(hWnd);
 
     while (1) {
         while (PeekMessage(&msg, hWnd, 0, 0, PM_NOREMOVE)) {

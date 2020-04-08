@@ -14,6 +14,45 @@ namespace Prototype_CSWindow_Windows
 
         // enum
         [Flags]
+        public enum AttribMask : uint
+        {
+            GL_CURRENT_BIT = 0x00000001,
+            GL_POINT_BIT = 0x00000002,
+            GL_LINE_BIT = 0x00000004,
+            GL_POLYGON_BIT = 0x00000008,
+            GL_POLYGON_STIPPLE_BIT = 0x00000010,
+            GL_PIXEL_MODE_BIT = 0x00000020,
+            GL_LIGHTING_BIT = 0x00000040,
+            GL_FOG_BIT = 0x00000080,
+            GL_DEPTH_BUFFER_BIT = 0x00000100,
+            GL_ACCUM_BUFFER_BIT = 0x00000200,
+            GL_STENCIL_BUFFER_BIT = 0x00000400,
+            GL_VIEWPORT_BIT = 0x00000800,
+            GL_TRANSFORM_BIT = 0x00001000,
+            GL_ENABLE_BIT = 0x00002000,
+            GL_COLOR_BUFFER_BIT = 0x00004000,
+            GL_HINT_BIT = 0x00008000,
+            GL_EVAL_BIT = 0x00010000,
+            GL_LIST_BIT = 0x00020000,
+            GL_TEXTURE_BIT = 0x00040000,
+            GL_SCISSOR_BIT = 0x00080000,
+            GL_ALL_ATTRIB_BITS = 0x000fffff,
+        }
+        [Flags]
+        public enum BeginMode : uint
+        {
+            GL_POINTS = 0x0000,
+            GL_LINES = 0x0001,
+            GL_LINE_LOOP = 0x0002,
+            GL_LINE_STRIP = 0x0003,
+            GL_TRIANGLES = 0x0004,
+            GL_TRIANGLE_STRIP = 0x0005,
+            GL_TRIANGLE_FAN = 0x0006,
+            GL_QUADS = 0x0007,
+            GL_QUAD_STRIP = 0x0008,
+            GL_POLYGON = 0x0009,
+        }
+        [Flags]
         public enum ClassStyles : uint
         {
             CS_VREDRAW = 0x0001,
@@ -440,7 +479,7 @@ namespace Prototype_CSWindow_Windows
         public struct WNDCLASSEX
         {
             public int cbSize;
-            public int style;
+            public ClassStyles style;
             public WndProc lpfnWndProc;
             public int cbClsExtra;
             public int cbWndExtra;
@@ -462,6 +501,8 @@ namespace Prototype_CSWindow_Windows
         static extern int ChoosePixelFormat(IntPtr hdc, ref PixelFormatDescriptor pfd);
         [DllImport("gdi32.dll")]
         static extern bool SetPixelFormat(IntPtr hdc, int format, in PixelFormatDescriptor pfd);
+        [DllImport("gdi32.dll")]
+        static extern bool SwapBuffers(IntPtr hdc);
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
         public static extern bool TextOut(IntPtr hdc, int nXStart, int nYStart, string lpString, int cbString);
 
@@ -472,8 +513,32 @@ namespace Prototype_CSWindow_Windows
         public static extern IntPtr GetModuleHandle(string lpModuleName);
 
         // Opengl32.dll
-        [DllImport("Opengl32.dll")]
+        [DllImport("opengl32.dll")]
+        public static extern void glBegin(BeginMode mode);
+        [DllImport("opengl32.dll")]
+        public static extern void glClear(AttribMask mask);
+        [DllImport("opengl32.dll")]
+        public static extern void glClearColor(float red, float green, float blue, float alpha);
+        [DllImport("opengl32.dll")]
+        public static extern void glColor3f(float red, float green, float blue);
+        [DllImport("opengl32.dll")]
+        public static extern void glEnd();
+        [DllImport("opengl32.dll")]
+        public static extern void glFlush();
+        [DllImport("opengl32.dll")]
+        public static extern void glRotated(double angle, double x, double y, double z);
+        [DllImport("opengl32.dll")]
+        public static extern void glRotatef(float angle, float x, float y, float z);
+        [DllImport("opengl32.dll")]
+        public static extern void glVertex2i(int x, int y);
+        [DllImport("opengl32.dll")]
+        public static extern void glViewport(int x, int y, int width, int height);
+        [DllImport("opengl32.dll")]
         public static extern IntPtr wglCreateContext(IntPtr hDC);
+        [DllImport("opengl32.dll")]
+        public static extern bool wglDeleteContext(IntPtr hRC);
+        [DllImport("opengl32.dll")]
+        public static extern bool wglMakeCurrent(IntPtr hDC, IntPtr hRC);
 
 
 
@@ -485,7 +550,7 @@ namespace Prototype_CSWindow_Windows
             int dwExStyle,
             uint lpClassName,
             string lpWindowName,
-            uint dwStyle,
+            WindowStyles dwStyle,
             int x,
             int y,
             int nWidth,
@@ -513,16 +578,44 @@ namespace Prototype_CSWindow_Windows
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
         public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
         [DllImport("user32.dll")]
+        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
         [DllImport("user32.dll")]
         public static extern bool TranslateMessage(ref MSG lpMsg);
         [DllImport("user32.dll")]
         static extern bool UpdateWindow(IntPtr hWnd);
-        
+
+        // MACROS
+        static int LOWORD(IntPtr lParam)
+        {
+            return ((int)lParam) & 0x0000FFFF;            
+        }
+        static int HIWORD(IntPtr lParam)
+        {
+            return (int)lParam >> 16;            
+        }
+
+        // member variables
+        private static IntPtr hDC;
 
 
-
-
+        private static void Display()
+        {
+            //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            glClear(AttribMask.GL_COLOR_BUFFER_BIT);
+            glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
+            glBegin(BeginMode.GL_TRIANGLES);
+            glColor3f(1.0f, 0.0f, 0.0f); // TODO use byte
+            glVertex2i(0, 1);
+            glColor3f(0.0f, 1.0f, 0.0f); // TODO use byte
+            glVertex2i(-1, -1);
+            glColor3f(0.0f, 0.0f, 1.0f); // TODO use byte
+            glVertex2i(1, -1);
+            glEnd();
+            glFlush();
+            SwapBuffers(hDC);
+        }
 
         private static IntPtr MyWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
@@ -564,11 +657,16 @@ namespace Prototype_CSWindow_Windows
 
             switch ((WindowsMessage)msg)
             {
-                case WindowsMessage.WM_PAINT:
-                    var ps = new PAINTSTRUCT();
-                    IntPtr hDC = BeginPaint(hWnd, out ps);
-                    TextOut(hDC, 0, 0, "Hello, Windows!", 15);
-                    EndPaint(hWnd, ref ps);
+                //case WindowsMessage.WM_PAINT:
+                //    Display();
+                //    //var ps = new PAINTSTRUCT();
+                //    //IntPtr hDC = BeginPaint(hWnd, out ps);
+                //    //////TextOut(hDC, 0, 0, "Hello, Windows!", 15);
+                //    //EndPaint(hWnd, ref ps);
+                //    return IntPtr.Zero;
+                case WindowsMessage.WM_SIZE:
+                    glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
+                    //PostMessage(hWnd, WM_PAINT, 0, 0);
                     return IntPtr.Zero;
                 case WindowsMessage.WM_DESTROY:
                     PostQuitMessage(0);
@@ -586,6 +684,7 @@ namespace Prototype_CSWindow_Windows
                 //hInstance = GetModuleHandle(null),
                 lpfnWndProc = new WndProc(MyWndProc),
                 lpszClassName = "SimpleWindow",
+                //style = ClassStyles.CS_OWNDC,
             };
             ushort atom = RegisterClassEx(ref wc);
             if (atom == 0)
@@ -601,7 +700,7 @@ namespace Prototype_CSWindow_Windows
                 0,
                 atom,
                 null,
-                (int)WindowStyles.WS_OVERLAPPEDWINDOW,
+                WindowStyles.WS_OVERLAPPEDWINDOW,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
@@ -624,7 +723,7 @@ namespace Prototype_CSWindow_Windows
                         PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
             pfd.PixelType = PixelType.PFD_TYPE_RGBA;
             pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
-            IntPtr hDC = GetDC(hWnd);
+            hDC = GetDC(hWnd);
             int pf = ChoosePixelFormat(hDC, ref pfd);
             if (pf == 0)
             {
@@ -651,7 +750,7 @@ namespace Prototype_CSWindow_Windows
                 else Console.WriteLine("wglCreateContext failed. GetLastError = {0}.", error);
                 return;
             }
-
+            wglMakeCurrent(hDC, hRC);
 
             ShowWindow(hWnd, ShowWindowCommand.Show);
             //UpdateWindow(hWnd);
@@ -668,10 +767,14 @@ namespace Prototype_CSWindow_Windows
                     }
                     else // Got WM_QUIT
                     {
+                        wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+                        ReleaseDC(hWnd, hDC);
+                        wglDeleteContext(hRC);
                         DestroyWindow(hWnd);
                         return;
                     }
                 }
+                Display();
             }
         }
     }
