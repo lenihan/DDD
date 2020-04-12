@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Management.Automation;             // Windows PowerShell namespace
 
 namespace Prototype_CSWindow_Windows
 {
@@ -684,8 +685,8 @@ namespace Prototype_CSWindow_Windows
 
             // Set pixel format
             var pfd = Gdi.PixelFormatDescriptor.Build();
-            pfd.Flags = Gdi.PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW | 
-                        Gdi.PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL | 
+            pfd.Flags = Gdi.PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW |
+                        Gdi.PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL |
                         Gdi.PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
             pfd.PixelType = Gdi.PixelType.PFD_TYPE_RGBA;
             pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
@@ -694,13 +695,13 @@ namespace Prototype_CSWindow_Windows
             if (pf == 0) PrintErrorAndExit();
             bool pixelFormatSet = Gdi.SetPixelFormat(hDC, pf, in pfd);
             if (!pixelFormatSet) PrintErrorAndExit();
-            
+
             // Show window
             IntPtr hRC = OpenGL.wglCreateContext(hDC);
             if (hRC == IntPtr.Zero) PrintErrorAndExit();
             OpenGL.wglMakeCurrent(hDC, hRC);
             User.ShowWindow(hWnd, User.ShowWindowCommand.Show);
-            
+
             // Message loop
             while (true)
             {
@@ -723,6 +724,60 @@ namespace Prototype_CSWindow_Windows
                 }
                 Display();
             }
+        }
+    }
+
+    [Cmdlet(VerbsData.Out, "3d")]
+    [Alias("o3d")]
+    public class Out3dCommand : Cmdlet
+    {
+        [Parameter(
+            ValueFromPipeline = true,
+            ValueFromPipelineByPropertyName = true)]
+        public ValueType[] InputValue;
+        protected override void BeginProcessing()
+        {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("BeginProcessing");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+        }
+        protected override void ProcessRecord()
+        {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("ProcessRecord");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+            if (InputValue is null)
+            {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+                Console.WriteLine("Got null");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+            }
+            else if (InputValue.Length == 0)
+            {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+                Console.WriteLine("Got empty array");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+                Console.WriteLine(InputValue[0].GetType().ToString());
+            }
+            else if (InputValue.Length == 1)
+            {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+                Console.WriteLine("Got array length 1");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+                Console.WriteLine(InputValue[0].GetType().ToString());
+            }
+            else
+            {
+                Console.WriteLine(String.Format(System.Globalization.CultureInfo.InvariantCulture, "Got array length {0}", InputValue.Length));
+                Console.WriteLine(InputValue[0].GetType().ToString());
+            }
+            WriteObject(InputValue);
+        }
+        protected override void EndProcessing()
+        {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("EndProcessing");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
     }
 }

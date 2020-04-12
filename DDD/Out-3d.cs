@@ -21,24 +21,34 @@ namespace DDD
 
         protected override void BeginProcessing()
         {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
         
         protected override void ProcessRecord()
         {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("ProcessRecord");            
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
             if (InputValue is null) 
             {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
                 Console.WriteLine("Got null");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
             }
             else if (InputValue.Length == 0)
             {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
                 Console.WriteLine("Got empty array");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
                 Console.WriteLine(InputValue[0].GetType().ToString());
             }
             else if (InputValue.Length == 1) 
             {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
                 Console.WriteLine("Got array length 1");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
                 Console.WriteLine(InputValue[0].GetType().ToString());
             }
             else 
@@ -50,7 +60,9 @@ namespace DDD
         }
         protected override void EndProcessing()
         {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("EndProcessing");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
 
 

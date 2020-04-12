@@ -6,4 +6,8 @@
     <RootNamespace>Prototype_CSWindow_Windows</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Management.Automation" Version="7.0.0" />
+  </ItemGroup>
+
 </Project>
