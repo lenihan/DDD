@@ -731,6 +731,113 @@ namespace Prototype_CSWindow_Windows
     [Alias("o3d")]
     public class Out3dCommand : Cmdlet
     {
+        // member variables
+        private static IntPtr hDC;
+
+        private static void Display()
+        {
+            //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            OpenGL.glClear(OpenGL.AttribMask.GL_COLOR_BUFFER_BIT);
+            OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
+            OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
+            OpenGL.glColor3f(1.0f, 0.0f, 0.0f); // TODO use byte
+            OpenGL.glVertex2i(0, 1);
+            OpenGL.glColor3f(0.0f, 1.0f, 0.0f); // TODO use byte
+            OpenGL.glVertex2i(-1, -1);
+            OpenGL.glColor3f(0.0f, 0.0f, 1.0f); // TODO use byte
+            OpenGL.glVertex2i(1, -1);
+            OpenGL.glEnd();
+            OpenGL.glFlush();
+            Gdi.SwapBuffers(hDC);
+        }
+
+        private static IntPtr MyWndProc(IntPtr hWnd, User.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
+        {
+            switch (msg)
+            {
+                case User.WindowsMessage.WM_SIZE:
+                    OpenGL.glViewport(0, 0, MinWinDef.LOWORD(lParam), MinWinDef.HIWORD(lParam));
+                    return IntPtr.Zero;
+                case User.WindowsMessage.WM_DESTROY:
+                    User.PostQuitMessage(0);
+                    return IntPtr.Zero;
+                default:
+                    return User.DefWindowProc(hWnd, msg, wParam, lParam);
+            }
+        }
+        private static void PrintErrorAndExit()
+        {
+            // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
+            int error = Kernel.GetLastError();
+            Console.WriteLine("GetLastError = {0}", error);
+            System.Environment.Exit(1);
+        }
+        static void MainXXX(string[] args)
+        {
+            // Create window
+            var wc = User.WNDCLASSEX.Build();
+            wc.WndProc = new User.WndProc(MyWndProc);
+            wc.ClassName = "SimpleWindow";
+            ushort atom = User.RegisterClassEx(ref wc);
+            if (atom == 0) PrintErrorAndExit();
+            IntPtr hWnd = User.CreateWindowEx(
+                0,
+                atom,
+                null,
+                User.WindowStyles.WS_OVERLAPPEDWINDOW,
+                WinUser.CW_USEDEFAULT,
+                WinUser.CW_USEDEFAULT,
+                WinUser.CW_USEDEFAULT,
+                WinUser.CW_USEDEFAULT,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                IntPtr.Zero);
+            if (hWnd == IntPtr.Zero) PrintErrorAndExit();
+
+            // Set pixel format
+            var pfd = Gdi.PixelFormatDescriptor.Build();
+            pfd.Flags = Gdi.PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW |
+                        Gdi.PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL |
+                        Gdi.PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
+            pfd.PixelType = Gdi.PixelType.PFD_TYPE_RGBA;
+            pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
+            hDC = User.GetDC(hWnd);
+            int pf = Gdi.ChoosePixelFormat(hDC, ref pfd);
+            if (pf == 0) PrintErrorAndExit();
+            bool pixelFormatSet = Gdi.SetPixelFormat(hDC, pf, in pfd);
+            if (!pixelFormatSet) PrintErrorAndExit();
+
+            // Show window
+            IntPtr hRC = OpenGL.wglCreateContext(hDC);
+            if (hRC == IntPtr.Zero) PrintErrorAndExit();
+            OpenGL.wglMakeCurrent(hDC, hRC);
+            User.ShowWindow(hWnd, User.ShowWindowCommand.Show);
+
+            // Message loop
+            while (true)
+            {
+                User.MSG msg;
+                while (User.PeekMessage(out msg, IntPtr.Zero, 0, 0, WinUser.PM_NOREMOVE))
+                {
+                    if (User.GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
+                    {
+                        User.TranslateMessage(ref msg);
+                        User.DispatchMessage(ref msg);
+                    }
+                    else // Got WM_QUIT
+                    {
+                        OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+                        User.ReleaseDC(hWnd, hDC);
+                        OpenGL.wglDeleteContext(hRC);
+                        User.DestroyWindow(hWnd);
+                        return;
+                    }
+                }
+                Display();
+            }
+        }
+
         [Parameter(
             ValueFromPipeline = true,
             ValueFromPipelineByPropertyName = true)]
@@ -777,6 +884,9 @@ namespace Prototype_CSWindow_Windows
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("EndProcessing");
+            MainXXX(null);
+            Console.WriteLine("AFTER MAINXXX");
+
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
     }
