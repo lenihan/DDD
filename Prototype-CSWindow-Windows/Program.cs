@@ -733,6 +733,8 @@ namespace Prototype_CSWindow_Windows
     {
         // member variables
         private static IntPtr hDC;
+        private static IntPtr hWnd;
+        private static IntPtr hRC;
 
         private static void Display()
         {
@@ -774,13 +776,26 @@ namespace Prototype_CSWindow_Windows
         }
         static void MainXXX(string[] args)
         {
+
+        }
+
+        [Parameter(
+            ValueFromPipeline = true,
+            ValueFromPipelineByPropertyName = true)]
+        public ValueType[] InputValue;
+        protected override void BeginProcessing()
+        {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("BeginProcessing");
+
+            Console.WriteLine("BEGIN Create window");
             // Create window
             var wc = User.WNDCLASSEX.Build();
             wc.WndProc = new User.WndProc(MyWndProc);
             wc.ClassName = "SimpleWindow";
             ushort atom = User.RegisterClassEx(ref wc);
             if (atom == 0) PrintErrorAndExit();
-            IntPtr hWnd = User.CreateWindowEx(
+            hWnd = User.CreateWindowEx(
                 0,
                 atom,
                 null,
@@ -809,43 +824,14 @@ namespace Prototype_CSWindow_Windows
             if (!pixelFormatSet) PrintErrorAndExit();
 
             // Show window
-            IntPtr hRC = OpenGL.wglCreateContext(hDC);
+            hRC = OpenGL.wglCreateContext(hDC);
             if (hRC == IntPtr.Zero) PrintErrorAndExit();
             OpenGL.wglMakeCurrent(hDC, hRC);
             User.ShowWindow(hWnd, User.ShowWindowCommand.Show);
+            Console.WriteLine("END window");
 
-            // Message loop
-            while (true)
-            {
-                User.MSG msg;
-                while (User.PeekMessage(out msg, IntPtr.Zero, 0, 0, WinUser.PM_NOREMOVE))
-                {
-                    if (User.GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
-                    {
-                        User.TranslateMessage(ref msg);
-                        User.DispatchMessage(ref msg);
-                    }
-                    else // Got WM_QUIT
-                    {
-                        OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
-                        User.ReleaseDC(hWnd, hDC);
-                        OpenGL.wglDeleteContext(hRC);
-                        User.DestroyWindow(hWnd);
-                        return;
-                    }
-                }
-                Display();
-            }
-        }
 
-        [Parameter(
-            ValueFromPipeline = true,
-            ValueFromPipelineByPropertyName = true)]
-        public ValueType[] InputValue;
-        protected override void BeginProcessing()
-        {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine("BeginProcessing");
+
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
         protected override void ProcessRecord()
@@ -884,8 +870,33 @@ namespace Prototype_CSWindow_Windows
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("EndProcessing");
-            MainXXX(null);
-            Console.WriteLine("AFTER MAINXXX");
+  
+            Console.WriteLine("BEFORE Message loop");
+            // Message loop
+            bool running = true;
+            while (running)
+            {
+                User.MSG msg;
+                while (User.PeekMessage(out msg, IntPtr.Zero, 0, 0, WinUser.PM_NOREMOVE))
+                {
+                    if (User.GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
+                    {
+                        User.TranslateMessage(ref msg);
+                        User.DispatchMessage(ref msg);
+                    }
+                    else // Got WM_QUIT
+                    {
+                        OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+                        User.ReleaseDC(hWnd, hDC);
+                        OpenGL.wglDeleteContext(hRC);
+                        User.DestroyWindow(hWnd);
+                        running = false;
+                    }
+                }
+                Display();
+            }
+            Console.WriteLine("After Message loop");
+
 
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
