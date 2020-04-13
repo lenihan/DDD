@@ -656,6 +656,13 @@ namespace DDD
                     OpenGL.glViewport(0, 0, MinWinDef.LOWORD(lParam), MinWinDef.HIWORD(lParam));
                     return IntPtr.Zero;
                 case User.WindowsMessage.WM_DESTROY:
+                    int released = User.ReleaseDC(hWnd, hDC);
+                    if (released == 0) 
+                    {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+                        Console.WriteLine("Device Context not released");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+                    }
                     User.PostQuitMessage(0);
                     return IntPtr.Zero;
                 default:
@@ -781,12 +788,6 @@ namespace DDD
                     {
                         OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
                         OpenGL.wglDeleteContext(hRC);
-                        int released = User.ReleaseDC(hWnd, hDC);
-                        if (released == 0) 
-                        {
-                            Console.WriteLine("Device Context not released");
-                            return;
-                        }
                         User.DestroyWindow(hWnd);
                         running = false;
                     }
