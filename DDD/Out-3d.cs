@@ -1,6 +1,8 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Collections.Generic;
 using System.Management.Automation;             // Windows PowerShell namespace
-using System;
+using System.Management.Automation.Internal;
+using System.Runtime.InteropServices;
 // Defining input from the pipeline
 // https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/adding-parameters-that-process-pipeline-input?view=powershell-7
 
@@ -9,6 +11,7 @@ using System;
 
 namespace DDD
 {
+#region WIN32    
     class MinWinDef
     {
         // Macros
@@ -600,6 +603,9 @@ namespace DDD
         public static extern bool DestroyWindow(IntPtr hwnd);
         [DllImport("user32.dll")]
         public static extern bool EndPaint(IntPtr hWnd, ref PAINTSTRUCT lpPaint);
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        // [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern int GetClassInfoEx(IntPtr hInstance, string lpClassName, ref WNDCLASSEX lpWndClass);        
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr GetDC(IntPtr hWnd);
         [DllImport("user32.dll", EntryPoint = "GetMessageW")]
@@ -611,20 +617,25 @@ namespace DDD
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
         public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
         [DllImport("user32.dll")]
-        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        public static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
         [DllImport("user32.dll")]
         public static extern bool TranslateMessage(ref MSG lpMsg);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern bool UnregisterClass(string lpClassName, IntPtr hInstance);
         [DllImport("user32.dll")]
         public static extern bool UpdateWindow(IntPtr hWnd);
 
     }    
+#endregion    
     [Cmdlet(VerbsData.Out, "3d")]
     [Alias("o3d")]
     public class Out3dCommand : Cmdlet
     {
-        private static void Display(IntPtr hWnd)
+        List<object> _objects = new List<object>();
+#region OPENGL             
+        private static void Display()
         {
             //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
             OpenGL.glClear(OpenGL.AttribMask.GL_COLOR_BUFFER_BIT);
@@ -638,17 +649,9 @@ namespace DDD
             OpenGL.glVertex2i(1, -1);
             OpenGL.glEnd();
             OpenGL.glFlush();
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                IntPtr hDC = User.GetDC(hWnd);
-                Gdi.SwapBuffers(hDC);
-                int released = User.ReleaseDC(hWnd, hDC);
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-                if (released == 0) Console.WriteLine("Device Context not released");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
-            }
         }
+#endregion         
+#region WIN32        
         private static IntPtr MyWndProc(IntPtr hWnd, User.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
             switch (msg)
@@ -663,62 +666,97 @@ namespace DDD
                     return User.DefWindowProc(hWnd, msg, wParam, lParam);
             }
         }
-        private static void PrintErrorAndExit()
+        private void PrintErrorAndExit(string cmd)
         {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
             // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
             int error = Kernel.GetLastError();
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine("GetLastError = {0}", error);
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
-            System.Environment.Exit(1);
-        }        
-        [Parameter(
-            ValueFromPipeline = true,
-            ValueFromPipelineByPropertyName = true)]
-        public ValueType[] InputValue;
+            // Throw a terminating error for types that are not supported.
+            string msg = string.Format("{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
+            ErrorRecord er = new ErrorRecord(
+                new FormatException(msg),
+                "LastError",
+                ErrorCategory.NotSpecified,
+                null);
+            this.ThrowTerminatingError(er);
+#pragma warning restore CA1303 // Do not pass literals as localized parameters            
+        }
+#endregion                
+        [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
+        public object[] InputObject;
         protected override void BeginProcessing()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
+        private void ProcessObject(object input)
+        {
+            if (input is Point ||
+                input is Matrix ||
+                input is Vector)
+            {
+                _objects.Add(input);
+            }
+            else
+            {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters            
+
+                // Throw a terminating error for types that are not supported.
+                ErrorRecord error = new ErrorRecord(
+                    new FormatException("Invalid data type for Out-3d"),
+                    "DataNotQualifiedFor3d",
+                    ErrorCategory.InvalidType,
+                    null);
+                this.ThrowTerminatingError(error);
+#pragma warning restore CA1303 // Do not pass literals as localized parameters            
+            }
+        }
         protected override void ProcessRecord()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine("ProcessRecord");            
-            if (InputValue is null) 
-            {
-                Console.WriteLine("Got null");
-            }
-            else if (InputValue.Length == 0)
-            {
-                Console.WriteLine("Got empty array");
-                Console.WriteLine(InputValue[0].GetType().ToString());
-            }
-            else if (InputValue.Length == 1) 
-            {
-                Console.WriteLine("Got array length 1");
-                Console.WriteLine(InputValue[0].GetType().ToString());
-            }
-            else 
-            {                
-                Console.WriteLine(String.Format(System.Globalization.CultureInfo.InvariantCulture, "Got array length {0}", InputValue.Length));
-                Console.WriteLine(InputValue[0].GetType().ToString());
-            }
-            WriteObject(InputValue);
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("ProcessRecord");
+            // if (InputObject == null)
+            // {
+            //     Console.WriteLine("Got null");                
+            // }
+            // else if (InputObject.Length == 0)
+            // {
+            //      Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
+            // }
+            // else if (InputObject.Length == 1) 
+            // {
+            //     Console.WriteLine("Got array length 1 of type {0}", InputObject[0].GetType().ToString());
+            //     ProcessObject(InputObject[0]);
+            // }
+            // else 
+            // {   
+            //     Console.WriteLine("Got array length {0} containing...", InputObject.Length);
+            //     foreach(object obj in InputObject) 
+            //     {
+            //         Console.WriteLine("    Type: {0}", obj.GetType().ToString());
+            //         ProcessObject(obj);
+            //     }
+            // }
+#pragma warning restore CA1303 // Do not pass literals as localized parameters            
         }
         protected override void EndProcessing()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("EndProcessing");
-
+#region WIN32
             // Create window
+            IntPtr hInst = Kernel.GetModuleHandle(null);
+            if (hInst == null) PrintErrorAndExit("GetModuleHandle");
+
+            const string className = "DDDWindow";
             var wc = User.WNDCLASSEX.Build();
             wc.WndProc = new User.WndProc(MyWndProc);
-            wc.ClassName = "SimpleWindow";
+            wc.ClassName = className;
+            wc.Instance = hInst;
             ushort atom = User.RegisterClassEx(ref wc);
-            if (atom == 0) PrintErrorAndExit();
+            if (atom == 0) PrintErrorAndExit("RegisterClassEx");
+
             IntPtr hWnd = User.CreateWindowEx(
                 0,
                 atom,
@@ -732,7 +770,7 @@ namespace DDD
                 IntPtr.Zero,
                 IntPtr.Zero,
                 IntPtr.Zero);
-            if (hWnd == IntPtr.Zero) PrintErrorAndExit();
+            if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
 
             // Set pixel format
             var pfd = Gdi.PixelFormatDescriptor.Build();
@@ -741,27 +779,33 @@ namespace DDD
                         Gdi.PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
             pfd.PixelType = Gdi.PixelType.PFD_TYPE_RGBA;
             pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
-            IntPtr hDC = User.GetDC(hWnd);
-            int pf = Gdi.ChoosePixelFormat(hDC, ref pfd);
-            if (pf == 0) PrintErrorAndExit();
-            bool pixelFormatSet = Gdi.SetPixelFormat(hDC, pf, in pfd);
-            if (!pixelFormatSet) PrintErrorAndExit();
 
-            // Show window
+            IntPtr hDC = User.GetDC(hWnd);
+            if (hDC == IntPtr.Zero) PrintErrorAndExit("GetDC");
+
+            int pf = Gdi.ChoosePixelFormat(hDC, ref pfd);
+            if (pf == 0) PrintErrorAndExit("ChoosePixelFormat");
+
+            bool pixelFormatSet = Gdi.SetPixelFormat(hDC, pf, in pfd);
+            if (!pixelFormatSet) PrintErrorAndExit("SetPixelFormat");
+
             IntPtr hRC = OpenGL.wglCreateContext(hDC);
-            if (hRC == IntPtr.Zero) PrintErrorAndExit();
-            OpenGL.wglMakeCurrent(hDC, hRC);
-            User.ShowWindow(hWnd, User.ShowWindowCommand.Show);
-            int released = User.ReleaseDC(hWnd, hDC);
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            if (released == 0) Console.WriteLine("Device Context not released");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
+            if (hRC == IntPtr.Zero) PrintErrorAndExit("wglCreateContext");
             
+            bool makeCurrent = OpenGL.wglMakeCurrent(hDC, hRC);
+            if (!makeCurrent) PrintErrorAndExit("wglMakeCurrent");
+            
+            User.ShowWindow(hWnd, User.ShowWindowCommand.Show);
+                
             // Message loop
             bool running = true;
             while (running)
             {
-                Display(hWnd);
+                Display();
+
+                bool buffersSwapped = Gdi.SwapBuffers(hDC);
+                if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
+
                 User.MSG msg;
                 while (User.PeekMessage(out msg, IntPtr.Zero, 0, 0, WinUser.PM_NOREMOVE))
                 {
@@ -771,14 +815,24 @@ namespace DDD
                         User.DispatchMessage(ref msg);
                     }
                     else // Got WM_QUIT
-                    {
-                        OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
-                        OpenGL.wglDeleteContext(hRC);
+                    {                        
                         running = false;
                         break;
                     }
                 }
             }
+
+            bool makeCurrentZeroed = OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+            if (!makeCurrentZeroed) PrintErrorAndExit("wglMakeCurrent");
+
+            bool contextDeleted = OpenGL.wglDeleteContext(hRC);
+            if (!contextDeleted) PrintErrorAndExit("wglDeleteContext");
+
+            bool classUnregistered = User.UnregisterClass(className, hInst);            
+            if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
+            
+            Console.WriteLine("EndProcessing - DONE");
+#endregion        
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
     }
