@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Management.Automation;             // Windows PowerShell namespace
-using System.Management.Automation.Internal;
 using System.Runtime.InteropServices;
 // Defining input from the pipeline
 // https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/adding-parameters-that-process-pipeline-input?view=powershell-7
@@ -11,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace DDD
 {
-#region WIN32    
+    #region WIN32    
     class MinWinDef
     {
         // Macros
@@ -121,77 +120,6 @@ namespace DDD
         public static extern bool SwapBuffers(IntPtr hdc);
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
         public static extern bool TextOut(IntPtr hdc, int nXStart, int nYStart, string lpString, int cbString);
-    }
-    class OpenGL
-    {
-        // enum
-        [Flags]
-        public enum AttribMask : uint
-        {
-            GL_CURRENT_BIT = 0x00000001,
-            GL_POINT_BIT = 0x00000002,
-            GL_LINE_BIT = 0x00000004,
-            GL_POLYGON_BIT = 0x00000008,
-            GL_POLYGON_STIPPLE_BIT = 0x00000010,
-            GL_PIXEL_MODE_BIT = 0x00000020,
-            GL_LIGHTING_BIT = 0x00000040,
-            GL_FOG_BIT = 0x00000080,
-            GL_DEPTH_BUFFER_BIT = 0x00000100,
-            GL_ACCUM_BUFFER_BIT = 0x00000200,
-            GL_STENCIL_BUFFER_BIT = 0x00000400,
-            GL_VIEWPORT_BIT = 0x00000800,
-            GL_TRANSFORM_BIT = 0x00001000,
-            GL_ENABLE_BIT = 0x00002000,
-            GL_COLOR_BUFFER_BIT = 0x00004000,
-            GL_HINT_BIT = 0x00008000,
-            GL_EVAL_BIT = 0x00010000,
-            GL_LIST_BIT = 0x00020000,
-            GL_TEXTURE_BIT = 0x00040000,
-            GL_SCISSOR_BIT = 0x00080000,
-            GL_ALL_ATTRIB_BITS = 0x000fffff,
-        }
-        [Flags]
-        public enum BeginMode : uint
-        {
-            GL_POINTS = 0x0000,
-            GL_LINES = 0x0001,
-            GL_LINE_LOOP = 0x0002,
-            GL_LINE_STRIP = 0x0003,
-            GL_TRIANGLES = 0x0004,
-            GL_TRIANGLE_STRIP = 0x0005,
-            GL_TRIANGLE_FAN = 0x0006,
-            GL_QUADS = 0x0007,
-            GL_QUAD_STRIP = 0x0008,
-            GL_POLYGON = 0x0009,
-        }
-
-        // DllImport
-        [DllImport("opengl32.dll")]
-        public static extern void glBegin(BeginMode mode);
-        [DllImport("opengl32.dll")]
-        public static extern void glClear(AttribMask mask);
-        [DllImport("opengl32.dll")]
-        public static extern void glClearColor(float red, float green, float blue, float alpha);
-        [DllImport("opengl32.dll")]
-        public static extern void glColor3f(float red, float green, float blue);
-        [DllImport("opengl32.dll")]
-        public static extern void glEnd();
-        [DllImport("opengl32.dll")]
-        public static extern void glFlush();
-        [DllImport("opengl32.dll")]
-        public static extern void glRotated(double angle, double x, double y, double z);
-        [DllImport("opengl32.dll")]
-        public static extern void glRotatef(float angle, float x, float y, float z);
-        [DllImport("opengl32.dll")]
-        public static extern void glVertex2i(int x, int y);
-        [DllImport("opengl32.dll")]
-        public static extern void glViewport(int x, int y, int width, int height);
-        [DllImport("opengl32.dll")]
-        public static extern IntPtr wglCreateContext(IntPtr hDC);
-        [DllImport("opengl32.dll")]
-        public static extern bool wglDeleteContext(IntPtr hRC);
-        [DllImport("opengl32.dll")]
-        public static extern bool wglMakeCurrent(IntPtr hDC, IntPtr hRC);
     }
     class User
     {
@@ -581,7 +509,7 @@ namespace DDD
         // DllImport
         [DllImport("user32.dll")]
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr CreateWindowEx(
             int dwExStyle,
             uint lpClassName,
@@ -604,8 +532,7 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool EndPaint(IntPtr hWnd, ref PAINTSTRUCT lpPaint);
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        // [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern int GetClassInfoEx(IntPtr hInstance, string lpClassName, ref WNDCLASSEX lpWndClass);        
+        public static extern bool GetClassInfoEx(IntPtr hInstance, string lpClassName, ref WNDCLASSEX lpWndClass);        
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr GetDC(IntPtr hWnd);
         [DllImport("user32.dll", EntryPoint = "GetMessageW")]
@@ -628,25 +555,343 @@ namespace DDD
         public static extern bool UpdateWindow(IntPtr hWnd);
 
     }    
-#endregion    
+#endregion
+    class OpenGL
+    {
+        // enum
+        [Flags]
+        public enum AttribMask : uint
+        {
+            GL_CURRENT_BIT = 0x00000001,
+            GL_POINT_BIT = 0x00000002,
+            GL_LINE_BIT = 0x00000004,
+            GL_POLYGON_BIT = 0x00000008,
+            GL_POLYGON_STIPPLE_BIT = 0x00000010,
+            GL_PIXEL_MODE_BIT = 0x00000020,
+            GL_LIGHTING_BIT = 0x00000040,
+            GL_FOG_BIT = 0x00000080,
+            GL_DEPTH_BUFFER_BIT = 0x00000100,
+            GL_ACCUM_BUFFER_BIT = 0x00000200,
+            GL_STENCIL_BUFFER_BIT = 0x00000400,
+            GL_VIEWPORT_BIT = 0x00000800,
+            GL_TRANSFORM_BIT = 0x00001000,
+            GL_ENABLE_BIT = 0x00002000,
+            GL_COLOR_BUFFER_BIT = 0x00004000,
+            GL_HINT_BIT = 0x00008000,
+            GL_EVAL_BIT = 0x00010000,
+            GL_LIST_BIT = 0x00020000,
+            GL_TEXTURE_BIT = 0x00040000,
+            GL_SCISSOR_BIT = 0x00080000,
+            GL_ALL_ATTRIB_BITS = 0x000fffff,
+        }
+        [Flags]
+        public enum BeginMode : uint
+        {
+            GL_POINTS = 0x0000,
+            GL_LINES = 0x0001,
+            GL_LINE_LOOP = 0x0002,
+            GL_LINE_STRIP = 0x0003,
+            GL_TRIANGLES = 0x0004,
+            GL_TRIANGLE_STRIP = 0x0005,
+            GL_TRIANGLE_FAN = 0x0006,
+            GL_QUADS = 0x0007,
+            GL_QUAD_STRIP = 0x0008,
+            GL_POLYGON = 0x0009,
+        }
+        [Flags()]
+        public enum GetTarget : uint
+        {
+            GL_CURRENT_COLOR = 0x0B00,
+            GL_CURRENT_INDEX = 0x0B01,
+            GL_CURRENT_NORMAL = 0x0B02,
+            GL_CURRENT_TEXTURE_COORDS = 0x0B03,
+            GL_CURRENT_RASTER_COLOR = 0x0B04,
+            GL_CURRENT_RASTER_INDEX = 0x0B05,
+            GL_CURRENT_RASTER_TEXTURE_COORDS = 0x0B06,
+            GL_CURRENT_RASTER_POSITION = 0x0B07,
+            GL_CURRENT_RASTER_POSITION_VALID = 0x0B08,
+            GL_CURRENT_RASTER_DISTANCE = 0x0B09,
+            GL_POINT_SMOOTH = 0x0B10,
+            GL_POINT_SIZE = 0x0B11,
+            GL_POINT_SIZE_RANGE = 0x0B12,
+            GL_POINT_SIZE_GRANULARITY = 0x0B13,
+            GL_LINE_SMOOTH = 0x0B20,
+            GL_LINE_WIDTH = 0x0B21,
+            GL_LINE_WIDTH_RANGE = 0x0B22,
+            GL_LINE_WIDTH_GRANULARITY = 0x0B23,
+            GL_LINE_STIPPLE = 0x0B24,
+            GL_LINE_STIPPLE_PATTERN = 0x0B25,
+            GL_LINE_STIPPLE_REPEAT = 0x0B26,
+            GL_LIST_MODE = 0x0B30,
+            GL_MAX_LIST_NESTING = 0x0B31,
+            GL_LIST_BASE = 0x0B32,
+            GL_LIST_INDEX = 0x0B33,
+            GL_POLYGON_MODE = 0x0B40,
+            GL_POLYGON_SMOOTH = 0x0B41,
+            GL_POLYGON_STIPPLE = 0x0B42,
+            GL_EDGE_FLAG = 0x0B43,
+            GL_CULL_FACE = 0x0B44,
+            GL_CULL_FACE_MODE = 0x0B45,
+            GL_FRONT_FACE = 0x0B46,
+            GL_LIGHTING = 0x0B50,
+            GL_LIGHT_MODEL_LOCAL_VIEWER = 0x0B51,
+            GL_LIGHT_MODEL_TWO_SIDE = 0x0B52,
+            GL_LIGHT_MODEL_AMBIENT = 0x0B53,
+            GL_SHADE_MODEL = 0x0B54,
+            GL_COLOR_MATERIAL_FACE = 0x0B55,
+            GL_COLOR_MATERIAL_PARAMETER = 0x0B56,
+            GL_COLOR_MATERIAL = 0x0B57,
+            GL_FOG = 0x0B60,
+            GL_FOG_INDEX = 0x0B61,
+            GL_FOG_DENSITY = 0x0B62,
+            GL_FOG_START = 0x0B63,
+            GL_FOG_END = 0x0B64,
+            GL_FOG_MODE = 0x0B65,
+            GL_FOG_COLOR = 0x0B66,
+            GL_DEPTH_RANGE = 0x0B70,
+            GL_DEPTH_TEST = 0x0B71,
+            GL_DEPTH_WRITEMASK = 0x0B72,
+            GL_DEPTH_CLEAR_VALUE = 0x0B73,
+            GL_DEPTH_FUNC = 0x0B74,
+            GL_ACCUM_CLEAR_VALUE = 0x0B80,
+            GL_STENCIL_TEST = 0x0B90,
+            GL_STENCIL_CLEAR_VALUE = 0x0B91,
+            GL_STENCIL_FUNC = 0x0B92,
+            GL_STENCIL_VALUE_MASK = 0x0B93,
+            GL_STENCIL_FAIL = 0x0B94,
+            GL_STENCIL_PASS_DEPTH_FAIL = 0x0B95,
+            GL_STENCIL_PASS_DEPTH_PASS = 0x0B96,
+            GL_STENCIL_REF = 0x0B97,
+            GL_STENCIL_WRITEMASK = 0x0B98,
+            GL_MATRIX_MODE = 0x0BA0,
+            GL_NORMALIZE = 0x0BA1,
+            GL_VIEWPORT = 0x0BA2,
+            GL_MODELVIEW_STACK_DEPTH = 0x0BA3,
+            GL_PROJECTION_STACK_DEPTH = 0x0BA4,
+            GL_TEXTURE_STACK_DEPTH = 0x0BA5,
+            GL_MODELVIEW_MATRIX = 0x0BA6,
+            GL_PROJECTION_MATRIX = 0x0BA7,
+            GL_TEXTURE_MATRIX = 0x0BA8,
+            GL_ATTRIB_STACK_DEPTH = 0x0BB0,
+            GL_CLIENT_ATTRIB_STACK_DEPTH = 0x0BB1,
+            GL_ALPHA_TEST = 0x0BC0,
+            GL_ALPHA_TEST_FUNC = 0x0BC1,
+            GL_ALPHA_TEST_REF = 0x0BC2,
+            GL_DITHER = 0x0BD0,
+            GL_BLEND_DST = 0x0BE0,
+            GL_BLEND_SRC = 0x0BE1,
+            GL_BLEND = 0x0BE2,
+            GL_LOGIC_OP_MODE = 0x0BF0,
+            GL_INDEX_LOGIC_OP = 0x0BF1,
+            GL_COLOR_LOGIC_OP = 0x0BF2,
+            GL_AUX_BUFFERS = 0x0C00,
+            GL_DRAW_BUFFER = 0x0C01,
+            GL_READ_BUFFER = 0x0C02,
+            GL_SCISSOR_BOX = 0x0C10,
+            GL_SCISSOR_TEST = 0x0C11,
+            GL_INDEX_CLEAR_VALUE = 0x0C20,
+            GL_INDEX_WRITEMASK = 0x0C21,
+            GL_COLOR_CLEAR_VALUE = 0x0C22,
+            GL_COLOR_WRITEMASK = 0x0C23,
+            GL_INDEX_MODE = 0x0C30,
+            GL_RGBA_MODE = 0x0C31,
+            GL_DOUBLEBUFFER = 0x0C32,
+            GL_STEREO = 0x0C33,
+            GL_RENDER_MODE = 0x0C40,
+            GL_PERSPECTIVE_CORRECTION_HINT = 0x0C50,
+            GL_POINT_SMOOTH_HINT = 0x0C51,
+            GL_LINE_SMOOTH_HINT = 0x0C52,
+            GL_POLYGON_SMOOTH_HINT = 0x0C53,
+            GL_FOG_HINT = 0x0C54,
+            GL_TEXTURE_GEN_S = 0x0C60,
+            GL_TEXTURE_GEN_T = 0x0C61,
+            GL_TEXTURE_GEN_R = 0x0C62,
+            GL_TEXTURE_GEN_Q = 0x0C63,
+            GL_PIXEL_MAP_I_TO_I = 0x0C70,
+            GL_PIXEL_MAP_S_TO_S = 0x0C71,
+            GL_PIXEL_MAP_I_TO_R = 0x0C72,
+            GL_PIXEL_MAP_I_TO_G = 0x0C73,
+            GL_PIXEL_MAP_I_TO_B = 0x0C74,
+            GL_PIXEL_MAP_I_TO_A = 0x0C75,
+            GL_PIXEL_MAP_R_TO_R = 0x0C76,
+            GL_PIXEL_MAP_G_TO_G = 0x0C77,
+            GL_PIXEL_MAP_B_TO_B = 0x0C78,
+            GL_PIXEL_MAP_A_TO_A = 0x0C79,
+            GL_PIXEL_MAP_I_TO_I_SIZE = 0x0CB0,
+            GL_PIXEL_MAP_S_TO_S_SIZE = 0x0CB1,
+            GL_PIXEL_MAP_I_TO_R_SIZE = 0x0CB2,
+            GL_PIXEL_MAP_I_TO_G_SIZE = 0x0CB3,
+            GL_PIXEL_MAP_I_TO_B_SIZE = 0x0CB4,
+            GL_PIXEL_MAP_I_TO_A_SIZE = 0x0CB5,
+            GL_PIXEL_MAP_R_TO_R_SIZE = 0x0CB6,
+            GL_PIXEL_MAP_G_TO_G_SIZE = 0x0CB7,
+            GL_PIXEL_MAP_B_TO_B_SIZE = 0x0CB8,
+            GL_PIXEL_MAP_A_TO_A_SIZE = 0x0CB9,
+            GL_UNPACK_SWAP_BYTES = 0x0CF0,
+            GL_UNPACK_LSB_FIRST = 0x0CF1,
+            GL_UNPACK_ROW_LENGTH = 0x0CF2,
+            GL_UNPACK_SKIP_ROWS = 0x0CF3,
+            GL_UNPACK_SKIP_PIXELS = 0x0CF4,
+            GL_UNPACK_ALIGNMENT = 0x0CF5,
+            GL_PACK_SWAP_BYTES = 0x0D00,
+            GL_PACK_LSB_FIRST = 0x0D01,
+            GL_PACK_ROW_LENGTH = 0x0D02,
+            GL_PACK_SKIP_ROWS = 0x0D03,
+            GL_PACK_SKIP_PIXELS = 0x0D04,
+            GL_PACK_ALIGNMENT = 0x0D05,
+            GL_MAP_COLOR = 0x0D10,
+            GL_MAP_STENCIL = 0x0D11,
+            GL_INDEX_SHIFT = 0x0D12,
+            GL_INDEX_OFFSET = 0x0D13,
+            GL_RED_SCALE = 0x0D14,
+            GL_RED_BIAS = 0x0D15,
+            GL_ZOOM_X = 0x0D16,
+            GL_ZOOM_Y = 0x0D17,
+            GL_GREEN_SCALE = 0x0D18,
+            GL_GREEN_BIAS = 0x0D19,
+            GL_BLUE_SCALE = 0x0D1A,
+            GL_BLUE_BIAS = 0x0D1B,
+            GL_ALPHA_SCALE = 0x0D1C,
+            GL_ALPHA_BIAS = 0x0D1D,
+            GL_DEPTH_SCALE = 0x0D1E,
+            GL_DEPTH_BIAS = 0x0D1F,
+            GL_MAX_EVAL_ORDER = 0x0D30,
+            GL_MAX_LIGHTS = 0x0D31,
+            GL_MAX_CLIP_PLANES = 0x0D32,
+            GL_MAX_TEXTURE_SIZE = 0x0D33,
+            GL_MAX_PIXEL_MAP_TABLE = 0x0D34,
+            GL_MAX_ATTRIB_STACK_DEPTH = 0x0D35,
+            GL_MAX_MODELVIEW_STACK_DEPTH = 0x0D36,
+            GL_MAX_NAME_STACK_DEPTH = 0x0D37,
+            GL_MAX_PROJECTION_STACK_DEPTH = 0x0D38,
+            GL_MAX_TEXTURE_STACK_DEPTH = 0x0D39,
+            GL_MAX_VIEWPORT_DIMS = 0x0D3A,
+            GL_MAX_CLIENT_ATTRIB_STACK_DEPTH = 0x0D3B,
+            GL_SUBPIXEL_BITS = 0x0D50,
+            GL_INDEX_BITS = 0x0D51,
+            GL_RED_BITS = 0x0D52,
+            GL_GREEN_BITS = 0x0D53,
+            GL_BLUE_BITS = 0x0D54,
+            GL_ALPHA_BITS = 0x0D55,
+            GL_DEPTH_BITS = 0x0D56,
+            GL_STENCIL_BITS = 0x0D57,
+            GL_ACCUM_RED_BITS = 0x0D58,
+            GL_ACCUM_GREEN_BITS = 0x0D59,
+            GL_ACCUM_BLUE_BITS = 0x0D5A,
+            GL_ACCUM_ALPHA_BITS = 0x0D5B,
+            GL_NAME_STACK_DEPTH = 0x0D70,
+            GL_AUTO_NORMAL = 0x0D80,
+            GL_MAP1_COLOR_4 = 0x0D90,
+            GL_MAP1_INDEX = 0x0D91,
+            GL_MAP1_NORMAL = 0x0D92,
+            GL_MAP1_TEXTURE_COORD_1 = 0x0D93,
+            GL_MAP1_TEXTURE_COORD_2 = 0x0D94,
+            GL_MAP1_TEXTURE_COORD_3 = 0x0D95,
+            GL_MAP1_TEXTURE_COORD_4 = 0x0D96,
+            GL_MAP1_VERTEX_3 = 0x0D97,
+            GL_MAP1_VERTEX_4 = 0x0D98,
+            GL_MAP2_COLOR_4 = 0x0DB0,
+            GL_MAP2_INDEX = 0x0DB1,
+            GL_MAP2_NORMAL = 0x0DB2,
+            GL_MAP2_TEXTURE_COORD_1 = 0x0DB3,
+            GL_MAP2_TEXTURE_COORD_2 = 0x0DB4,
+            GL_MAP2_TEXTURE_COORD_3 = 0x0DB5,
+            GL_MAP2_TEXTURE_COORD_4 = 0x0DB6,
+            GL_MAP2_VERTEX_3 = 0x0DB7,
+            GL_MAP2_VERTEX_4 = 0x0DB8,
+            GL_MAP1_GRID_DOMAIN = 0x0DD0,
+            GL_MAP1_GRID_SEGMENTS = 0x0DD1,
+            GL_MAP2_GRID_DOMAIN = 0x0DD2,
+            GL_MAP2_GRID_SEGMENTS = 0x0DD3,
+            GL_TEXTURE_1D = 0x0DE0,
+            GL_TEXTURE_2D = 0x0DE1,
+            GL_FEEDBACK_BUFFER_POINTER = 0x0DF0,
+            GL_FEEDBACK_BUFFER_SIZE = 0x0DF1,
+            GL_FEEDBACK_BUFFER_TYPE = 0x0DF2,
+            GL_SELECTION_BUFFER_POINTER = 0x0DF3,
+            GL_SELECTION_BUFFER_SIZE = 0x0DF4,
+        }        
+        [Flags()]
+        public enum HintMode : uint
+        {
+            GL_DONT_CARE = 0x1100,
+            GL_FASTEST = 0x1101,
+            GL_NICEST = 0x1102,
+        }
+
+        // DllImport
+        [DllImport("opengl32.dll")]
+        public static extern void glBegin(BeginMode mode);
+        [DllImport("opengl32.dll")]
+        public static extern void glClear(AttribMask mask);
+        [DllImport("opengl32.dll")]
+        public static extern void glClearColor(float red, float green, float blue, float alpha);
+        [DllImport("opengl32.dll")]
+        public static extern void glColor3ub(byte red, byte green, byte blue);
+        [DllImport("opengl32.dll")]
+        public static extern void glColor3f(float red, float green, float blue);
+        [DllImport("opengl32.dll")]
+        public static extern void glEnable(GetTarget cap);
+        [DllImport("opengl32.dll")]
+        public static extern void glEnd();
+        [DllImport("opengl32.dll")]
+        public static extern void glFlush();
+        [DllImport("opengl32.dll")]
+        public static extern void glHint(GetTarget target, HintMode mode);        
+        [DllImport("opengl32.dll")]
+        public static extern void glPointSize(float size);
+        [DllImport("opengl32.dll")]
+        public static extern void glRotated(double angle, double x, double y, double z);
+        [DllImport("opengl32.dll")]
+        public static extern void glRotatef(float angle, float x, float y, float z);
+        [DllImport("opengl32.dll")]
+        public static extern void glVertex2i(int x, int y);
+        [DllImport("opengl32.dll")]
+        public static extern void glVertex3d(double x, double y, double z);        
+        [DllImport("opengl32.dll")]
+        public static extern void glViewport(int x, int y, int width, int height);
+        [DllImport("opengl32.dll")]
+        public static extern IntPtr wglCreateContext(IntPtr hDC);
+        [DllImport("opengl32.dll")]
+        public static extern bool wglDeleteContext(IntPtr hRC);
+        [DllImport("opengl32.dll")]
+        public static extern bool wglMakeCurrent(IntPtr hDC, IntPtr hRC);
+    }
+
     [Cmdlet(VerbsData.Out, "3d")]
     [Alias("o3d")]
     public class Out3dCommand : Cmdlet
     {
         List<object> _objects = new List<object>();
 #region OPENGL             
-        private static void Display()
+        private static void Display(List<object> objects)
         {
+// TODO: point array doesn't allow modification            
             //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
             OpenGL.glClear(OpenGL.AttribMask.GL_COLOR_BUFFER_BIT);
-            OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
-            OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
-            OpenGL.glColor3f(1.0f, 0.0f, 0.0f); // TODO use byte
-            OpenGL.glVertex2i(0, 1);
-            OpenGL.glColor3f(0.0f, 1.0f, 0.0f); // TODO use byte
-            OpenGL.glVertex2i(-1, -1);
-            OpenGL.glColor3f(0.0f, 0.0f, 1.0f); // TODO use byte
-            OpenGL.glVertex2i(1, -1);
+            // OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
+            // OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
+            OpenGL.glPointSize(10);
+            OpenGL.glEnable(OpenGL.GetTarget.GL_POINT_SMOOTH);
+            OpenGL.glHint(OpenGL.GetTarget.GL_POINT_SMOOTH_HINT, OpenGL.HintMode.GL_FASTEST);
+            OpenGL.glBegin(OpenGL.BeginMode.GL_POINTS);
+
+
+            foreach (object o in objects)
+            {
+                if (o is Point p) 
+                {
+                    OpenGL.glColor3ub(255, 0, 0); 
+                    OpenGL.glVertex3d(p.X, p.Y, p.Z);
+                }
+            }
+            // OpenGL.glColor3f(1.0f, 0.0f, 0.0f); // TODO use byte
+            // OpenGL.glVertex2i(0, 1);
+            // OpenGL.glColor3f(0.0f, 1.0f, 0.0f); // TODO use byte
+            // OpenGL.glVertex2i(-1, -1);
+            // OpenGL.glColor3f(0.0f, 0.0f, 1.0f); // TODO use byte
+            // OpenGL.glVertex2i(1, -1);
+
             OpenGL.glEnd();
             OpenGL.glFlush();
         }
@@ -716,34 +961,35 @@ namespace DDD
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("ProcessRecord");
-            // if (InputObject == null)
-            // {
-            //     Console.WriteLine("Got null");                
-            // }
-            // else if (InputObject.Length == 0)
-            // {
-            //      Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
-            // }
-            // else if (InputObject.Length == 1) 
-            // {
-            //     Console.WriteLine("Got array length 1 of type {0}", InputObject[0].GetType().ToString());
-            //     ProcessObject(InputObject[0]);
-            // }
-            // else 
-            // {   
-            //     Console.WriteLine("Got array length {0} containing...", InputObject.Length);
-            //     foreach(object obj in InputObject) 
-            //     {
-            //         Console.WriteLine("    Type: {0}", obj.GetType().ToString());
-            //         ProcessObject(obj);
-            //     }
-            // }
+            if (InputObject == null)
+            {
+                Console.WriteLine("Got null");                
+            }
+            else if (InputObject.Length == 0)
+            {
+                 Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
+            }
+            else if (InputObject.Length == 1) 
+            {
+                Console.WriteLine("Got array length 1 of type {0}", InputObject[0].GetType().ToString());
+                ProcessObject(InputObject[0]);
+            }
+            else 
+            {   
+                Console.WriteLine("Got array length {0} containing...", InputObject.Length);
+                foreach(object obj in InputObject) 
+                {
+                    Console.WriteLine("    Type: {0}", obj.GetType().ToString());
+                    ProcessObject(obj);
+                }
+            }
 #pragma warning restore CA1303 // Do not pass literals as localized parameters            
         }
         protected override void EndProcessing()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("EndProcessing");
+            if (_objects.Count == 0) return;
 #region WIN32
             // Create window
             IntPtr hInst = Kernel.GetModuleHandle(null);
@@ -801,7 +1047,7 @@ namespace DDD
             bool running = true;
             while (running)
             {
-                Display();
+                Display(_objects);
 
                 bool buffersSwapped = Gdi.SwapBuffers(hDC);
                 if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
