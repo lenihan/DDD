@@ -672,7 +672,7 @@ namespace DDD
             // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
             int error = Kernel.GetLastError();
             // Throw a terminating error for types that are not supported.
-            string msg = string.Format("{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
+            string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
             ErrorRecord er = new ErrorRecord(
                 new FormatException(msg),
                 "LastError",
