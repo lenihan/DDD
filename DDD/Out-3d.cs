@@ -10,9 +10,10 @@ using System.Runtime.InteropServices;
 
 namespace DDD
 {
-    #region WIN32    
-    class MinWinDef
+    internal static class NativeMethods
     {
+    //internal class MinWinDef
+    //{
         // Macros
         public static int LOWORD(IntPtr lParam)
         {
@@ -22,23 +23,23 @@ namespace DDD
         {
             return ((int)lParam >> 16) & 0x0000FFFF;
         }
-    }
-    class WinUser
-    {
+    //}
+    //class WinUser
+    //{
         // Macros
         public const int CW_USEDEFAULT = unchecked((int)0x80000000);
         public const int PM_NOREMOVE = 0x00000000;
-    }
-    class Kernel
-    {
+    //}
+    //class Kernel
+    //{
         // DllImport
         [DllImport("kernel32.dll")]
         public static extern int GetLastError();
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
-    }
-    class Gdi
-    {
+    //}
+    //class Gdi
+    //{
         // enum
         [Flags]
         public enum PixelFormatDescriptorFlags : uint
@@ -120,9 +121,9 @@ namespace DDD
         public static extern bool SwapBuffers(IntPtr hdc);
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
         public static extern bool TextOut(IntPtr hdc, int nXStart, int nYStart, string lpString, int cbString);
-    }
-    class User
-    {
+    //}
+    //class User
+    //{
         // enum
         public enum WindowsMessage : uint
         {
@@ -554,10 +555,9 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool UpdateWindow(IntPtr hWnd);
 
-    }    
-#endregion
-    class OpenGL
-    {
+    //}    
+    //class OpenGL
+    //{
         // enum
         [Flags]
         public enum AttribMask : uint
@@ -856,6 +856,8 @@ namespace DDD
         public static extern bool wglDeleteContext(IntPtr hRC);
         [DllImport("opengl32.dll")]
         public static extern bool wglMakeCurrent(IntPtr hDC, IntPtr hRC);
+    //}
+
     }
 
     [Cmdlet(VerbsData.Out, "3d")]
@@ -866,23 +868,23 @@ namespace DDD
 #region OPENGL             
         private static void Display(List<object> objects)
         {
-// TODO: point array doesn't allow modification            
+            // TODO: point array doesn't allow modification            
             //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-            OpenGL.glClear(OpenGL.AttribMask.GL_COLOR_BUFFER_BIT);
+            NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
             // OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
             // OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
-            OpenGL.glPointSize(10);
-            OpenGL.glEnable(OpenGL.GetTarget.GL_POINT_SMOOTH);
-            OpenGL.glHint(OpenGL.GetTarget.GL_POINT_SMOOTH_HINT, OpenGL.HintMode.GL_FASTEST);
-            OpenGL.glBegin(OpenGL.BeginMode.GL_POINTS);
+            NativeMethods.glPointSize(10);
+            NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
+            NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
+            NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
 
 
             foreach (object o in objects)
             {
                 if (o is Point p) 
                 {
-                    OpenGL.glColor3ub(255, 0, 0); 
-                    OpenGL.glVertex3d(p.X, p.Y, p.Z);
+                    NativeMethods.glColor3ub(255, 0, 0);
+                    NativeMethods.glVertex3d(p.X, p.Y, p.Z);
                 }
             }
             // OpenGL.glColor3f(1.0f, 0.0f, 0.0f); // TODO use byte
@@ -892,30 +894,30 @@ namespace DDD
             // OpenGL.glColor3f(0.0f, 0.0f, 1.0f); // TODO use byte
             // OpenGL.glVertex2i(1, -1);
 
-            OpenGL.glEnd();
-            OpenGL.glFlush();
+            NativeMethods.glEnd();
+            NativeMethods.glFlush();
         }
 #endregion         
 #region WIN32        
-        private static IntPtr MyWndProc(IntPtr hWnd, User.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
+        private static IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
             switch (msg)
             {
-                case User.WindowsMessage.WM_SIZE:
-                    OpenGL.glViewport(0, 0, MinWinDef.LOWORD(lParam), MinWinDef.HIWORD(lParam));
+                case NativeMethods.WindowsMessage.WM_SIZE:
+                    NativeMethods.glViewport(0, 0, NativeMethods.LOWORD(lParam), NativeMethods.HIWORD(lParam));
                     return IntPtr.Zero;
-                case User.WindowsMessage.WM_DESTROY:
-                    User.PostQuitMessage(0);
+                case NativeMethods.WindowsMessage.WM_DESTROY:
+                    NativeMethods.PostQuitMessage(0);
                     return IntPtr.Zero;
                 default:
-                    return User.DefWindowProc(hWnd, msg, wParam, lParam);
+                    return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
             }
         }
         private void PrintErrorAndExit(string cmd)
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
-            int error = Kernel.GetLastError();
+            int error = NativeMethods.GetLastError();
             // Throw a terminating error for types that are not supported.
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
             ErrorRecord er = new ErrorRecord(
@@ -992,26 +994,26 @@ namespace DDD
             if (_objects.Count == 0) return;
 #region WIN32
             // Create window
-            IntPtr hInst = Kernel.GetModuleHandle(null);
+            IntPtr hInst = NativeMethods.GetModuleHandle(null);
             if (hInst == null) PrintErrorAndExit("GetModuleHandle");
 
             const string className = "DDDWindow";
-            var wc = User.WNDCLASSEX.Build();
-            wc.WndProc = new User.WndProc(MyWndProc);
+            var wc = NativeMethods.WNDCLASSEX.Build();
+            wc.WndProc = new NativeMethods.WndProc(MyWndProc);
             wc.ClassName = className;
             wc.Instance = hInst;
-            ushort atom = User.RegisterClassEx(ref wc);
+            ushort atom = NativeMethods.RegisterClassEx(ref wc);
             if (atom == 0) PrintErrorAndExit("RegisterClassEx");
 
-            IntPtr hWnd = User.CreateWindowEx(
+            IntPtr hWnd = NativeMethods.CreateWindowEx(
                 0,
                 atom,
                 null,
-                User.WindowStyles.WS_OVERLAPPEDWINDOW,
-                WinUser.CW_USEDEFAULT,
-                WinUser.CW_USEDEFAULT,
-                WinUser.CW_USEDEFAULT,
-                WinUser.CW_USEDEFAULT,
+                NativeMethods.WindowStyles.WS_OVERLAPPEDWINDOW,
+                NativeMethods.CW_USEDEFAULT,
+                NativeMethods.CW_USEDEFAULT,
+                NativeMethods.CW_USEDEFAULT,
+                NativeMethods.CW_USEDEFAULT,
                 IntPtr.Zero,
                 IntPtr.Zero,
                 IntPtr.Zero,
@@ -1019,29 +1021,29 @@ namespace DDD
             if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
 
             // Set pixel format
-            var pfd = Gdi.PixelFormatDescriptor.Build();
-            pfd.Flags = Gdi.PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW |
-                        Gdi.PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL |
-                        Gdi.PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
-            pfd.PixelType = Gdi.PixelType.PFD_TYPE_RGBA;
+            var pfd = NativeMethods.PixelFormatDescriptor.Build();
+            pfd.Flags = NativeMethods.PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW |
+                        NativeMethods.PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL |
+                        NativeMethods.PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
+            pfd.PixelType = NativeMethods.PixelType.PFD_TYPE_RGBA;
             pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
 
-            IntPtr hDC = User.GetDC(hWnd);
+            IntPtr hDC = NativeMethods.GetDC(hWnd);
             if (hDC == IntPtr.Zero) PrintErrorAndExit("GetDC");
 
-            int pf = Gdi.ChoosePixelFormat(hDC, ref pfd);
+            int pf = NativeMethods.ChoosePixelFormat(hDC, ref pfd);
             if (pf == 0) PrintErrorAndExit("ChoosePixelFormat");
 
-            bool pixelFormatSet = Gdi.SetPixelFormat(hDC, pf, in pfd);
+            bool pixelFormatSet = NativeMethods.SetPixelFormat(hDC, pf, in pfd);
             if (!pixelFormatSet) PrintErrorAndExit("SetPixelFormat");
 
-            IntPtr hRC = OpenGL.wglCreateContext(hDC);
+            IntPtr hRC = NativeMethods.wglCreateContext(hDC);
             if (hRC == IntPtr.Zero) PrintErrorAndExit("wglCreateContext");
             
-            bool makeCurrent = OpenGL.wglMakeCurrent(hDC, hRC);
+            bool makeCurrent = NativeMethods.wglMakeCurrent(hDC, hRC);
             if (!makeCurrent) PrintErrorAndExit("wglMakeCurrent");
-            
-            User.ShowWindow(hWnd, User.ShowWindowCommand.Show);
+
+            NativeMethods.ShowWindow(hWnd, NativeMethods.ShowWindowCommand.Show);
                 
             // Message loop
             bool running = true;
@@ -1049,16 +1051,16 @@ namespace DDD
             {
                 Display(_objects);
 
-                bool buffersSwapped = Gdi.SwapBuffers(hDC);
+                bool buffersSwapped = NativeMethods.SwapBuffers(hDC);
                 if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
 
-                User.MSG msg;
-                while (User.PeekMessage(out msg, IntPtr.Zero, 0, 0, WinUser.PM_NOREMOVE))
+                NativeMethods.MSG msg;
+                while (NativeMethods.PeekMessage(out msg, IntPtr.Zero, 0, 0, NativeMethods.PM_NOREMOVE))
                 {
-                    if (User.GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
+                    if (NativeMethods.GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
                     {
-                        User.TranslateMessage(ref msg);
-                        User.DispatchMessage(ref msg);
+                        NativeMethods.TranslateMessage(ref msg);
+                        NativeMethods.DispatchMessage(ref msg);
                     }
                     else // Got WM_QUIT
                     {                        
@@ -1068,13 +1070,13 @@ namespace DDD
                 }
             }
 
-            bool makeCurrentZeroed = OpenGL.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+            bool makeCurrentZeroed = NativeMethods.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
             if (!makeCurrentZeroed) PrintErrorAndExit("wglMakeCurrent");
 
-            bool contextDeleted = OpenGL.wglDeleteContext(hRC);
+            bool contextDeleted = NativeMethods.wglDeleteContext(hRC);
             if (!contextDeleted) PrintErrorAndExit("wglDeleteContext");
 
-            bool classUnregistered = User.UnregisterClass(className, hInst);            
+            bool classUnregistered = NativeMethods.UnregisterClass(className, hInst);            
             if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
             
             Console.WriteLine("EndProcessing - DONE");

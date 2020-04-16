@@ -100,10 +100,11 @@ HWND
 CreateOpenGLWindow(char* title, int x, int y, int width, int height,
     BYTE type, DWORD flags)
 {
-    int         n, pf;
+    //int         n;
+    int         pf;
     HWND        hWnd;
     WNDCLASS    wc;
-    LOGPALETTE* lpPal;
+    //LOGPALETTE* lpPal;
     PIXELFORMATDESCRIPTOR pfd;
     static HINSTANCE hInstance = 0;
 
