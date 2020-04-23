@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Management.Automation;             // Windows PowerShell namespace
+using System.Linq;
+using DDD;
 
 namespace Prototype_CSWindow_Windows
 {
@@ -660,6 +662,11 @@ namespace Prototype_CSWindow_Windows
             Console.WriteLine("GetLastError = {0}", error);
             System.Environment.Exit(1);
         }
+        
+        static void AllocateArray()
+        {
+
+        }
         static void Main(string[] args)
         {
             // Create window
@@ -729,7 +736,7 @@ namespace Prototype_CSWindow_Windows
 
     [Cmdlet(VerbsData.Out, "3d")]
     [Alias("o3d")]
-    public class Out3dCommand : Cmdlet
+    unsafe public class Out3dCommand : Cmdlet
     {
         // member variables
         private static IntPtr hDC;
