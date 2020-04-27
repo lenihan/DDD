@@ -663,10 +663,6 @@ namespace Prototype_CSWindow_Windows
             System.Environment.Exit(1);
         }
         
-        static void AllocateArray()
-        {
-
-        }
         static void Main(string[] args)
         {
             // Create window
