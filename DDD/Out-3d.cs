@@ -837,7 +837,9 @@ namespace DDD
         [DllImport("opengl32.dll")]
         public static extern void glFlush();
         [DllImport("opengl32.dll")]
-        public static extern void glHint(GetTarget target, HintMode mode);        
+        public static extern void glHint(GetTarget target, HintMode mode);
+        [DllImport("opengl32.dll")]
+        public static extern void glLineWidth(float width);
         [DllImport("opengl32.dll")]
         public static extern void glPointSize(float size);
         [DllImport("opengl32.dll")]
@@ -873,12 +875,36 @@ namespace DDD
             NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
             // OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
             // OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
+
+            #region DRAW AXES
+            const double MaxValue = 3.40282347E+38; // NOTE: This is the max value for float. Using max value for double did not draw. Not sure why.
+            //NativeMethods.glLineWidth(10.0f);
+            //NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+            //NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
+
+            NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+            // x axis (red) - left
+            NativeMethods.glColor3ub(255, 0, 0);
+            NativeMethods.glVertex3d(0.0, 0.0, 0.0);
+            NativeMethods.glVertex3d(MaxValue, 0.0, 0.0);
+
+            // y axis (green) - up
+            NativeMethods.glColor3ub(0, 255, 0);
+            NativeMethods.glVertex3d(0.0, 0.0, 0.0);
+            NativeMethods.glVertex3d(0.0, MaxValue, 0.0);
+
+            // z axis (blue) - towards user
+            NativeMethods.glColor3ub(0, 0, 255);
+            NativeMethods.glVertex3d(0.0, 0.0, 0.0);
+            NativeMethods.glVertex3d(0.0, 0.0, MaxValue);
+            NativeMethods.glEnd();
+            #endregion
+
+            #region DRAW POINTS
             NativeMethods.glPointSize(10);
             NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
             NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
             NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
-
-
             foreach (object o in objects)
             {
                 if (o is Point p) 
@@ -887,14 +913,9 @@ namespace DDD
                     NativeMethods.glVertex3d(p.X, p.Y, p.Z);
                 }
             }
-            // OpenGL.glColor3f(1.0f, 0.0f, 0.0f); // TODO use byte
-            // OpenGL.glVertex2i(0, 1);
-            // OpenGL.glColor3f(0.0f, 1.0f, 0.0f); // TODO use byte
-            // OpenGL.glVertex2i(-1, -1);
-            // OpenGL.glColor3f(0.0f, 0.0f, 1.0f); // TODO use byte
-            // OpenGL.glVertex2i(1, -1);
-
             NativeMethods.glEnd();
+            #endregion
+
             NativeMethods.glFlush();
         }
 #endregion         
