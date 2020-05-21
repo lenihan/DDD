@@ -924,6 +924,35 @@ namespace DDD
         {
             switch (msg)
             {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+                case NativeMethods.WindowsMessage.WM_KEYDOWN:
+                    Console.WriteLine("WM_KEYDOWN");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_SYSKEYDOWN:
+                    Console.WriteLine("WM_SYSKEYDOWN");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_KEYUP:
+                    Console.WriteLine("WM_KEYUP");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_SYSKEYUP:
+                    Console.WriteLine("WM_SYSKEYUP");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_CHAR:
+                    Console.WriteLine("WM_CHAR");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_UNICHAR:
+                    Console.WriteLine("WM_UNICHAR");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_DEADCHAR:
+                    Console.WriteLine("WM_DEADCHAR");
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_SYSDEADCHAR:
+                    Console.WriteLine("WM_SYSDEADCHAR");
+                    return IntPtr.Zero;
+
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+
+
                 case NativeMethods.WindowsMessage.WM_SIZE:
                     NativeMethods.glViewport(0, 0, NativeMethods.LOWORD(lParam), NativeMethods.HIWORD(lParam));
                     return IntPtr.Zero;
