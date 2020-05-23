@@ -13,6 +13,8 @@ HDC hDC;				/* device context */
 HPALETTE hPalette = 0;			/* custom palette (if needed) */
 GLboolean animate = GL_TRUE;		/* animation flag */
 
+VK_KEY_W
+VK_DOWN
 
 void
 display()
