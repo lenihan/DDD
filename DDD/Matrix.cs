@@ -234,7 +234,6 @@ namespace DDD
                               c41, c42, c43, c44);
         }
         public static Matrix Multiply(Matrix a, Matrix b) => a * b;
-
         public static Matrix operator *(Matrix m, double s)
         {
             double n11 = m.M11 * s; double n12 = m.M12 * s; double n13 = m.M13 * s; double n14 = m.M14 * s;

@@ -1144,16 +1144,45 @@ namespace DDD
         static int _yaxis = 0;
         static int _zaxis = 0;
         static int _zoom = 0;
+        private Matrix _wld2cam = Matrix.Identity();
+        static private DateTime? _zaxisStart = null;
 
 
-#region OPENGL             
+        #region OPENGL             
         private void Display()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
 
             Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
+            
+            #region DRAW AXES
+            const double MaxValue = 3.40282347E+38; // NOTE: This is the max value for float. Using max value for double did not draw. Not sure why.
 
+            // TODO: These should be const...how to do that?
+            Point origin_wld = new Point(0.0, 0.0, 0.0);
+            Point xaxis_wld = new Point(MaxValue, 0.0, 0.0);
+            Point yaxis_wld = new Point(0.0, MaxValue, 0.0);
+            Point zaxis_wld = new Point(0.0, 0.0, MaxValue);
+
+            
+            if (_zaxisStart != null)
+            {
+                TimeSpan interval = (DateTime)_zaxisStart - DateTime.Now;
+                const int fullRotMs = 1000;
+                double rot = interval.TotalMilliseconds % fullRotMs / 1000.0;
+                double deg = 360.0 * rot;
+
+
+                _wld2cam = Matrix.RotateZ(deg * _zaxis) * Matrix.Identity();
+            }
+
+
+
+            Point origin_cam = _wld2cam * origin_wld;
+            Point xaxis_cam = _wld2cam * xaxis_wld;
+            Point yaxis_cam = _wld2cam * yaxis_wld;
+            Point zaxis_cam = _wld2cam * zaxis_wld;
 
 
 
@@ -1163,8 +1192,6 @@ namespace DDD
             // OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
             // OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
 
-            #region DRAW AXES
-            const double MaxValue = 3.40282347E+38; // NOTE: This is the max value for float. Using max value for double did not draw. Not sure why.
             //NativeMethods.glLineWidth(10.0f);
             //NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
             //NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
@@ -1172,18 +1199,18 @@ namespace DDD
             NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
             // x axis (red) - left
             NativeMethods.glColor3ub(255, 0, 0);
-            NativeMethods.glVertex3d(0.0, 0.0, 0.0);
-            NativeMethods.glVertex3d(MaxValue, 0.0, 0.0);
+            NativeMethods.glVertex3d(origin_cam.X, origin_cam.Y, origin_cam.Z);
+            NativeMethods.glVertex3d(xaxis_cam.X, xaxis_cam.Y, xaxis_cam.Z);
 
             // y axis (green) - up
             NativeMethods.glColor3ub(0, 255, 0);
-            NativeMethods.glVertex3d(0.0, 0.0, 0.0);
-            NativeMethods.glVertex3d(0.0, MaxValue, 0.0);
+            NativeMethods.glVertex3d(origin_cam.X, origin_cam.Y, origin_cam.Z);
+            NativeMethods.glVertex3d(yaxis_cam.X, yaxis_cam.Y, yaxis_cam.Z);
 
             // z axis (blue) - towards user
             NativeMethods.glColor3ub(0, 0, 255);
-            NativeMethods.glVertex3d(0.0, 0.0, 0.0);
-            NativeMethods.glVertex3d(0.0, 0.0, MaxValue);
+            NativeMethods.glVertex3d(origin_cam.X, origin_cam.Y, origin_cam.Z);
+            NativeMethods.glVertex3d(zaxis_cam.X, zaxis_cam.Y, zaxis_cam.Z);
             NativeMethods.glEnd();
             #endregion
 
@@ -1238,11 +1265,13 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_Q:
                         case NativeMethods.VIRTUALKEY.VK_OEM_COMMA:
                         case NativeMethods.VIRTUALKEY.VK_PRIOR:
+                            if (_zaxisStart == null) _zaxisStart = DateTime.Now;
                             _zaxis = 1;
                             break;
                         case NativeMethods.VIRTUALKEY.VK_E:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
+                            if (_zaxisStart == null) _zaxisStart = DateTime.Now;
                             _zaxis = -1;
                             break;
                         // zoom
@@ -1283,6 +1312,7 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_E:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
+                            _zaxisStart = null;
                             _zaxis = 0;
                             break;
                         // zoom
