@@ -1176,8 +1176,13 @@ namespace DDD
                 double rot = interval.TotalMilliseconds % fullRotMs / fullRotMs; // 0.0 - 1.0 amount of rotation since button down
                 double deg = 360.0 * rot * _zaxis;  // amount of degrees rotation since button down
                 double delta = _zDegreesCurrent - (deg + _zDegreesAtButtonDown);
+
+                Console.WriteLine($"delta = {delta}, deg = {deg}, current = {_zDegreesCurrent}, atbuttondown = {_zDegreesAtButtonDown}");
+
                 _wld2cam *= Matrix.RotateZ(delta);
-                _zDegreesCurrent = _zDegreesAtButtonDown + deg;
+                _zDegreesCurrent = (_zDegreesAtButtonDown + deg);
+                while (_zDegreesCurrent > 360.0) _zDegreesCurrent -= 360.0;
+                while (_zDegreesCurrent < 0) _zDegreesCurrent += 360.0;
             }
 
 
@@ -1268,16 +1273,22 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_Q:
                         case NativeMethods.VIRTUALKEY.VK_OEM_COMMA:
                         case NativeMethods.VIRTUALKEY.VK_PRIOR:
-                            if (_zaxisStart == null) _zaxisStart = DateTime.Now;
-                            _zaxis = 1;
-                            _zDegreesAtButtonDown = _zDegreesCurrent;
+                            if (_zaxisStart == null)
+                            {
+                                _zDegreesAtButtonDown = _zDegreesCurrent;
+                                _zaxisStart = DateTime.Now;
+                                _zaxis = 1;
+                            }
                             break;
                         case NativeMethods.VIRTUALKEY.VK_E:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
-                            if (_zaxisStart == null) _zaxisStart = DateTime.Now;
-                            _zaxis = -1;
-                            _zDegreesAtButtonDown = _zDegreesCurrent;
+                            if (_zaxisStart == null)
+                            {
+                                _zaxisStart = DateTime.Now;
+                                _zaxis = -1;
+                                _zDegreesAtButtonDown = _zDegreesCurrent;
+                            }
                             break;
                         // zoom
                         case NativeMethods.VIRTUALKEY.VK_Z:
