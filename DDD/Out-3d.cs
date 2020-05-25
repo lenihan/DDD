@@ -1146,13 +1146,16 @@ namespace DDD
         static int _zoom = 0;
         private Matrix _wld2cam = Matrix.Identity();
         static private DateTime? _zaxisStart = null;
+        static double _xDegrees = 0.0;
+        static double _yDegrees = 0.0;
 
+        static double _zDegreesCurrent = 0.0;
+        static double _zDegreesAtButtonDown = 0.0;
 
         #region OPENGL             
         private void Display()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-
             Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
             
@@ -1170,11 +1173,11 @@ namespace DDD
             {
                 TimeSpan interval = (DateTime)_zaxisStart - DateTime.Now;
                 const int fullRotMs = 1000;
-                double rot = interval.TotalMilliseconds % fullRotMs / 1000.0;
-                double deg = 360.0 * rot;
-
-
-                _wld2cam = Matrix.RotateZ(deg * _zaxis) * Matrix.Identity();
+                double rot = interval.TotalMilliseconds % fullRotMs / fullRotMs; // 0.0 - 1.0 amount of rotation since button down
+                double deg = 360.0 * rot * _zaxis;  // amount of degrees rotation since button down
+                double delta = _zDegreesCurrent - (deg + _zDegreesAtButtonDown);
+                _wld2cam *= Matrix.RotateZ(delta);
+                _zDegreesCurrent = _zDegreesAtButtonDown + deg;
             }
 
 
@@ -1267,12 +1270,14 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_PRIOR:
                             if (_zaxisStart == null) _zaxisStart = DateTime.Now;
                             _zaxis = 1;
+                            _zDegreesAtButtonDown = _zDegreesCurrent;
                             break;
                         case NativeMethods.VIRTUALKEY.VK_E:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
                             if (_zaxisStart == null) _zaxisStart = DateTime.Now;
                             _zaxis = -1;
+                            _zDegreesAtButtonDown = _zDegreesCurrent;
                             break;
                         // zoom
                         case NativeMethods.VIRTUALKEY.VK_Z:
