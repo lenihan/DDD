@@ -780,6 +780,7 @@ namespace DDD
             }
         }
 
+
         // DllImport
         [DllImport("user32.dll")]
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
@@ -805,10 +806,18 @@ namespace DDD
         public static extern bool DestroyWindow(IntPtr hwnd);
         [DllImport("user32.dll")]
         public static extern bool EndPaint(IntPtr hWnd, ref PAINTSTRUCT lpPaint);
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetActiveWindow();
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern bool GetClassInfoEx(IntPtr hInstance, string lpClassName, ref WNDCLASSEX lpWndClass);        
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetCapture();
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr GetDC(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetFocus();
+        [DllImport("user32.dll")]
+        public  static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll", EntryPoint = "GetMessageW")]
         public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
         [DllImport("user32.dll")]
@@ -819,6 +828,10 @@ namespace DDD
         public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
         [DllImport("user32.dll")]
         public static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetActiveWindow(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
         [DllImport("user32.dll")]
@@ -1144,19 +1157,27 @@ namespace DDD
         static int _yaxis = 0;
         static int _zaxis = 0;
         static int _zoom = 0;
-        private Matrix _wld2cam = Matrix.Identity();
-        static private DateTime? _zaxisStart = null;
-        static double _xDegrees = 0.0;
-        static double _yDegrees = 0.0;
+        static private Matrix _wld2cam = Matrix.Identity();
+        
+        static private DateTime _xaxisStart = DateTime.Now;
+        static private double _xDegreesCurrent = 0.0;
+        static private double _xDegreesAtButtonDown = 0.0;
 
-        static double _zDegreesCurrent = 0.0;
-        static double _zDegreesAtButtonDown = 0.0;
+        static private DateTime _yaxisStart = DateTime.Now;
+        static private double _yDegreesCurrent = 0.0;
+        static private double _yDegreesAtButtonDown = 0.0;
+
+        static private DateTime _zaxisStart = DateTime.Now;
+        static private double _zDegreesCurrent = 0.0;
+        static private double _zDegreesAtButtonDown = 0.0;
+
+        const int MILLISECONDS_PER_ROTATION = 1000;
 
         #region OPENGL             
         private void Display()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
+            //Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
             
             #region DRAW AXES
@@ -1169,21 +1190,54 @@ namespace DDD
             Point zaxis_wld = new Point(0.0, 0.0, MaxValue);
 
             
-            if (_zaxisStart != null)
+            if (_xaxis != 0)
             {
-                TimeSpan interval = (DateTime)_zaxisStart - DateTime.Now;
-                const int fullRotMs = 1000;
-                double rot = interval.TotalMilliseconds % fullRotMs / fullRotMs; // 0.0 - 1.0 amount of rotation since button down
-                double deg = 360.0 * rot * _zaxis;  // amount of degrees rotation since button down
-                double delta = _zDegreesCurrent - (deg + _zDegreesAtButtonDown);
+                TimeSpan interval = DateTime.Now - _xaxisStart;
+                double rot = interval.TotalMilliseconds % MILLISECONDS_PER_ROTATION / MILLISECONDS_PER_ROTATION;    // 0.0 to 1.0 rotation since button down
+                double deg = 360.0 * rot * _xaxis;                                                                  // degrees rotation since button down
+                double newCurrent = deg + _xDegreesAtButtonDown;
+                
+                // clamp to 0 to 360
+                while (newCurrent >= 360.0) newCurrent -= 360.0;
+                while (newCurrent < 0.0) newCurrent += 360.0;
 
-                Console.WriteLine($"delta = {delta}, deg = {deg}, current = {_zDegreesCurrent}, atbuttondown = {_zDegreesAtButtonDown}");
-
-                _wld2cam *= Matrix.RotateZ(delta);
-                _zDegreesCurrent = (_zDegreesAtButtonDown + deg);
-                while (_zDegreesCurrent > 360.0) _zDegreesCurrent -= 360.0;
-                while (_zDegreesCurrent < 0) _zDegreesCurrent += 360.0;
+                double delta = _xDegreesCurrent - newCurrent;
+                _wld2cam *= Matrix.RotateX(delta);
+                _xDegreesCurrent = newCurrent;
             }
+            
+            if (_yaxis != 0)
+            {
+                TimeSpan interval = DateTime.Now - _yaxisStart;
+                double rot = interval.TotalMilliseconds % MILLISECONDS_PER_ROTATION / MILLISECONDS_PER_ROTATION;    // 0.0 to 1.0 rotation since button down
+                double deg = 360.0 * rot * _yaxis;                                                                  // degrees rotation since button down
+                double newCurrent = deg + _yDegreesAtButtonDown;
+                
+                // clamp to 0 to 360
+                while (newCurrent >= 360.0) newCurrent -= 360.0;
+                while (newCurrent < 0.0) newCurrent += 360.0;
+
+                double delta = _yDegreesCurrent - newCurrent;
+                _wld2cam *= Matrix.RotateY(delta);
+                _yDegreesCurrent = newCurrent;
+            }
+            
+            if (_zaxis != 0)
+            {
+                TimeSpan interval = DateTime.Now - _zaxisStart;
+                double rot = interval.TotalMilliseconds % MILLISECONDS_PER_ROTATION / MILLISECONDS_PER_ROTATION;    // 0.0 to 1.0 rotation since button down
+                double deg = 360.0 * rot * _zaxis;                                                                  // degrees rotation since button down
+                double newCurrent = deg + _zDegreesAtButtonDown;
+                
+                // clamp to 0 to 360
+                while (newCurrent >= 360.0) newCurrent -= 360.0;
+                while (newCurrent < 0.0) newCurrent += 360.0;
+
+                double delta = _zDegreesCurrent - newCurrent;
+                _wld2cam *= Matrix.RotateZ(delta);
+                _zDegreesCurrent = newCurrent;
+            }
+
 
 
 
@@ -1229,10 +1283,11 @@ namespace DDD
             NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
             foreach (object o in _objects)
             {
-                if (o is Point p) 
+                if (o is Point p_wld) 
                 {
+                    Point p_cam = _wld2cam * p_wld;
                     NativeMethods.glColor3ub(255, 0, 0);
-                    NativeMethods.glVertex3d(p.X, p.Y, p.Z);
+                    NativeMethods.glVertex3d(p_cam.X, p_cam.Y, p_cam.Z);
                 }
             }
             NativeMethods.glEnd();
@@ -1244,50 +1299,72 @@ namespace DDD
 #region WIN32        
         private static IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
+//#pragma warning disable CA1303 // Do not pass literals as localized parameters
+//            Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+//#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
                 case NativeMethods.WindowsMessage.WM_KEYDOWN:
-                    Console.WriteLine($"WM_KEYDOWN {wParam}");
                     switch ((uint)wParam)
                     {
                         // x axis
                         case NativeMethods.VIRTUALKEY.VK_W:
                         case NativeMethods.VIRTUALKEY.VK_UP:
-                            _xaxis = 1;
+                            if (_xaxis != 1)
+                            {
+                                _xaxis = 1;
+                                _xDegreesAtButtonDown = _xDegreesCurrent;
+                                _xaxisStart = DateTime.Now;
+                            }
                             break;
                         case NativeMethods.VIRTUALKEY.VK_S:
                         case NativeMethods.VIRTUALKEY.VK_DOWN:
-                            _xaxis = -1;
+                            if (_xaxis != -1)
+                            {
+                                _xaxis = -1;
+                                _xDegreesAtButtonDown = _xDegreesCurrent;
+                                _xaxisStart = DateTime.Now;
+                            }
                             break;
                         // y axis
                         case NativeMethods.VIRTUALKEY.VK_A:
                         case NativeMethods.VIRTUALKEY.VK_LEFT:
-                            _yaxis = 1;
+                            if (_yaxis != 1)
+                            {
+                                _yaxis = 1;
+                                _yDegreesAtButtonDown = _yDegreesCurrent;
+                                _yaxisStart = DateTime.Now;
+                            }
+                            break;
                             break;
                         case NativeMethods.VIRTUALKEY.VK_D:
                         case NativeMethods.VIRTUALKEY.VK_RIGHT:
-                            _yaxis = -1;
+                            if (_yaxis != -1)
+                            {
+                                _yaxis = -1;
+                                _yDegreesAtButtonDown = _yDegreesCurrent;
+                                _yaxisStart = DateTime.Now;
+                            }
                             break;
                         // z axis
                         case NativeMethods.VIRTUALKEY.VK_Q:
                         case NativeMethods.VIRTUALKEY.VK_OEM_COMMA:
                         case NativeMethods.VIRTUALKEY.VK_PRIOR:
-                            if (_zaxisStart == null)
+                            if (_zaxis != 1)
                             {
+                                _zaxis = 1;
                                 _zDegreesAtButtonDown = _zDegreesCurrent;
                                 _zaxisStart = DateTime.Now;
-                                _zaxis = 1;
                             }
                             break;
                         case NativeMethods.VIRTUALKEY.VK_E:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
-                            if (_zaxisStart == null)
+                            if (_zaxis != -1)
                             {
-                                _zaxisStart = DateTime.Now;
                                 _zaxis = -1;
                                 _zDegreesAtButtonDown = _zDegreesCurrent;
+                                _zaxisStart = DateTime.Now;
                             }
                             break;
                         // zoom
@@ -1304,7 +1381,6 @@ namespace DDD
                     }
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_KEYUP:
-                    Console.WriteLine($"WM_KEYUP {wParam}");
                     switch ((uint)wParam)
                     {
                         // x axis
@@ -1328,7 +1404,6 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_E:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
-                            _zaxisStart = null;
                             _zaxis = 0;
                             break;
                         // zoom
@@ -1340,10 +1415,12 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_END:
                             _zoom = 0;
                             break;
+                        // reset
+                        case NativeMethods.VIRTUALKEY.VK_R:
+                            _wld2cam = Matrix.Identity();
+                            break;
                     }
                     return IntPtr.Zero;
-
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
 
 
                 case NativeMethods.WindowsMessage.WM_SIZE:
@@ -1448,20 +1525,29 @@ namespace DDD
             ushort atom = NativeMethods.RegisterClassEx(ref wc);
             if (atom == 0) PrintErrorAndExit("RegisterClassEx");
 
+            // TODO: this is for easier debugging, clean up
+            int x = 0;              // NativeMethods.CW_USEDEFAULT
+            int y = 0;              // NativeMethods.CW_USEDEFAULT
+            int width = 1000;       // NativeMethods.CW_USEDEFAULT
+            int height = 1000;      // NativeMethods.CW_USEDEFAULT
+
             IntPtr hWnd = NativeMethods.CreateWindowEx(
                 0,
                 atom,
                 null,
                 NativeMethods.WindowStyles.WS_OVERLAPPEDWINDOW,
-                NativeMethods.CW_USEDEFAULT,
-                NativeMethods.CW_USEDEFAULT,
-                NativeMethods.CW_USEDEFAULT,
-                NativeMethods.CW_USEDEFAULT,
+                x,
+                y,
+                width,
+                height,
                 IntPtr.Zero,
                 IntPtr.Zero,
                 IntPtr.Zero,
                 IntPtr.Zero);
             if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
+
+            bool foregroundWindow = NativeMethods.SetForegroundWindow(hWnd);
+            if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow");
 
             // Set pixel format
             var pfd = NativeMethods.PixelFormatDescriptor.Build();
