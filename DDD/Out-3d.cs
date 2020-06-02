@@ -1179,16 +1179,18 @@ namespace DDD
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             //Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
-            
+
             #region DRAW AXES
-            const double MaxValue = 3.40282347E+38; // NOTE: This is the max value for float. Using max value for double did not draw. Not sure why.
+            const double MAX_DOUBLE = 1.0;
+
 
             // TODO: These should be const...how to do that?
             Point origin_wld = new Point(0.0, 0.0, 0.0);
-            Point xaxis_wld = new Point(MaxValue, 0.0, 0.0);
-            Point yaxis_wld = new Point(0.0, MaxValue, 0.0);
-            Point zaxis_wld = new Point(0.0, 0.0, MaxValue);
+            Point xaxis_wld = new Point(MAX_DOUBLE, 0.0, 0.0);
+            Point yaxis_wld = new Point(0.0, MAX_DOUBLE, 0.0);
+            Point zaxis_wld = new Point(0.0, 0.0, MAX_DOUBLE);
 
+            Matrix cam2wld = _wld2cam.Transpose();
             
             if (_xaxis != 0)
             {
@@ -1202,7 +1204,7 @@ namespace DDD
                 while (newCurrent < 0.0) newCurrent += 360.0;
 
                 double delta = _xDegreesCurrent - newCurrent;
-                _wld2cam *= Matrix.RotateX(delta);
+                cam2wld *= Matrix.RotateX(delta);
                 _xDegreesCurrent = newCurrent;
             }
             
@@ -1218,7 +1220,7 @@ namespace DDD
                 while (newCurrent < 0.0) newCurrent += 360.0;
 
                 double delta = _yDegreesCurrent - newCurrent;
-                _wld2cam *= Matrix.RotateY(delta);
+                cam2wld *= Matrix.RotateY(delta);
                 _yDegreesCurrent = newCurrent;
             }
             
@@ -1234,10 +1236,10 @@ namespace DDD
                 while (newCurrent < 0.0) newCurrent += 360.0;
 
                 double delta = _zDegreesCurrent - newCurrent;
-                _wld2cam *= Matrix.RotateZ(delta);
+                cam2wld *= Matrix.RotateZ(delta);
                 _zDegreesCurrent = newCurrent;
             }
-
+            _wld2cam = cam2wld.Transpose();
 
 
 
@@ -1335,7 +1337,6 @@ namespace DDD
                                 _yDegreesAtButtonDown = _yDegreesCurrent;
                                 _yaxisStart = DateTime.Now;
                             }
-                            break;
                             break;
                         case NativeMethods.VIRTUALKEY.VK_D:
                         case NativeMethods.VIRTUALKEY.VK_RIGHT:
