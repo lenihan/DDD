@@ -1420,6 +1420,9 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_R:
                             _wld2cam = Matrix.Identity();
                             break;
+                        case NativeMethods.VIRTUALKEY.VK_ESCAPE:
+                            NativeMethods.DestroyWindow(hWnd);
+                            break;
                     }
                     return IntPtr.Zero;
 
