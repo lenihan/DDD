@@ -1176,7 +1176,7 @@ namespace DDD
         static private int _zoomUnitsAtButtonDown = 0;
 
         const int MILLISECONDS_PER_ROTATION = 1000;
-        const int SCALE_UPDATES_PER_SECOND = 10;
+        const int SCALE_UPDATES_PER_SECOND = 20;
         const int MAX_ZOOM_UNITS = 10;
         const int MIN_ZOOM_UNITS = -MAX_ZOOM_UNITS;
 
@@ -1255,7 +1255,7 @@ namespace DDD
                 if (newZoomUnits > MAX_ZOOM_UNITS) newZoomUnits = MAX_ZOOM_UNITS;
 
                 double delta = _zoomUnitsCurrent - newZoomUnits;
-                double scale = Math.Pow(2, delta);
+                double scale = Math.Pow(1.25, delta);
                 cam2wld *= Matrix.Scale(scale, scale, scale);
                 _zoomUnitsCurrent = newZoomUnits;
                 Console.WriteLine($"_zoom={_zoom}, interval.TotalSeconds={interval.TotalSeconds}, numUpdates={numUpdates}, newZoomUnits={newZoomUnits}, delta={delta}");
