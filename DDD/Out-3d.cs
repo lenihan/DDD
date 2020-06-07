@@ -1171,7 +1171,15 @@ namespace DDD
         static private double _zDegreesCurrent = 0.0;
         static private double _zDegreesAtButtonDown = 0.0;
 
+        static private DateTime _zoomStart = DateTime.Now;
+        static private int _zoomUnitsCurrent = 0;
+        static private int _zoomUnitsAtButtonDown = 0;
+
         const int MILLISECONDS_PER_ROTATION = 1000;
+        const int SCALE_UPDATES_PER_SECOND = 10;
+        const int MAX_ZOOM_UNITS = 10;
+        const int MIN_ZOOM_UNITS = -MAX_ZOOM_UNITS;
+
 
         #region OPENGL             
         private void Display()
@@ -1182,7 +1190,6 @@ namespace DDD
 
             #region DRAW AXES
             const double MAX_DOUBLE = 1.0;
-
 
             // TODO: These should be const...how to do that?
             Point origin_wld = new Point(0.0, 0.0, 0.0);
@@ -1207,7 +1214,6 @@ namespace DDD
                 cam2wld *= Matrix.RotateX(delta);
                 _xDegreesCurrent = newCurrent;
             }
-            
             if (_yaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _yaxisStart;
@@ -1223,7 +1229,6 @@ namespace DDD
                 cam2wld *= Matrix.RotateY(delta);
                 _yDegreesCurrent = newCurrent;
             }
-            
             if (_zaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _zaxisStart;
@@ -1239,16 +1244,28 @@ namespace DDD
                 cam2wld *= Matrix.RotateZ(delta);
                 _zDegreesCurrent = newCurrent;
             }
+            if (_zoom != 0)
+            {
+                TimeSpan interval = DateTime.Now - _zoomStart;
+                int numUpdates = (int)(interval.TotalSeconds * SCALE_UPDATES_PER_SECOND);
+                int newZoomUnits = _zoomUnitsAtButtonDown + _zoom * numUpdates;
+
+                // Clamp zoomUnits
+                if (newZoomUnits < MIN_ZOOM_UNITS) newZoomUnits = MIN_ZOOM_UNITS;
+                if (newZoomUnits > MAX_ZOOM_UNITS) newZoomUnits = MAX_ZOOM_UNITS;
+
+                double delta = _zoomUnitsCurrent - newZoomUnits;
+                double scale = Math.Pow(2, delta);
+                cam2wld *= Matrix.Scale(scale, scale, scale);
+                _zoomUnitsCurrent = newZoomUnits;
+                Console.WriteLine($"_zoom={_zoom}, interval.TotalSeconds={interval.TotalSeconds}, numUpdates={numUpdates}, newZoomUnits={newZoomUnits}, delta={delta}");
+            }
             _wld2cam = cam2wld.Transpose();
-
-
 
             Point origin_cam = _wld2cam * origin_wld;
             Point xaxis_cam = _wld2cam * xaxis_wld;
             Point yaxis_cam = _wld2cam * yaxis_wld;
             Point zaxis_cam = _wld2cam * zaxis_wld;
-
-
 
             // TODO: point array doesn't allow modification            
             //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -1372,12 +1389,22 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_Z:
                         case NativeMethods.VIRTUALKEY.VK_OEM_MINUS:
                         case NativeMethods.VIRTUALKEY.VK_HOME:
-                            _zoom = 1;
+                            if (_zoom != 1)
+                            {
+                                _zoom = 1;
+                                _zoomUnitsAtButtonDown = _zoomUnitsCurrent;
+                                _zoomStart = DateTime.Now;
+                            }
                             break;
                         case NativeMethods.VIRTUALKEY.VK_C:
                         case NativeMethods.VIRTUALKEY.VK_OEM_PLUS:
                         case NativeMethods.VIRTUALKEY.VK_END:
-                            _zoom = -1;
+                            if (_zoom != -1)
+                            {
+                                _zoomUnitsAtButtonDown = _zoomUnitsCurrent;
+                                _zoomStart = DateTime.Now;
+                                _zoom = -1;
+                            }
                             break;
                     }
                     return IntPtr.Zero;
