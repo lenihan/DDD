@@ -1164,8 +1164,6 @@ namespace DDD
         readonly Point XAxis_wld = new Point(MaxAxis, 0.0, 0.0);
         readonly Point YAxis_wld = new Point(0.0, MaxAxis, 0.0);
         readonly Point ZAxis_wld = new Point(0.0, 0.0, MaxAxis);
-        readonly Point Min_ogl = new Point(-1.0, -1.0, -1.0);
-        readonly Point Max_ogl = new Point(1.0, 1.0, 1.0);
 
         List<object> _objects = new List<object>();
         static int _xaxis = 0;
@@ -1208,10 +1206,6 @@ namespace DDD
                 Camera  cam   Observers view. Looking at world origin. 
                 Screen  scr   OpenGL. XY origin at center of screen. +X from left (-1) to right (+1). +Y from bottom (-1) to top (+1).
             */
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            //Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
-            Console.WriteLine($"{_bboxMin_wld}; {_bboxMax_wld}");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
 
             #region UPDATE WLD2CAM
             Matrix cam2wld = _wld2cam.Transpose();
@@ -1280,18 +1274,17 @@ namespace DDD
             
             #region CAMERA TO SCREEN
             Matrix cam2scr = Matrix.Identity();
-            // cam2scr *= Matrix.Translate(-_bboxMin_wld.X, -_bboxMin_wld.Y, -_bboxMin_wld.Z);
 
-            // Vector vecBboxMin_wld = _bboxMin - Origin_wld;
-            // _wld2cam *= Matrix.Translate(-vecBboxMin_wld);
-            // Vector delta_ogl = Max_ogl - Min_ogl;
-            // Vector delta_bbox = _bboxMax - _bboxMin;
-            // if (delta_bbox.X == 0 || delta_bbox.Y == 0 || delta_bbox.Z == 0) delta_bbox = delta_ogl;
-            // // TODO: should be able to create vector by dividing delta_ogl/delta_bbox
-            // // TODO: should be able to use scale with a single vector
-            // _wld2cam *= Matrix.Scale(delta_ogl.X/delta_bbox.X, delta_ogl.Y/delta_bbox.Y, delta_ogl.Z/delta_bbox.Z);
-            // _wld2cam *= Matrix.Translate(vecBboxMin_wld);
-            //_wld2cam *= Matrix.Scale(scale, scale, scale);
+            // Keep 1:1 ratio, even when window is not square
+            double w2h = (double)_width/(double)_height;
+            if (_width < _height)
+            {
+                cam2scr *= Matrix.Scale(1.0, w2h, 1.0);
+            }
+            else 
+            {
+                cam2scr *= Matrix.Scale(1.0/w2h, 1.0, 1.0);
+            }
             #endregion
 
             Matrix wld2scr = cam2scr * _wld2cam;
@@ -1329,7 +1322,6 @@ namespace DDD
 
             NativeMethods.glEnd();
             #endregion
-            
 
             #region DRAW POINTS
             NativeMethods.glPointSize(10);
