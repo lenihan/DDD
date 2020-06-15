@@ -807,6 +807,8 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool EndPaint(IntPtr hWnd, ref PAINTSTRUCT lpPaint);
         [DllImport("user32.dll")]
+        public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+        [DllImport("user32.dll")]
         public static extern IntPtr GetActiveWindow();
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern bool GetClassInfoEx(IntPtr hInstance, string lpClassName, ref WNDCLASSEX lpWndClass);        
@@ -1157,7 +1159,8 @@ namespace DDD
         static int _yaxis = 0;
         static int _zaxis = 0;
         static int _zoom = 0;
-        static private Matrix _wld2cam = Matrix.Identity();
+        static private Matrix _wld2cam = Matrix.Identity();     // world to camera
+        static private Matrix _cam2scn = Matrix.Identity();     // camera to screen
         
         static private DateTime _xaxisStart = DateTime.Now;
         static private double _xDegreesCurrent = 0.0;
@@ -1179,6 +1182,11 @@ namespace DDD
         const int SCALE_UPDATES_PER_SECOND = 20;
         const int MAX_ZOOM_UNITS = 10;
         const int MIN_ZOOM_UNITS = -MAX_ZOOM_UNITS;
+        
+        static int _width = 0;
+        static int _height = 0;
+        static Point _bboxMin = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
+        static Point _bboxMax = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
 
 
         #region OPENGL             
@@ -1186,16 +1194,17 @@ namespace DDD
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             //Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
+            Console.WriteLine($"{_bboxMin}; {_bboxMax}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
 
             #region DRAW AXES
-            const double MAX_DOUBLE = 1.0;
+            const double MAX_AXIS = 1.0;
 
             // TODO: These should be const...how to do that?
             Point origin_wld = new Point(0.0, 0.0, 0.0);
-            Point xaxis_wld = new Point(MAX_DOUBLE, 0.0, 0.0);
-            Point yaxis_wld = new Point(0.0, MAX_DOUBLE, 0.0);
-            Point zaxis_wld = new Point(0.0, 0.0, MAX_DOUBLE);
+            Point xaxis_wld = new Point(MAX_AXIS, 0.0, 0.0);
+            Point yaxis_wld = new Point(0.0, MAX_AXIS, 0.0);
+            Point zaxis_wld = new Point(0.0, 0.0, MAX_AXIS);
 
             Matrix cam2wld = _wld2cam.Transpose();
             
@@ -1258,9 +1267,9 @@ namespace DDD
                 double scale = Math.Pow(1.25, delta);
                 cam2wld *= Matrix.Scale(scale, scale, scale);
                 _zoomUnitsCurrent = newZoomUnits;
-                Console.WriteLine($"_zoom={_zoom}, interval.TotalSeconds={interval.TotalSeconds}, numUpdates={numUpdates}, newZoomUnits={newZoomUnits}, delta={delta}");
             }
             _wld2cam = cam2wld.Transpose();
+            //_wld2cam *= Matrix.Scale(scale, scale, scale);
 
             Point origin_cam = _wld2cam * origin_wld;
             Point xaxis_cam = _wld2cam * xaxis_wld;
@@ -1313,6 +1322,7 @@ namespace DDD
             #endregion
 
             NativeMethods.glFlush();
+
         }
 #endregion         
 #region WIN32        
@@ -1452,10 +1462,12 @@ namespace DDD
                             break;
                     }
                     return IntPtr.Zero;
-
-
                 case NativeMethods.WindowsMessage.WM_SIZE:
-                    NativeMethods.glViewport(0, 0, NativeMethods.LOWORD(lParam), NativeMethods.HIWORD(lParam));
+                    const int x = 0;
+                    const int y = 0;
+                    _width = NativeMethods.LOWORD(lParam);
+                    _height = NativeMethods.HIWORD(lParam);
+                    NativeMethods.glViewport(x, y, _width, _height);
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_DESTROY:
                     NativeMethods.PostQuitMessage(0);
@@ -1484,17 +1496,52 @@ namespace DDD
         public object[] InputObject;
         protected override void BeginProcessing()
         {
+            _bboxMin.X = Double.MaxValue;
+            _bboxMin.Y = Double.MaxValue;
+            _bboxMin.Z = Double.MaxValue;
+            _bboxMax.X = Double.MinValue;
+            _bboxMax.Y = Double.MinValue;
+            _bboxMax.Z = Double.MinValue;
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
         private void ProcessObject(object input)
         {
-            if (input is Point ||
-                input is Matrix ||
-                input is Vector)
+            if (input is Point p)
             {
                 _objects.Add(input);
+                if (p.X > _bboxMax.X) _bboxMax.X = p.X;
+                if (p.Y > _bboxMax.Y) _bboxMax.Y = p.Y;
+                if (p.Z > _bboxMax.Z) _bboxMax.Z = p.Z;
+                if (p.X < _bboxMin.X) _bboxMin.X = p.X;
+                if (p.Y < _bboxMin.Y) _bboxMin.Y = p.Y;
+                if (p.Z < _bboxMin.Z) _bboxMin.Z = p.Z;
+                Console.WriteLine($"Got point: {p}; {_bboxMin}; {_bboxMax}");
+            }
+            else if (input is Matrix m)
+            {
+                _objects.Add(input);
+                Point o = new Point(0.0, 0.0, 0.0);
+                o = m * o;
+                if (o.X > _bboxMax.X) _bboxMax.X = o.X;
+                if (o.Y > _bboxMax.Y) _bboxMax.Y = o.Y;
+                if (o.Z > _bboxMax.Z) _bboxMax.Z = o.Z;
+                if (o.X < _bboxMin.X) _bboxMin.X = o.X;
+                if (o.Y < _bboxMin.Y) _bboxMin.Y = o.Y;
+                if (o.Z < _bboxMin.Z) _bboxMin.Z = o.Z;
+                Console.WriteLine($"Got matrix: {o}; {_bboxMin}; {_bboxMax}");
+            }
+            else if (input is Vector v)
+            {
+                _objects.Add(input);
+                if (v.X > _bboxMax.X) _bboxMax.X = v.X;
+                if (v.Y > _bboxMax.Y) _bboxMax.Y = v.Y;
+                if (v.Z > _bboxMax.Z) _bboxMax.Z = v.Z;
+                if (v.X < _bboxMin.X) _bboxMin.X = v.X;
+                if (v.Y < _bboxMin.Y) _bboxMin.Y = v.Y;
+                if (v.Z < _bboxMin.Z) _bboxMin.Z = v.Z;
+                Console.WriteLine($"Got vector: {v}; {_bboxMin}; {_bboxMax}"); 
             }
             else
             {
@@ -1541,6 +1588,8 @@ namespace DDD
         protected override void EndProcessing()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine(_bboxMin);
+            Console.WriteLine(_bboxMax);
             Console.WriteLine("EndProcessing");
             if (_objects.Count == 0) return;
 #region WIN32
