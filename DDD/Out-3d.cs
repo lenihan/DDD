@@ -1190,12 +1190,11 @@ namespace DDD
         static private DateTime _zoomStart = DateTime.Now;
         static private int _zoomUnitsCurrent = 0;
         static private int _zoomUnitsAtButtonDown = 0;
-
         
         static int _width = 0;
         static int _height = 0;
-        static Point _bboxMin = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
-        static Point _bboxMax = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
+        static Point _bboxMin_wld = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
+        static Point _bboxMax_wld = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
 
         private void Display()
         {
@@ -1211,9 +1210,8 @@ namespace DDD
             */
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             //Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
-            Console.WriteLine($"{_bboxMin}; {_bboxMax}");
+            Console.WriteLine($"{_bboxMin_wld}; {_bboxMax_wld}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
-
 
             #region UPDATE WLD2CAM
             Matrix cam2wld = _wld2cam.Transpose();
@@ -1281,6 +1279,9 @@ namespace DDD
             #endregion
             
             #region CAMERA TO SCREEN
+            Matrix cam2scr = Matrix.Identity();
+            cam2scr *= Matrix.Translate(-_bboxMin_wld.X, -_bboxMin_wld.Y, -_bboxMin_wld.Z);
+
             // Vector vecBboxMin_wld = _bboxMin - Origin_wld;
             // _wld2cam *= Matrix.Translate(-vecBboxMin_wld);
             // Vector delta_ogl = Max_ogl - Min_ogl;
@@ -1293,38 +1294,38 @@ namespace DDD
             //_wld2cam *= Matrix.Scale(scale, scale, scale);
             #endregion
 
+            Matrix wld2scr = cam2scr * _wld2cam;
+
             #region DRAW AXES
             // Map axis to camera space
-            Point origin_cam = _wld2cam * Origin_wld;
-            Point xaxis_cam = _wld2cam * XAxis_wld;
-            Point yaxis_cam = _wld2cam * YAxis_wld;
-            Point zaxis_cam = _wld2cam * ZAxis_wld;
+            Point origin_scr = wld2scr * Origin_wld;
+            Point xaxis_scr = wld2scr * XAxis_wld;
+            Point yaxis_scr = wld2scr * YAxis_wld;
+            Point zaxis_scr = wld2scr * ZAxis_wld;
 
-            // TODO: point array doesn't allow modification            
-            //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
             NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
-            // OpenGL.glRotatef(1.0f, 0.0f, 0.0f, 1.0f);  // TODO use double everywhere
-            // OpenGL.glBegin(OpenGL.BeginMode.GL_TRIANGLES);
-
-            //NativeMethods.glLineWidth(10.0f);
-            //NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-            //NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-
+            NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+            NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
             NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
-            // x axis (red) - left
-            NativeMethods.glColor3ub(255, 0, 0);
-            NativeMethods.glVertex3d(origin_cam.X, origin_cam.Y, origin_cam.Z);
-            NativeMethods.glVertex3d(xaxis_cam.X, xaxis_cam.Y, xaxis_cam.Z);
 
-            // y axis (green) - up
-            NativeMethods.glColor3ub(0, 255, 0);
-            NativeMethods.glVertex3d(origin_cam.X, origin_cam.Y, origin_cam.Z);
-            NativeMethods.glVertex3d(yaxis_cam.X, yaxis_cam.Y, yaxis_cam.Z);
+                // x axis (red) - left
+                NativeMethods.glColor3ub(255, 0, 0);
+                NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                NativeMethods.glColor3ub(0, 0, 0);
+                NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
 
-            // z axis (blue) - towards user
-            NativeMethods.glColor3ub(0, 0, 255);
-            NativeMethods.glVertex3d(origin_cam.X, origin_cam.Y, origin_cam.Z);
-            NativeMethods.glVertex3d(zaxis_cam.X, zaxis_cam.Y, zaxis_cam.Z);
+                // y axis (green) - up
+                NativeMethods.glColor3ub(0, 255, 0);
+                NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                NativeMethods.glColor3ub(0, 0, 0);
+                NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
+
+                // z axis (blue) - towards user
+                NativeMethods.glColor3ub(0, 0, 255);
+                NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                NativeMethods.glColor3ub(0, 0, 0);
+                NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
+
             NativeMethods.glEnd();
             #endregion
             
@@ -1333,22 +1334,21 @@ namespace DDD
             NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
             NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
             NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
-            foreach (object o in _objects)
-            {
-                if (o is Point p_wld) 
+                foreach (object o in _objects)
                 {
-                    Point p_cam = _wld2cam * p_wld;
-                    NativeMethods.glColor3ub(255, 0, 0);
-                    NativeMethods.glVertex3d(p_cam.X, p_cam.Y, p_cam.Z);
+                    if (o is Point p_wld) 
+                    {
+                        Point p_scr = wld2scr * p_wld;
+                        NativeMethods.glColor3ub(255, 0, 0);
+                        NativeMethods.glVertex3d(p_scr.X, p_scr.Y, p_scr.Z);
+                    }
                 }
-            }
             NativeMethods.glEnd();
             #endregion
             
             NativeMethods.glFlush();
         }
 
-#region WIN32        
         private static IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
@@ -1514,12 +1514,10 @@ namespace DDD
             this.ThrowTerminatingError(er);
 #pragma warning restore CA1303 // Do not pass literals as localized parameters            
         }
-#endregion                
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public object[] InputObject;
         protected override void BeginProcessing()
         {
-
             _objects = new List<object>();
             _xaxis = 0;
             _yaxis = 0;
@@ -1546,15 +1544,15 @@ namespace DDD
             
             _width = 0;
             _height = 0;
-            _bboxMin = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
-            _bboxMax = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
+            _bboxMin_wld = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
+            _bboxMax_wld = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
 
-            _bboxMin.X = Double.MaxValue;
-            _bboxMin.Y = Double.MaxValue;
-            _bboxMin.Z = Double.MaxValue;
-            _bboxMax.X = Double.MinValue;
-            _bboxMax.Y = Double.MinValue;
-            _bboxMax.Z = Double.MinValue;
+            _bboxMin_wld.X = Double.MaxValue;
+            _bboxMin_wld.Y = Double.MaxValue;
+            _bboxMin_wld.Z = Double.MaxValue;
+            _bboxMax_wld.X = Double.MinValue;
+            _bboxMax_wld.Y = Double.MinValue;
+            _bboxMax_wld.Z = Double.MinValue;
 
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
@@ -1565,37 +1563,37 @@ namespace DDD
             if (input is Point p)
             {
                 _objects.Add(input);
-                if (p.X > _bboxMax.X) _bboxMax.X = p.X;
-                if (p.Y > _bboxMax.Y) _bboxMax.Y = p.Y;
-                if (p.Z > _bboxMax.Z) _bboxMax.Z = p.Z;
-                if (p.X < _bboxMin.X) _bboxMin.X = p.X;
-                if (p.Y < _bboxMin.Y) _bboxMin.Y = p.Y;
-                if (p.Z < _bboxMin.Z) _bboxMin.Z = p.Z;
-                Console.WriteLine($"Got point: {p}; {_bboxMin}; {_bboxMax}");
+                if (p.X > _bboxMax_wld.X) _bboxMax_wld.X = p.X;
+                if (p.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = p.Y;
+                if (p.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = p.Z;
+                if (p.X < _bboxMin_wld.X) _bboxMin_wld.X = p.X;
+                if (p.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = p.Y;
+                if (p.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = p.Z;
+                Console.WriteLine($"Got point: {p}; {_bboxMin_wld}; {_bboxMax_wld}");
             }
             else if (input is Matrix m)
             {
                 _objects.Add(input);
                 Point o = new Point(0.0, 0.0, 0.0);
                 o = m * o;
-                if (o.X > _bboxMax.X) _bboxMax.X = o.X;
-                if (o.Y > _bboxMax.Y) _bboxMax.Y = o.Y;
-                if (o.Z > _bboxMax.Z) _bboxMax.Z = o.Z;
-                if (o.X < _bboxMin.X) _bboxMin.X = o.X;
-                if (o.Y < _bboxMin.Y) _bboxMin.Y = o.Y;
-                if (o.Z < _bboxMin.Z) _bboxMin.Z = o.Z;
-                Console.WriteLine($"Got matrix: {o}; {_bboxMin}; {_bboxMax}");
+                if (o.X > _bboxMax_wld.X) _bboxMax_wld.X = o.X;
+                if (o.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = o.Y;
+                if (o.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = o.Z;
+                if (o.X < _bboxMin_wld.X) _bboxMin_wld.X = o.X;
+                if (o.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = o.Y;
+                if (o.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = o.Z;
+                Console.WriteLine($"Got matrix: {o}; {_bboxMin_wld}; {_bboxMax_wld}");
             }
             else if (input is Vector v)
             {
                 _objects.Add(input);
-                if (v.X > _bboxMax.X) _bboxMax.X = v.X;
-                if (v.Y > _bboxMax.Y) _bboxMax.Y = v.Y;
-                if (v.Z > _bboxMax.Z) _bboxMax.Z = v.Z;
-                if (v.X < _bboxMin.X) _bboxMin.X = v.X;
-                if (v.Y < _bboxMin.Y) _bboxMin.Y = v.Y;
-                if (v.Z < _bboxMin.Z) _bboxMin.Z = v.Z;
-                Console.WriteLine($"Got vector: {v}; {_bboxMin}; {_bboxMax}"); 
+                if (v.X > _bboxMax_wld.X) _bboxMax_wld.X = v.X;
+                if (v.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = v.Y;
+                if (v.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = v.Z;
+                if (v.X < _bboxMin_wld.X) _bboxMin_wld.X = v.X;
+                if (v.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = v.Y;
+                if (v.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = v.Z;
+                Console.WriteLine($"Got vector: {v}; {_bboxMin_wld}; {_bboxMax_wld}"); 
             }
             else
             {
@@ -1642,8 +1640,8 @@ namespace DDD
         protected override void EndProcessing()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine(_bboxMin);
-            Console.WriteLine(_bboxMax);
+            Console.WriteLine(_bboxMin_wld);
+            Console.WriteLine(_bboxMax_wld);
             Console.WriteLine("EndProcessing");
             if (_objects.Count == 0) return;
 #region WIN32
