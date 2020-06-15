@@ -1280,7 +1280,7 @@ namespace DDD
             
             #region CAMERA TO SCREEN
             Matrix cam2scr = Matrix.Identity();
-            cam2scr *= Matrix.Translate(-_bboxMin_wld.X, -_bboxMin_wld.Y, -_bboxMin_wld.Z);
+            // cam2scr *= Matrix.Translate(-_bboxMin_wld.X, -_bboxMin_wld.Y, -_bboxMin_wld.Z);
 
             // Vector vecBboxMin_wld = _bboxMin - Origin_wld;
             // _wld2cam *= Matrix.Translate(-vecBboxMin_wld);
@@ -1296,14 +1296,15 @@ namespace DDD
 
             Matrix wld2scr = cam2scr * _wld2cam;
 
+            NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
+
             #region DRAW AXES
-            // Map axis to camera space
+            // Map axis to screen space
             Point origin_scr = wld2scr * Origin_wld;
             Point xaxis_scr = wld2scr * XAxis_wld;
             Point yaxis_scr = wld2scr * YAxis_wld;
             Point zaxis_scr = wld2scr * ZAxis_wld;
 
-            NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
             NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
             NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
             NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
@@ -1329,6 +1330,7 @@ namespace DDD
             NativeMethods.glEnd();
             #endregion
             
+
             #region DRAW POINTS
             NativeMethods.glPointSize(10);
             NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
@@ -1345,7 +1347,103 @@ namespace DDD
                 }
             NativeMethods.glEnd();
             #endregion
-            
+
+            #region DRAW BOUNDING BOX
+            Vector delta_bbox = _bboxMax_wld - _bboxMin_wld;
+            if (delta_bbox.X != 0 && delta_bbox.Y != 0 && delta_bbox.Z != 0)
+            {
+                // Map bounding box to screen space
+                Point min_scr = wld2scr * _bboxMin_wld;
+                Point max_scr = wld2scr * _bboxMax_wld;
+
+                Point xmin_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMin_wld.Z);
+                Point ymin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
+                Point zmin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
+
+                Point xmax_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMax_wld.Z);
+                Point ymax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
+                Point zmax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
+
+                NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+                NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
+                NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+
+                    // x axis (red) - left
+                    NativeMethods.glColor3ub(255, 0, 0);
+                    NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                    NativeMethods.glColor3ub(63, 0, 0);
+                    NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+
+                    // y axis (green) - up
+                    NativeMethods.glColor3ub(0, 255, 0);
+                    NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                    NativeMethods.glColor3ub(0, 63, 0);
+                    NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+
+                    // z axis (blue) - towards user
+                    NativeMethods.glColor3ub(0, 0, 255);
+                    NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                    NativeMethods.glColor3ub(0, 0, 63);
+                    NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+
+                    // max x white
+                    NativeMethods.glColor3ub(255, 255, 255);
+                    NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+
+                    // max y white
+                    NativeMethods.glColor3ub(255, 255, 255);
+                    NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+
+                    // max z white
+                    NativeMethods.glColor3ub(255, 255, 255);
+                    NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+
+
+                    // x axis (red) - left
+                    NativeMethods.glColor3ub(63, 0, 0);
+                    NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+
+                    NativeMethods.glColor3ub(63, 0, 0);
+                    NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+
+                    // y axis (green) - up
+                    NativeMethods.glColor3ub(0, 63, 0);
+                    NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+
+                    NativeMethods.glColor3ub(0, 63, 0);
+                    NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+
+                    // z axis (blue) - towards user
+                    NativeMethods.glColor3ub(0, 0, 63);
+                    NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+
+                    NativeMethods.glColor3ub(0, 0, 63);
+                    NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+
+
+                NativeMethods.glEnd();
+            }
+
+            #endregion
+
             NativeMethods.glFlush();
         }
 
