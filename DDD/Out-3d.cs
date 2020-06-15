@@ -1154,6 +1154,19 @@ namespace DDD
     [Alias("o3d")]
     public class Out3dCommand : Cmdlet
     {
+        // Constants
+        const int MillisecondsPerRotation = 1000;
+        const int ScaleUpdatesPerSecond = 20;
+        const int MaxZoomUnits = 10;
+        const int MinZoomUnits = -MaxZoomUnits;
+        const double MaxAxis = 1.0;
+        readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
+        readonly Point XAxis_wld = new Point(MaxAxis, 0.0, 0.0);
+        readonly Point YAxis_wld = new Point(0.0, MaxAxis, 0.0);
+        readonly Point ZAxis_wld = new Point(0.0, 0.0, MaxAxis);
+        readonly Point Min_ogl = new Point(-1.0, -1.0, -1.0);
+        readonly Point Max_ogl = new Point(1.0, 1.0, 1.0);
+
         List<object> _objects = new List<object>();
         static int _xaxis = 0;
         static int _yaxis = 0;
@@ -1178,41 +1191,37 @@ namespace DDD
         static private int _zoomUnitsCurrent = 0;
         static private int _zoomUnitsAtButtonDown = 0;
 
-        const int MILLISECONDS_PER_ROTATION = 1000;
-        const int SCALE_UPDATES_PER_SECOND = 20;
-        const int MAX_ZOOM_UNITS = 10;
-        const int MIN_ZOOM_UNITS = -MAX_ZOOM_UNITS;
         
         static int _width = 0;
         static int _height = 0;
         static Point _bboxMin = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
         static Point _bboxMax = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
 
-
-        #region OPENGL             
         private void Display()
         {
+            /*
+                Coordinate System Definitions
+                
+                Name    TLA   Notes
+                ----    ---   -----
+                Object  obj   Relative to an object  
+                World   wld   Global space
+                Camera  cam   Observers view. Looking at world origin. 
+                Screen  scr   OpenGL. XY origin at center of screen. +X from left (-1) to right (+1). +Y from bottom (-1) to top (+1).
+            */
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             //Console.WriteLine($"State: X: {_xaxis}, Y: {_yaxis}, Z: {_zaxis}, zoom: {_zoom}");
             Console.WriteLine($"{_bboxMin}; {_bboxMax}");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
 
-            #region DRAW AXES
-            const double MAX_AXIS = 1.0;
 
-            // TODO: These should be const...how to do that?
-            Point origin_wld = new Point(0.0, 0.0, 0.0);
-            Point xaxis_wld = new Point(MAX_AXIS, 0.0, 0.0);
-            Point yaxis_wld = new Point(0.0, MAX_AXIS, 0.0);
-            Point zaxis_wld = new Point(0.0, 0.0, MAX_AXIS);
-
+            #region UPDATE WLD2CAM
             Matrix cam2wld = _wld2cam.Transpose();
-            
             if (_xaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _xaxisStart;
-                double rot = interval.TotalMilliseconds % MILLISECONDS_PER_ROTATION / MILLISECONDS_PER_ROTATION;    // 0.0 to 1.0 rotation since button down
-                double deg = 360.0 * rot * _xaxis;                                                                  // degrees rotation since button down
+                double rot = interval.TotalMilliseconds % MillisecondsPerRotation / MillisecondsPerRotation;    // 0.0 to 1.0 rotation since button down
+                double deg = 360.0 * rot * _xaxis;                                                              // degrees rotation since button down
                 double newCurrent = deg + _xDegreesAtButtonDown;
                 
                 // clamp to 0 to 360
@@ -1226,8 +1235,8 @@ namespace DDD
             if (_yaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _yaxisStart;
-                double rot = interval.TotalMilliseconds % MILLISECONDS_PER_ROTATION / MILLISECONDS_PER_ROTATION;    // 0.0 to 1.0 rotation since button down
-                double deg = 360.0 * rot * _yaxis;                                                                  // degrees rotation since button down
+                double rot = interval.TotalMilliseconds % MillisecondsPerRotation / MillisecondsPerRotation;    // 0.0 to 1.0 rotation since button down
+                double deg = 360.0 * rot * _yaxis;                                                              // degrees rotation since button down
                 double newCurrent = deg + _yDegreesAtButtonDown;
                 
                 // clamp to 0 to 360
@@ -1241,8 +1250,8 @@ namespace DDD
             if (_zaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _zaxisStart;
-                double rot = interval.TotalMilliseconds % MILLISECONDS_PER_ROTATION / MILLISECONDS_PER_ROTATION;    // 0.0 to 1.0 rotation since button down
-                double deg = 360.0 * rot * _zaxis;                                                                  // degrees rotation since button down
+                double rot = interval.TotalMilliseconds % MillisecondsPerRotation / MillisecondsPerRotation;    // 0.0 to 1.0 rotation since button down
+                double deg = 360.0 * rot * _zaxis;                                                              // degrees rotation since button down
                 double newCurrent = deg + _zDegreesAtButtonDown;
                 
                 // clamp to 0 to 360
@@ -1256,12 +1265,12 @@ namespace DDD
             if (_zoom != 0)
             {
                 TimeSpan interval = DateTime.Now - _zoomStart;
-                int numUpdates = (int)(interval.TotalSeconds * SCALE_UPDATES_PER_SECOND);
+                int numUpdates = (int)(interval.TotalSeconds * ScaleUpdatesPerSecond);
                 int newZoomUnits = _zoomUnitsAtButtonDown + _zoom * numUpdates;
 
                 // Clamp zoomUnits
-                if (newZoomUnits < MIN_ZOOM_UNITS) newZoomUnits = MIN_ZOOM_UNITS;
-                if (newZoomUnits > MAX_ZOOM_UNITS) newZoomUnits = MAX_ZOOM_UNITS;
+                if (newZoomUnits < MinZoomUnits) newZoomUnits = MinZoomUnits;
+                if (newZoomUnits > MaxZoomUnits) newZoomUnits = MaxZoomUnits;
 
                 double delta = _zoomUnitsCurrent - newZoomUnits;
                 double scale = Math.Pow(1.25, delta);
@@ -1269,12 +1278,27 @@ namespace DDD
                 _zoomUnitsCurrent = newZoomUnits;
             }
             _wld2cam = cam2wld.Transpose();
+            #endregion
+            
+            #region CAMERA TO SCREEN
+            // Vector vecBboxMin_wld = _bboxMin - Origin_wld;
+            // _wld2cam *= Matrix.Translate(-vecBboxMin_wld);
+            // Vector delta_ogl = Max_ogl - Min_ogl;
+            // Vector delta_bbox = _bboxMax - _bboxMin;
+            // if (delta_bbox.X == 0 || delta_bbox.Y == 0 || delta_bbox.Z == 0) delta_bbox = delta_ogl;
+            // // TODO: should be able to create vector by dividing delta_ogl/delta_bbox
+            // // TODO: should be able to use scale with a single vector
+            // _wld2cam *= Matrix.Scale(delta_ogl.X/delta_bbox.X, delta_ogl.Y/delta_bbox.Y, delta_ogl.Z/delta_bbox.Z);
+            // _wld2cam *= Matrix.Translate(vecBboxMin_wld);
             //_wld2cam *= Matrix.Scale(scale, scale, scale);
+            #endregion
 
-            Point origin_cam = _wld2cam * origin_wld;
-            Point xaxis_cam = _wld2cam * xaxis_wld;
-            Point yaxis_cam = _wld2cam * yaxis_wld;
-            Point zaxis_cam = _wld2cam * zaxis_wld;
+            #region DRAW AXES
+            // Map axis to camera space
+            Point origin_cam = _wld2cam * Origin_wld;
+            Point xaxis_cam = _wld2cam * XAxis_wld;
+            Point yaxis_cam = _wld2cam * YAxis_wld;
+            Point zaxis_cam = _wld2cam * ZAxis_wld;
 
             // TODO: point array doesn't allow modification            
             //glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -1303,7 +1327,7 @@ namespace DDD
             NativeMethods.glVertex3d(zaxis_cam.X, zaxis_cam.Y, zaxis_cam.Z);
             NativeMethods.glEnd();
             #endregion
-
+            
             #region DRAW POINTS
             NativeMethods.glPointSize(10);
             NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
@@ -1320,11 +1344,10 @@ namespace DDD
             }
             NativeMethods.glEnd();
             #endregion
-
+            
             NativeMethods.glFlush();
-
         }
-#endregion         
+
 #region WIN32        
         private static IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
@@ -1496,12 +1519,43 @@ namespace DDD
         public object[] InputObject;
         protected override void BeginProcessing()
         {
+
+            _objects = new List<object>();
+            _xaxis = 0;
+            _yaxis = 0;
+            _zaxis = 0;
+            _zoom = 0;
+            _wld2cam = Matrix.Identity();     // world to camera
+            _cam2scn = Matrix.Identity();     // camera to screen
+            
+            _xaxisStart = DateTime.Now;
+            _xDegreesCurrent = 0.0;
+            _xDegreesAtButtonDown = 0.0;
+            
+            _yaxisStart = DateTime.Now;
+            _yDegreesCurrent = 0.0;
+            _yDegreesAtButtonDown = 0.0;
+
+            _zaxisStart = DateTime.Now;
+            _zDegreesCurrent = 0.0;
+            _zDegreesAtButtonDown = 0.0;
+
+            _zoomStart = DateTime.Now;
+            _zoomUnitsCurrent = 0;
+            _zoomUnitsAtButtonDown = 0;
+            
+            _width = 0;
+            _height = 0;
+            _bboxMin = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
+            _bboxMax = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
+
             _bboxMin.X = Double.MaxValue;
             _bboxMin.Y = Double.MaxValue;
             _bboxMin.Z = Double.MaxValue;
             _bboxMax.X = Double.MinValue;
             _bboxMax.Y = Double.MinValue;
             _bboxMax.Z = Double.MinValue;
+
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
