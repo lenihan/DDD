@@ -40,8 +40,7 @@ namespace DDD
         public class VIRTUALKEY
         {
 
-            /*
-        * Virtual Keys, Standard Set */
+            /* Virtual Keys, Standard Set */
             public const uint VK_LBUTTON = 0x01;
             public const uint VK_RBUTTON = 0x02;
             public const uint VK_CANCEL = 0x03;
@@ -52,13 +51,11 @@ namespace DDD
             public const uint VK_XBUTTON2 = 0x06;    /* NOT contiguous with L & RBUTTON */
             //#endif /* _WIN32_WINNT >= 0x0500 */
 
-            /*
-        * 0x07 : unassigned */
+            /* 0x07 : unassigned */
             public const uint VK_BACK = 0x08;
             public const uint VK_TAB = 0x09;
 
-            /*
-        * 0x0A - 0x0B : reserved */
+            /* 0x0A - 0x0B : reserved */
             public const uint VK_CLEAR = 0x0C;
             public const uint VK_RETURN = 0x0D;
 
@@ -100,15 +97,13 @@ namespace DDD
             public const uint VK_DELETE = 0x2E;
             public const uint VK_HELP = 0x2F;
 
-            /*
-            public const uint VK_LWIN = 0x5B;CII '0' - '9' (0x30 - 0x39)
-        * 0x40 : unassigned * VK_A - VK_Z are the same as ASCII 'A' - 'Z' (0x41 - 0x5A) */
+            /*  public const uint VK_LWIN = 0x5B;CII '0' - '9' (0x30 - 0x39)
+            /* 0x40 : unassigned * VK_A - VK_Z are the same as ASCII 'A' - 'Z' (0x41 - 0x5A) */
             public const uint VK_LWIN = 0x5B;
             public const uint VK_RWIN = 0x5C;
             public const uint VK_APPS = 0x5D;
 
-            /*
-        * 0x5E : reserved */
+            /* 0x5E : reserved */
             public const uint VK_SLEEP = 0x5F;
 
             public const uint VK_NUMPAD0 = 0x60;
@@ -152,27 +147,22 @@ namespace DDD
             public const uint VK_F23 = 0x86;
             public const uint VK_F24 = 0x87;
 
-            /*
-        * 0x88 - 0x8F : unassigned */
+            /* 0x88 - 0x8F : unassigned */
             public const uint VK_NUMLOCK = 0x90;
             public const uint VK_SCROLL = 0x91;
 
-            /*
-        * NEC PC-9800 kbd definitions */
+            /* NEC PC-9800 kbd definitions */
             public const uint VK_OEM_NEC_EQUAL = 0x92;   // '=' key on numpad
 
-            /*
-        * Fujitsu/OASYS kbd definitions */
+            /* Fujitsu/OASYS kbd definitions */
             public const uint VK_OEM_FJ_JISHO = 0x92;   // 'Dictionary' key
             public const uint VK_OEM_FJ_MASSHOU = 0x93;   // 'Unregister word' key
             public const uint VK_OEM_FJ_TOUROKU = 0x94;   // 'Register word' key
             public const uint VK_OEM_FJ_LOYA = 0x95;   // 'Left OYAYUBI' key
             public const uint VK_OEM_FJ_ROYA = 0x96;   // 'Right OYAYUBI' key
 
-            /*
-        * 0x97 - 0x9F : unassigned */
-            /*
-        * VK_L* & VK_R* - left and right Alt, Ctrl and Shift virtual keys. * Used only as parameters to GetAsyncKeyState() and GetKeyState(). * No other API or message will distinguish left and right keys in this way. */
+            /* 0x97 - 0x9F : unassigned */
+            /* VK_L* & VK_R* - left and right Alt, Ctrl and Shift virtual keys. * Used only as parameters to GetAsyncKeyState() and GetKeyState(). * No other API or message will distinguish left and right keys in this way. */
             public const uint VK_LSHIFT = 0xA0;
             public const uint VK_RSHIFT = 0xA1;
             public const uint VK_LCONTROL = 0xA2;
@@ -203,8 +193,7 @@ namespace DDD
 
             //#endif /* _WIN32_WINNT >= 0x0500 */
 
-            /*
-        * 0xB8 - 0xB9 : reserved */
+            /* 0xB8 - 0xB9 : reserved */
             public const uint VK_OEM_1 = 0xBA;   // ';:' for US
             public const uint VK_OEM_PLUS = 0xBB;   // '+' any country
             public const uint VK_OEM_COMMA = 0xBC;   // ',' any country
@@ -213,24 +202,20 @@ namespace DDD
             public const uint VK_OEM_2 = 0xBF;   // '/?' for US
             public const uint VK_OEM_3 = 0xC0;   // '`~' for US
 
-            /*
-        * 0xC1 - 0xD7 : reserved */
-            /*
-        * 0xD8 - 0xDA : unassigned */
+            /* 0xC1 - 0xD7 : reserved */
+            /* 0xD8 - 0xDA : unassigned */
             public const uint VK_OEM_4 = 0xDB;  //  '[{' for US
             public const uint VK_OEM_5 = 0xDC;  //  '\|' for US
             public const uint VK_OEM_6 = 0xDD;  //  ']}' for US
             public const uint VK_OEM_7 = 0xDE;  //  ''"' for US
             public const uint VK_OEM_8 = 0xDF;
 
-            /*
-        * 0xE0 : reserved */
-            /*
-        * Various extended or enhanced keyboards */
-            public const uint VK_OEM_AX = 0xE1;  //  'AX' key on Japanese AX kbd
-            public const uint VK_OEM_102 = 0xE2;  //  "<>" or "\|" on RT 102-key kbd.
-            public const uint VK_ICO_HELP = 0xE3;  //  Help key on ICO
-            public const uint VK_ICO_00 = 0xE4;  //  00 key on ICO
+            /* 0xE0 : reserved */
+            /* Various extended or enhanced keyboards */
+            public const uint VK_OEM_AX = 0xE1;     //  'AX' key on Japanese AX kbd
+            public const uint VK_OEM_102 = 0xE2;    //  "<>" or "\|" on RT 102-key kbd.
+            public const uint VK_ICO_HELP = 0xE3;   //  Help key on ICO
+            public const uint VK_ICO_00 = 0xE4;     //  00 key on ICO
 
             //#if(WINVER >= 0x0400)
             public const uint VK_PROCESSKEY = 0xE5;
@@ -241,10 +226,8 @@ namespace DDD
             public const uint VK_PACKET = 0xE7;
             //#endif /* _WIN32_WINNT >= 0x0500 */
 
-            /*
-        * 0xE8 : unassigned */
-            /*
-        * Nokia/Ericsson definitions */
+            /* 0xE8 : unassigned */
+            /* Nokia/Ericsson definitions */
             public const uint VK_OEM_RESET = 0xE9;
             public const uint VK_OEM_JUMP = 0xEA;
             public const uint VK_OEM_PA1 = 0xEB;
@@ -269,9 +252,8 @@ namespace DDD
             public const uint VK_PA1 = 0xFD;
             public const uint VK_OEM_CLEAR = 0xFE;
 
-            /*
-        * 0xFF : reserved */
-            /* missing letters and numbers for convenience*/
+            /* 0xFF : reserved */
+            /* missing letters and numbers for convenience */
             public const uint VK_0 = 0x30;
             public const uint VK_1 = 0x31;
             public const uint VK_2 = 0x32;
@@ -282,7 +264,7 @@ namespace DDD
             public const uint VK_7 = 0x37;
             public const uint VK_8 = 0x38;
             public const uint VK_9 = 0x39;
-            /* 0x40 : unassigned*/
+            /* 0x40 : unassigned */
             public const uint VK_A = 0x41;
             public const uint VK_B = 0x42;
             public const uint VK_C = 0x43;
@@ -716,6 +698,25 @@ namespace DDD
             CS_IME = 0x00010000,
             CS_DROPSHADOW = 0x00020000
         }
+        public enum IDC_STANDARD_CURSORS 
+        {
+            IDC_ARROW = 32512,
+            IDC_IBEAM = 32513,
+            IDC_WAIT = 32514,
+            IDC_CROSS = 32515,
+            IDC_UPARROW = 32516,
+            IDC_SIZE = 32640,
+            IDC_ICON = 32641,
+            IDC_SIZENWSE = 32642,
+            IDC_SIZENESW = 32643,
+            IDC_SIZEWE = 32644,
+            IDC_SIZENS = 32645,
+            IDC_SIZEALL = 32646,
+            IDC_NO = 32648,
+            IDC_HAND = 32649,
+            IDC_APPSTARTING = 32650,
+            IDC_HELP = 32651
+        }
 
         // delegate
         public delegate IntPtr WndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam);
@@ -819,9 +820,11 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern IntPtr GetFocus();
         [DllImport("user32.dll")]
-        public  static extern IntPtr GetForegroundWindow();
+        public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll", EntryPoint = "GetMessageW")]
         public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+        [DllImport("user32.dll")]
+        public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
         [DllImport("user32.dll")]
         public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
         [DllImport("user32.dll")]
@@ -1617,10 +1620,24 @@ namespace DDD
             this.ThrowTerminatingError(er);
 #pragma warning restore CA1303 // Do not pass literals as localized parameters            
         }
+        
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public object[] InputObject;
+        
+        [Parameter()]
+        public string Title
+        {
+            get {return _title;}
+            set {_title = value;}
+        }
+        private string _title;
+
         protected override void BeginProcessing()
         {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("BeginProcessing");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+
             _objects = new List<object>();
             _xaxis = 0;
             _yaxis = 0;
@@ -1647,8 +1664,6 @@ namespace DDD
             
             _width = 0;
             _height = 0;
-            _bboxMin_wld = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
-            _bboxMax_wld = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
 
             _bboxMin_wld.X = 0.0;
             _bboxMin_wld.Y = 0.0;
@@ -1656,10 +1671,6 @@ namespace DDD
             _bboxMax_wld.X = 0.0;
             _bboxMax_wld.Y = 0.0;
             _bboxMax_wld.Z = 0.0;
-
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine("BeginProcessing");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
         private void ProcessObject(object input)
         {
@@ -1672,7 +1683,7 @@ namespace DDD
                 if (p.X < _bboxMin_wld.X) _bboxMin_wld.X = p.X;
                 if (p.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = p.Y;
                 if (p.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = p.Z;
-                Console.WriteLine($"Got point: {p}; {_bboxMin_wld}; {_bboxMax_wld}");
+                Console.WriteLine($"Got point: {p}");
             }
             else if (input is Matrix m)
             {
@@ -1685,7 +1696,7 @@ namespace DDD
                 if (o.X < _bboxMin_wld.X) _bboxMin_wld.X = o.X;
                 if (o.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = o.Y;
                 if (o.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = o.Z;
-                Console.WriteLine($"Got matrix: {o}; {_bboxMin_wld}; {_bboxMax_wld}");
+                Console.WriteLine($"Got matrix: {o}");
             }
             else if (input is Vector v)
             {
@@ -1696,7 +1707,7 @@ namespace DDD
                 if (v.X < _bboxMin_wld.X) _bboxMin_wld.X = v.X;
                 if (v.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = v.Y;
                 if (v.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = v.Z;
-                Console.WriteLine($"Got vector: {v}; {_bboxMin_wld}; {_bboxMax_wld}"); 
+                Console.WriteLine($"Got vector: {v}"); 
             }
             else
             {
@@ -1765,36 +1776,41 @@ namespace DDD
 
 #region WIN32
             // Create window
-            IntPtr hInst = NativeMethods.GetModuleHandle(null);
-            if (hInst == null) PrintErrorAndExit("GetModuleHandle");
+            IntPtr hInstance = NativeMethods.GetModuleHandle(null);
+            if (hInstance == null) PrintErrorAndExit("GetModuleHandle");
 
             const string className = "DDDWindow";
             var wc = NativeMethods.WNDCLASSEX.Build();
             wc.WndProc = new NativeMethods.WndProc(MyWndProc);
             wc.ClassName = className;
-            wc.Instance = hInst;
+            wc.Instance = hInstance;
+            wc.Cursor = NativeMethods.LoadCursor(IntPtr.Zero, NativeMethods.IDC_STANDARD_CURSORS.IDC_ARROW);
+
             ushort atom = NativeMethods.RegisterClassEx(ref wc);
             if (atom == 0) PrintErrorAndExit("RegisterClassEx");
 
-            // TODO: this is for easier debugging, clean up
-            int x = 0;              // NativeMethods.CW_USEDEFAULT
-            int y = 0;              // NativeMethods.CW_USEDEFAULT
-            int width = 1000;       // NativeMethods.CW_USEDEFAULT
-            int height = 1000;      // NativeMethods.CW_USEDEFAULT
+            const int dwExStyle = 0;
+            const int x = NativeMethods.CW_USEDEFAULT;
+            const int y = NativeMethods.CW_USEDEFAULT;
+            const int width = NativeMethods.CW_USEDEFAULT;
+            const int height = NativeMethods.CW_USEDEFAULT;
+            IntPtr hWndParent = IntPtr.Zero;
+            IntPtr hMenu = IntPtr.Zero;
+            IntPtr lpParam = IntPtr.Zero;
 
             IntPtr hWnd = NativeMethods.CreateWindowEx(
-                0,
+                dwExStyle,
                 atom,
-                null,
+                _title, 
                 NativeMethods.WindowStyles.WS_OVERLAPPEDWINDOW,
                 x,
                 y,
                 width,
                 height,
-                IntPtr.Zero,
-                IntPtr.Zero,
-                IntPtr.Zero,
-                IntPtr.Zero);
+                hWndParent,
+                hMenu,
+                hInstance,
+                lpParam);
             if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
 
             bool foregroundWindow = NativeMethods.SetForegroundWindow(hWnd);
@@ -1856,7 +1872,7 @@ namespace DDD
             bool contextDeleted = NativeMethods.wglDeleteContext(hRC);
             if (!contextDeleted) PrintErrorAndExit("wglDeleteContext");
 
-            bool classUnregistered = NativeMethods.UnregisterClass(className, hInst);            
+            bool classUnregistered = NativeMethods.UnregisterClass(className, hInstance);            
             if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
             
             Console.WriteLine("EndProcessing - DONE");
