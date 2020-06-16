@@ -1849,6 +1849,9 @@ namespace DDD
 
                 bool buffersSwapped = NativeMethods.SwapBuffers(hDC);
                 if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
+                
+                // Do not use 100% of CPU. Yield to others for a minimal amount of time (1 millisecond)
+                System.Threading.Tasks.Task.Delay(1).Wait();    
 
                 NativeMethods.MSG msg;
                 while (NativeMethods.PeekMessage(out msg, IntPtr.Zero, 0, 0, NativeMethods.PM_NOREMOVE))
