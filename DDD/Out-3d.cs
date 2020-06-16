@@ -1159,11 +1159,7 @@ namespace DDD
         const int ScaleUpdatesPerSecond = 20;
         const int MaxZoomUnits = 10;
         const int MinZoomUnits = -MaxZoomUnits;
-        const double MaxAxis = 1.0;
         readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
-        readonly Point XAxis_wld = new Point(MaxAxis, 0.0, 0.0);
-        readonly Point YAxis_wld = new Point(0.0, MaxAxis, 0.0);
-        readonly Point ZAxis_wld = new Point(0.0, 0.0, MaxAxis);
 
         List<object> _objects = new List<object>();
         static int _xaxis = 0;
@@ -1193,6 +1189,12 @@ namespace DDD
         static int _height = 0;
         static Point _bboxMin_wld;
         static Point _bboxMax_wld;
+        static double _maxDistance;
+        static Point _xAxis_wld;
+        static Point _yAxis_wld;
+        static Point _zAxis_wld;
+
+
 
         private void Display()
         {
@@ -1276,20 +1278,14 @@ namespace DDD
             Matrix cam2scr = Matrix.Identity();
 
             // fit bounding box within opengl window
-            double bboxXDelta = _bboxMax_wld.X - _bboxMin_wld.X;
-            double bboxYDelta = _bboxMax_wld.Y - _bboxMin_wld.Y;
-            double bboxZDelta = _bboxMax_wld.Z - _bboxMin_wld.Z;
-            double maxDelta = Math.Max(Math.Max(bboxXDelta, bboxYDelta), bboxZDelta);
-            if (maxDelta != 0)
+            if (_maxDistance != 0)
             {
-                const double oglDelta = 1 - -1;
-                double s = oglDelta / maxDelta;
+                const double OPENGL_MAX = 1.0;
+                const double COVERAGE = 0.95;   // 1.0 == max coverage, 0.5 == half coverage, .95 looks about right
+                double s = OPENGL_MAX / _maxDistance * COVERAGE;
                 cam2scr *= Matrix.Scale(s, s, s);
             }
             
-            
-            // scale largest bbox axis delta to match opengl (1 - -1 = 2)
-
             // Keep 1:1 ratio, even when window is not square
             if (_width != 0 && _height != 0) 
             {
@@ -1311,9 +1307,9 @@ namespace DDD
             #region DRAW AXES
             // Map axis to screen space
             Point origin_scr = wld2scr * Origin_wld;
-            Point xaxis_scr = wld2scr * XAxis_wld;
-            Point yaxis_scr = wld2scr * YAxis_wld;
-            Point zaxis_scr = wld2scr * ZAxis_wld;
+            Point xaxis_scr = wld2scr * _xAxis_wld;
+            Point yaxis_scr = wld2scr * _yAxis_wld;
+            Point zaxis_scr = wld2scr * _zAxis_wld;
 
             NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
             NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
@@ -1747,10 +1743,26 @@ namespace DDD
         protected override void EndProcessing()
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine(_bboxMin_wld);
-            Console.WriteLine(_bboxMax_wld);
             Console.WriteLine("EndProcessing");
             if (_objects.Count == 0) return;
+            
+            // compute _maxDistance
+            double maxX = Math.Max(Math.Abs(_bboxMin_wld.X), Math.Abs(_bboxMax_wld.X));     // max distance from origin in X direction
+            double maxY = Math.Max(Math.Abs(_bboxMin_wld.Y), Math.Abs(_bboxMax_wld.Y));     // max distance from origin in Y direction
+            double maxZ = Math.Max(Math.Abs(_bboxMin_wld.Z), Math.Abs(_bboxMax_wld.Z));     // max distance from origin in Z direction
+            double maxAxis = Math.Max(Math.Max(maxX, maxY), maxZ);                          // overall max distance for any axis
+            _maxDistance = Math.Sqrt(3 * maxAxis * maxAxis);                                // Distance from origin to (maxAxis, maxAxis, maxAxis)
+
+            _xAxis_wld.X = _maxDistance;
+            _xAxis_wld.Y = 0;
+            _xAxis_wld.Z = 0;
+            _yAxis_wld.X = 0;
+            _yAxis_wld.Y = _maxDistance;
+            _yAxis_wld.Z = 0;
+            _zAxis_wld.X = 0;
+            _zAxis_wld.Y = 0;
+            _zAxis_wld.Z = _maxDistance;
+
 #region WIN32
             // Create window
             IntPtr hInst = NativeMethods.GetModuleHandle(null);
