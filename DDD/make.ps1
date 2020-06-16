@@ -1,4 +1,4 @@
-Param([Switch]$PowerShellGallery)
+Param([Switch]$PowerShellGallery,[Switch]$Release)
 
 # How to write a PowerShell module manifest
 # https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
@@ -13,8 +13,21 @@ $tags           = @('3D', 'ply', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
 $cmdlets        = @('Out-3d')
 $aliases        = @('o3d')
+$config         = $Release ? "Release" : "Debug"
 
-$cmd = "dotnet build '$root\DDD.csproj' --configuration Release"
+# Clean
+$cmd = "dotnet clean '$root\DDD.csproj' --configuration $config"
+Write-Host "# $cmd" -ForegroundColor Green
+Invoke-Expression $cmd
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "# Fix errors and re-run." -ForegroundColor Green
+    return
+}
+
+# Build
+#       Creates $root\bin\$config\netcoreapp3.1\DDD.dll
+#               $root\obj\$config\netcoreapp3.1\DDD.dll
+$cmd = "dotnet build '$root\DDD.csproj' --configuration $config"
 Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
 if ($LASTEXITCODE -ne 0) {
@@ -27,7 +40,7 @@ Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
 
 try {
-    $cmd = "Copy-Item '$root\bin\Release\netcoreapp3.1\DDD.dll' '$root\publish\DDD' -ErrorAction Stop"
+    $cmd = "Copy-Item '$root\bin\$config\netcoreapp3.1\DDD.dll' '$root\publish\DDD' -ErrorAction Stop"
     Write-Host "# $cmd" -ForegroundColor Green
     Invoke-Expression $cmd    
 } 
@@ -47,25 +60,25 @@ Invoke-Expression $cmd
 
 $manifestArgs = [ordered]@{
     Path               = "$root\publish\DDD\DDD.psd1"
-    RootModule         = $moduleName                                             
-    ModuleVersion      = $version                                                
-    Author             = $name                                                   
-    CompanyName        = $name                                                   
-    Copyright          = "Copyright = '(c) $name. All rights reserved.'"         
-    Description        = $description                                            
-    RequiredAssemblies = $reqAssemblies                                          
-    ScriptsToProcess   = $scripts                                                
-    CmdletsToExport    = $cmdlets                                                
-    Tags               = $tags
-    AliasesToExport    = $aliases
-}
-Write-Host '# $manifestArgs contents: ' -ForegroundColor Green
-$manifestArgs
-
-$cmd = "New-ModuleManifest @manifestArgs"
-Write-Host "# $cmd" -ForegroundColor Green
-Invoke-Expression $cmd
-
+        RootModule         = $moduleName                                             
+        ModuleVersion      = $version                                                
+        Author             = $name                                                   
+        CompanyName        = $name                                                   
+        Copyright          = "Copyright = '(c) $name. All rights reserved.'"         
+        Description        = $description                                            
+        RequiredAssemblies = $reqAssemblies                                          
+        ScriptsToProcess   = $scripts                                                
+        CmdletsToExport    = $cmdlets                                                
+        Tags               = $tags
+        AliasesToExport    = $aliases
+    }
+    Write-Host '# $manifestArgs contents: ' -ForegroundColor Green
+    $manifestArgs
+    
+    $cmd = "New-ModuleManifest @manifestArgs"
+    Write-Host "# $cmd" -ForegroundColor Green
+    Invoke-Expression $cmd
+    
 if ($PowerShellGallery) {
     $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca"
     Write-Host "# $cmd" -ForegroundColor Green

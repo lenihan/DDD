@@ -1191,8 +1191,8 @@ namespace DDD
         
         static int _width = 0;
         static int _height = 0;
-        static Point _bboxMin_wld = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
-        static Point _bboxMax_wld = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
+        static Point _bboxMin_wld;
+        static Point _bboxMax_wld;
 
         private void Display()
         {
@@ -1272,23 +1272,40 @@ namespace DDD
             _wld2cam = cam2wld.Transpose();
             #endregion
             
-            #region CAMERA TO SCREEN
+            #region CAM2SCR
             Matrix cam2scr = Matrix.Identity();
 
-            // Keep 1:1 ratio, even when window is not square
-            double w2h = (double)_width/(double)_height;
-            if (_width < _height)
+            // fit bounding box within opengl window
+            double bboxXDelta = _bboxMax_wld.X - _bboxMin_wld.X;
+            double bboxYDelta = _bboxMax_wld.Y - _bboxMin_wld.Y;
+            double bboxZDelta = _bboxMax_wld.Z - _bboxMin_wld.Z;
+            double maxDelta = Math.Max(Math.Max(bboxXDelta, bboxYDelta), bboxZDelta);
+            if (maxDelta != 0)
             {
-                cam2scr *= Matrix.Scale(1.0, w2h, 1.0);
+                const double oglDelta = 1 - -1;
+                double s = oglDelta / maxDelta;
+                cam2scr *= Matrix.Scale(s, s, s);
             }
-            else 
+            
+            
+            // scale largest bbox axis delta to match opengl (1 - -1 = 2)
+
+            // Keep 1:1 ratio, even when window is not square
+            if (_width != 0 && _height != 0) 
             {
-                cam2scr *= Matrix.Scale(1.0/w2h, 1.0, 1.0);
+                double w2h = (double)_width/(double)_height;
+                if (_width < _height)
+                {
+                    cam2scr *= Matrix.Scale(1.0, w2h, 1.0);
+                }
+                else 
+                {
+                    cam2scr *= Matrix.Scale(1.0/w2h, 1.0, 1.0);
+                }
             }
             #endregion
 
             Matrix wld2scr = cam2scr * _wld2cam;
-
             NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
 
             #region DRAW AXES
@@ -1637,12 +1654,12 @@ namespace DDD
             _bboxMin_wld = new Point(Double.MaxValue, Double.MaxValue, Double.MaxValue);
             _bboxMax_wld = new Point(Double.MinValue, Double.MinValue, Double.MinValue);
 
-            _bboxMin_wld.X = Double.MaxValue;
-            _bboxMin_wld.Y = Double.MaxValue;
-            _bboxMin_wld.Z = Double.MaxValue;
-            _bboxMax_wld.X = Double.MinValue;
-            _bboxMax_wld.Y = Double.MinValue;
-            _bboxMax_wld.Z = Double.MinValue;
+            _bboxMin_wld.X = 0.0;
+            _bboxMin_wld.Y = 0.0;
+            _bboxMin_wld.Z = 0.0;
+            _bboxMax_wld.X = 0.0;
+            _bboxMax_wld.Y = 0.0;
+            _bboxMax_wld.Z = 0.0;
 
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
