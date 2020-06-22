@@ -1122,6 +1122,8 @@ namespace DDD
         [DllImport("opengl32.dll")]
         public static extern void glColor3f(float red, float green, float blue);
         [DllImport("opengl32.dll")]
+        public static extern void glDisable(GetTarget cap);
+        [DllImport("opengl32.dll")]
         public static extern void glEnable(GetTarget cap);
         [DllImport("opengl32.dll")]
         public static extern void glEnd();
@@ -1159,7 +1161,6 @@ namespace DDD
     {
         // Constants
         const int MillisecondsPerRotation = 1000;
-        const int ScaleUpdatesPerSecond = 20;
         readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
 
         List<object> _objects = new List<object>();
@@ -1189,8 +1190,6 @@ namespace DDD
         static Point _xAxis_wld;
         static Point _yAxis_wld;
         static Point _zAxis_wld;
-
-
 
         private void Display()
         {
@@ -1286,52 +1285,72 @@ namespace DDD
             NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
 
             #region DRAW AXES
-            // Map axis to screen space
-            Point origin_scr = wld2scr * Origin_wld;
-            Point xaxis_scr = wld2scr * _xAxis_wld;
-            Point yaxis_scr = wld2scr * _yAxis_wld;
-            Point zaxis_scr = wld2scr * _zAxis_wld;
+            {
+                // Map axis to screen space
+                Point origin_scr = wld2scr * Origin_wld;
+                Point xaxis_scr = wld2scr * _xAxis_wld;
+                Point yaxis_scr = wld2scr * _yAxis_wld;
+                Point zaxis_scr = wld2scr * _zAxis_wld;
 
-            NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-            NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-            NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+                var black = System.Drawing.Color.FromArgb(0, 0, 0);        // Black https://rgbcolorcode.com/color/000000
+                var red = System.Drawing.Color.FromArgb(230, 38, 0);      // Ferrari Red https://rgbcolorcode.com/color/E62600
+                var green = System.Drawing.Color.FromArgb(25, 255, 25);     // Neon Green https://rgbcolorcode.com/color/19FF19
+                var blue = System.Drawing.Color.FromArgb(0, 68, 204);      // Sapphire https://rgbcolorcode.com/color/0044CC
 
-                // x axis (red) - left
-                NativeMethods.glColor3ub(255, 0, 0);
-                NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                NativeMethods.glColor3ub(0, 0, 0);
-                NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
+                NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+                NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
+                NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
 
-                // y axis (green) - up
-                NativeMethods.glColor3ub(0, 255, 0);
-                NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                NativeMethods.glColor3ub(0, 0, 0);
-                NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
+                    // x axis (red) - left
+                    NativeMethods.glColor3ub(red.R, red.G, red.B);
+                    NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                    NativeMethods.glColor3ub(black.R, black.G, black.B);
+                    NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
 
-                // z axis (blue) - towards user
-                NativeMethods.glColor3ub(0, 0, 255);
-                NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                NativeMethods.glColor3ub(0, 0, 0);
-                NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
+                    // y axis (green) - up
+                    NativeMethods.glColor3ub(green.R, green.G, green.B);
+                    NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                    NativeMethods.glColor3ub(black.R, black.G, black.B);
+                    NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
 
-            NativeMethods.glEnd();
+                    // z axis (blue) - towards user
+                    NativeMethods.glColor3ub(blue.R, blue.G, blue.B);
+                    NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                    NativeMethods.glColor3ub(black.R, black.G, black.B);
+                    NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
+
+                NativeMethods.glEnd();
+                }
             #endregion
 
-            #region DRAW POINTS
-            NativeMethods.glPointSize(10);
-            NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
-            NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
-            NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
+            #region DRAW OBJECTS
                 foreach (object o in _objects)
                 {
                     if (o is Point p_wld) 
                     {
                         Point p_scr = wld2scr * p_wld;
-                        NativeMethods.glColor3ub(255, 0, 0);
-                        NativeMethods.glVertex3d(p_scr.X, p_scr.Y, p_scr.Z);
+                        NativeMethods.glPointSize(5.0f);
+                        NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
+                        NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
+                        NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
+                            NativeMethods.glColor3ub(255, 255, 0);
+                            NativeMethods.glVertex3d(p_scr.X, p_scr.Y, p_scr.Z);
+                        NativeMethods.glEnd();
+                    }
+                    else if(o is Vector v_wld)
+                    {
+                        Vector v_scr = wld2scr * v_wld;
+                        Vector origin_scr = wld2scr * new Vector(0.0, 0.0, 0.0);
+                        NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+                        NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
+                        NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);                        
+                            NativeMethods.glLineWidth(1.0f);
+                            NativeMethods.glColor3ub(255, 128, 0);
+                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            NativeMethods.glVertex3d(v_scr.X, v_scr.Y, v_scr.Z);
+                        NativeMethods.glEnd();
                     }
                 }
-            NativeMethods.glEnd();
             #endregion
 
             #region DRAW BOUNDING BOX
@@ -1390,7 +1409,6 @@ namespace DDD
                     NativeMethods.glColor3ub(63, 63, 63);
                     NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
-
                     // x axis (red) - left
                     NativeMethods.glColor3ub(63, 0, 0);
                     NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
@@ -1423,7 +1441,6 @@ namespace DDD
                     NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
                     NativeMethods.glColor3ub(63, 63, 63);
                     NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
-
 
                 NativeMethods.glEnd();
             }
