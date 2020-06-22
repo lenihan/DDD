@@ -1160,15 +1160,12 @@ namespace DDD
         // Constants
         const int MillisecondsPerRotation = 1000;
         const int ScaleUpdatesPerSecond = 20;
-        const int MaxZoomUnits = 10;
-        const int MinZoomUnits = -MaxZoomUnits;
         readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
 
         List<object> _objects = new List<object>();
         static int _xaxis = 0;
         static int _yaxis = 0;
         static int _zaxis = 0;
-        static int _zoom = 0;
         static private Matrix _wld2cam = Matrix.Identity();     // world to camera
         static private Matrix _cam2scn = Matrix.Identity();     // camera to screen
         
@@ -1184,10 +1181,6 @@ namespace DDD
         static private double _zDegreesCurrent = 0.0;
         static private double _zDegreesAtButtonDown = 0.0;
 
-        static private DateTime _zoomStart = DateTime.Now;
-        static private int _zoomUnitsCurrent = 0;
-        static private int _zoomUnitsAtButtonDown = 0;
-        
         static int _width = 0;
         static int _height = 0;
         static Point _bboxMin_wld;
@@ -1258,21 +1251,6 @@ namespace DDD
                 double delta = _zDegreesCurrent - newCurrent;
                 cam2wld *= Matrix.RotateZ(delta);
                 _zDegreesCurrent = newCurrent;
-            }
-            if (_zoom != 0)
-            {
-                TimeSpan interval = DateTime.Now - _zoomStart;
-                int numUpdates = (int)(interval.TotalSeconds * ScaleUpdatesPerSecond);
-                int newZoomUnits = _zoomUnitsAtButtonDown + _zoom * numUpdates;
-
-                // Clamp zoomUnits
-                if (newZoomUnits < MinZoomUnits) newZoomUnits = MinZoomUnits;
-                if (newZoomUnits > MaxZoomUnits) newZoomUnits = MaxZoomUnits;
-
-                double delta = _zoomUnitsCurrent - newZoomUnits;
-                double scale = Math.Pow(1.25, delta);
-                cam2wld *= Matrix.Scale(scale, scale, scale);
-                _zoomUnitsCurrent = newZoomUnits;
             }
             _wld2cam = cam2wld.Transpose();
             #endregion
@@ -1524,27 +1502,6 @@ namespace DDD
                                 _zaxisStart = DateTime.Now;
                             }
                             break;
-                        // zoom
-                        case NativeMethods.VIRTUALKEY.VK_Z:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_MINUS:
-                        case NativeMethods.VIRTUALKEY.VK_HOME:
-                            if (_zoom != 1)
-                            {
-                                _zoom = 1;
-                                _zoomUnitsAtButtonDown = _zoomUnitsCurrent;
-                                _zoomStart = DateTime.Now;
-                            }
-                            break;
-                        case NativeMethods.VIRTUALKEY.VK_C:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_PLUS:
-                        case NativeMethods.VIRTUALKEY.VK_END:
-                            if (_zoom != -1)
-                            {
-                                _zoomUnitsAtButtonDown = _zoomUnitsCurrent;
-                                _zoomStart = DateTime.Now;
-                                _zoom = -1;
-                            }
-                            break;
                     }
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_KEYUP:
@@ -1572,15 +1529,6 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
                             _zaxis = 0;
-                            break;
-                        // zoom
-                        case NativeMethods.VIRTUALKEY.VK_Z:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_MINUS:
-                        case NativeMethods.VIRTUALKEY.VK_HOME:
-                        case NativeMethods.VIRTUALKEY.VK_C:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_PLUS:
-                        case NativeMethods.VIRTUALKEY.VK_END:
-                            _zoom = 0;
                             break;
                         // reset
                         case NativeMethods.VIRTUALKEY.VK_R:
@@ -1642,7 +1590,6 @@ namespace DDD
             _xaxis = 0;
             _yaxis = 0;
             _zaxis = 0;
-            _zoom = 0;
             _wld2cam = Matrix.Identity();     // world to camera
             _cam2scn = Matrix.Identity();     // camera to screen
             
@@ -1658,9 +1605,6 @@ namespace DDD
             _zDegreesCurrent = 0.0;
             _zDegreesAtButtonDown = 0.0;
 
-            _zoomStart = DateTime.Now;
-            _zoomUnitsCurrent = 0;
-            _zoomUnitsAtButtonDown = 0;
             
             _width = 0;
             _height = 0;
