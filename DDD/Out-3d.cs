@@ -1159,37 +1159,56 @@ namespace DDD
     [Alias("o3d")]
     public class Out3dCommand : Cmdlet
     {
+        ////////////
         // Constants
+        
         const int MillisecondsPerRotation = 1000;
         readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
+        
+        // colors
+        readonly System.Drawing.Color _black = System.Drawing.Color.FromArgb(0, 0, 0);          // Black https://rgbcolorcode.com/color/000000
+        readonly System.Drawing.Color _darkGray = System.Drawing.Color.FromArgb(74, 74, 74);    // Quartz https://rgbcolorcode.com/color/4a4a4a
+        readonly System.Drawing.Color _white = System.Drawing.Color.FromArgb(255, 255, 255);    // White https://rgbcolorcode.com/color/FFFFFF
+        readonly System.Drawing.Color _red = System.Drawing.Color.FromArgb(230, 38, 0);         // Ferrari Red https://rgbcolorcode.com/color/E62600
+        readonly System.Drawing.Color _green = System.Drawing.Color.FromArgb(25, 255, 25);      // Neon Green https://rgbcolorcode.com/color/19FF19
+        readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
+        readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
+        readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
 
         List<object> _objects = new List<object>();
-        static int _xaxis = 0;
-        static int _yaxis = 0;
-        static int _zaxis = 0;
-        static private Matrix _wld2cam = Matrix.Identity();     // world to camera
-        static private Matrix _cam2scn = Matrix.Identity();     // camera to screen
+
+        int _xaxis = 0;
+        int _yaxis = 0;
+        int _zaxis = 0;
         
-        static private DateTime _xaxisStart = DateTime.Now;
-        static private double _xDegreesCurrent = 0.0;
-        static private double _xDegreesAtButtonDown = 0.0;
+        private Matrix _wld2cam = Matrix.Identity();     // world to camera
+        private Matrix _cam2scn = Matrix.Identity();     // camera to screen
+        
+        private DateTime _xaxisStart = DateTime.Now;
+        private double _xDegreesCurrent = 0.0;
+        private double _xDegreesAtButtonDown = 0.0;
+        
+        private DateTime _yaxisStart = DateTime.Now;
+        private double _yDegreesCurrent = 0.0;
+        private double _yDegreesAtButtonDown = 0.0;
+        
+        private DateTime _zaxisStart = DateTime.Now;
+        private double _zDegreesCurrent = 0.0;
+        private double _zDegreesAtButtonDown = 0.0;
 
-        static private DateTime _yaxisStart = DateTime.Now;
-        static private double _yDegreesCurrent = 0.0;
-        static private double _yDegreesAtButtonDown = 0.0;
+        int _width = 0;
+        int _height = 0;
+        
+        Point _bboxMin_wld;
+        Point _bboxMax_wld;
+        
+        double _maxDistance;
+        
+        Point _xAxis_wld;
+        Point _yAxis_wld;
+        Point _zAxis_wld;
 
-        static private DateTime _zaxisStart = DateTime.Now;
-        static private double _zDegreesCurrent = 0.0;
-        static private double _zDegreesAtButtonDown = 0.0;
 
-        static int _width = 0;
-        static int _height = 0;
-        static Point _bboxMin_wld;
-        static Point _bboxMax_wld;
-        static double _maxDistance;
-        static Point _xAxis_wld;
-        static Point _yAxis_wld;
-        static Point _zAxis_wld;
 
         private void Display()
         {
@@ -1292,35 +1311,30 @@ namespace DDD
                 Point yaxis_scr = wld2scr * _yAxis_wld;
                 Point zaxis_scr = wld2scr * _zAxis_wld;
 
-                var black = System.Drawing.Color.FromArgb(0, 0, 0);        // Black https://rgbcolorcode.com/color/000000
-                var red = System.Drawing.Color.FromArgb(230, 38, 0);      // Ferrari Red https://rgbcolorcode.com/color/E62600
-                var green = System.Drawing.Color.FromArgb(25, 255, 25);     // Neon Green https://rgbcolorcode.com/color/19FF19
-                var blue = System.Drawing.Color.FromArgb(0, 68, 204);      // Sapphire https://rgbcolorcode.com/color/0044CC
-
                 NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
                 NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
                 NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
 
                     // x axis (red) - left
-                    NativeMethods.glColor3ub(red.R, red.G, red.B);
+                    NativeMethods.glColor3ub(_red.R, _red.G, _red.B);
                     NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                    NativeMethods.glColor3ub(black.R, black.G, black.B);
+                    NativeMethods.glColor3ub(_black.R, _black.G, _black.B);
                     NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
 
                     // y axis (green) - up
-                    NativeMethods.glColor3ub(green.R, green.G, green.B);
+                    NativeMethods.glColor3ub(_green.R, _green.G, _green.B);
                     NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                    NativeMethods.glColor3ub(black.R, black.G, black.B);
+                    NativeMethods.glColor3ub(_black.R, _black.G, _black.B);
                     NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
 
                     // z axis (blue) - towards user
-                    NativeMethods.glColor3ub(blue.R, blue.G, blue.B);
+                    NativeMethods.glColor3ub(_blue.R, _blue.G, _blue.B);
                     NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                    NativeMethods.glColor3ub(black.R, black.G, black.B);
+                    NativeMethods.glColor3ub(_black.R, _black.G, _black.B);
                     NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
 
                 NativeMethods.glEnd();
-                }
+            }
             #endregion
 
             #region DRAW OBJECTS
@@ -1333,11 +1347,11 @@ namespace DDD
                         NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
                         NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
                         NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
-                            NativeMethods.glColor3ub(255, 255, 0);
+                            NativeMethods.glColor3ub(_yellow.R, _yellow.G, _yellow.B);
                             NativeMethods.glVertex3d(p_scr.X, p_scr.Y, p_scr.Z);
                         NativeMethods.glEnd();
                     }
-                    else if(o is Vector v_wld)
+                    else if (o is Vector v_wld)
                     {
                         Vector v_scr = wld2scr * v_wld;
                         Vector origin_scr = wld2scr * new Vector(0.0, 0.0, 0.0);
@@ -1345,7 +1359,7 @@ namespace DDD
                         NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
                         NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);                        
                             NativeMethods.glLineWidth(1.0f);
-                            NativeMethods.glColor3ub(255, 128, 0);
+                            NativeMethods.glColor3ub(_orange.R, _orange.G, _orange.B);
                             NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
                             NativeMethods.glVertex3d(v_scr.X, v_scr.Y, v_scr.Z);
                         NativeMethods.glEnd();
@@ -1374,72 +1388,72 @@ namespace DDD
                 NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
 
                     // x axis (red) - left
-                    NativeMethods.glColor3ub(255, 0, 0);
+                    NativeMethods.glColor3ub(_red.R, _red.G, _red.B);
                     NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                    NativeMethods.glColor3ub(63, 0, 0);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
 
                     // y axis (green) - up
-                    NativeMethods.glColor3ub(0, 255, 0);
+                    NativeMethods.glColor3ub(_green.R, _green.G, _green.B);
                     NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                    NativeMethods.glColor3ub(0, 63, 0);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
 
                     // z axis (blue) - towards user
-                    NativeMethods.glColor3ub(0, 0, 255);
+                    NativeMethods.glColor3ub(_blue.R, _blue.G, _blue.B);
                     NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                    NativeMethods.glColor3ub(0, 0, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
 
                     // max x white
-                    NativeMethods.glColor3ub(255, 255, 255);
+                    NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
                     NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
                     // max y white
-                    NativeMethods.glColor3ub(255, 255, 255);
+                    NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
                     NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
                     // max z white
-                    NativeMethods.glColor3ub(255, 255, 255);
+                    NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
                     NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
                     // x axis (red) - left
-                    NativeMethods.glColor3ub(63, 0, 0);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
-                    NativeMethods.glColor3ub(63, 0, 0);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
                     // y axis (green) - up
-                    NativeMethods.glColor3ub(0, 63, 0);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                    NativeMethods.glColor3ub(0, 63, 0);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
                     // z axis (blue) - towards user
-                    NativeMethods.glColor3ub(0, 0, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                    NativeMethods.glColor3ub(0, 0, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
-                    NativeMethods.glColor3ub(63, 63, 63);
+                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                     NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
                 NativeMethods.glEnd();
@@ -1450,7 +1464,7 @@ namespace DDD
             NativeMethods.glFlush();
         }
 
-        private static IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
+        private IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
 //            Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
