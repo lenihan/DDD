@@ -365,8 +365,6 @@ namespace DDD
             }
         }
 
-
-
         // DllImport
         [DllImport("gdi32.dll")]
         public static extern int ChoosePixelFormat(IntPtr hdc, ref PixelFormatDescriptor pfd);
@@ -1174,6 +1172,9 @@ namespace DDD
         readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
         readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
         readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
+        // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
+        // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
+        
 
         List<object> _objects = new List<object>();
 
@@ -1181,20 +1182,20 @@ namespace DDD
         int _yaxis = 0;
         int _zaxis = 0;
         
-        private Matrix _wld2cam = Matrix.Identity();     // world to camera
-        private Matrix _cam2scn = Matrix.Identity();     // camera to screen
+        Matrix _wld2cam = Matrix.Identity();     // world to camera
+        Matrix _cam2scn = Matrix.Identity();     // camera to screen
         
-        private DateTime _xaxisStart = DateTime.Now;
-        private double _xDegreesCurrent = 0.0;
-        private double _xDegreesAtButtonDown = 0.0;
+        DateTime _xaxisStart = DateTime.Now;
+        double _xDegreesCurrent = 0.0;
+        double _xDegreesAtButtonDown = 0.0;
         
-        private DateTime _yaxisStart = DateTime.Now;
-        private double _yDegreesCurrent = 0.0;
-        private double _yDegreesAtButtonDown = 0.0;
+        DateTime _yaxisStart = DateTime.Now;
+        double _yDegreesCurrent = 0.0;
+        double _yDegreesAtButtonDown = 0.0;
         
-        private DateTime _zaxisStart = DateTime.Now;
-        private double _zDegreesCurrent = 0.0;
-        private double _zDegreesAtButtonDown = 0.0;
+        DateTime _zaxisStart = DateTime.Now;
+        double _zDegreesCurrent = 0.0;
+        double _zDegreesAtButtonDown = 0.0;
 
         int _width = 0;
         int _height = 0;
@@ -1208,9 +1209,9 @@ namespace DDD
         Point _yAxis_wld;
         Point _zAxis_wld;
 
+        bool _showBoundingBox;
 
-
-        private void Display()
+        void Display()
         {
             /*
                 Coordinate System Definitions
@@ -1365,107 +1366,115 @@ namespace DDD
                             NativeMethods.glVertex3d(v_scr.X, v_scr.Y, v_scr.Z);
                         NativeMethods.glEnd();
                     }
+                    else if (o is Matrix m_wld)
+                    {
+                        Matrix m_scr = wld2scr * m_wld;
+                        Point origin_scr = m_scr * new Point(0.0, 0.0, 0.0);
+                        Point xaxis_scr = m_scr * new Point(1.0, 0.0, 0.0);
+                        Point yaxis_scr = m_scr * new Point(0.0, 1.0, 0.0);
+                        Point zaxis_scr = m_scr * new Point(0.0, 0.0, 1.0);
+                       
+                        NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+                        NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
+                        NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+
+                            // x axis (red) - left
+                            NativeMethods.glColor3ub(_red.R, _red.G, _red.B);
+                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
+
+                            // y axis (green) - up
+                             NativeMethods.glColor3ub(_green.R, _green.G, _green.B);
+                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
+
+                            // z axis (blue) - towards user
+                            NativeMethods.glColor3ub(_blue.R, _blue.G, _blue.B);
+                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
+
+                        NativeMethods.glEnd();
+                    }
                 }
             #endregion
 
             #region DRAW BOUNDING BOX
-            Vector delta_bbox = _bboxMax_wld - _bboxMin_wld;
-            if (delta_bbox.X != 0 && delta_bbox.Y != 0 && delta_bbox.Z != 0)
+            if (_showBoundingBox) 
             {
-                // Map bounding box to screen space
-                Point min_scr = wld2scr * _bboxMin_wld;
-                Point max_scr = wld2scr * _bboxMax_wld;
+                Vector delta_bbox = _bboxMax_wld - _bboxMin_wld;
+                if (delta_bbox.X != 0 && delta_bbox.Y != 0 && delta_bbox.Z != 0)
+                {
+                    // Map bounding box to screen space
+                    Point min_scr = wld2scr * _bboxMin_wld;
+                    Point max_scr = wld2scr * _bboxMax_wld;
 
-                Point xmin_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMin_wld.Z);
-                Point ymin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
-                Point zmin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
+                    Point xmin_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMin_wld.Z);
+                    Point ymin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
+                    Point zmin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
 
-                Point xmax_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMax_wld.Z);
-                Point ymax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
-                Point zmax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
+                    Point xmax_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMax_wld.Z);
+                    Point ymax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
+                    Point zmax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
 
-                NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-                NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-                NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+                    NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
+                    NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
+                    NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
 
-                    // x axis (red) - left
-                    NativeMethods.glColor3ub(_red.R, _red.G, _red.B);
-                    NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                        // x axis (red) - left
+                        NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
+                        NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                        NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
 
-                    // y axis (green) - up
-                    NativeMethods.glColor3ub(_green.R, _green.G, _green.B);
-                    NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                        // y axis (green) - up
+                        NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                        NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
 
-                    // z axis (blue) - towards user
-                    NativeMethods.glColor3ub(_blue.R, _blue.G, _blue.B);
-                    NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                        // z axis (blue) - towards user
+                        NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                        NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
 
-                    // max x white
-                    NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
-                    NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+                        // max x white
+                        NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                        NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                    // max y white
-                    NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
-                    NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+                        // max y white
+                        NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                        NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
-                    // max z white
-                    NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
-                    NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+                        // max z white
+                        NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                        NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
-                    // x axis (red) - left
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+                        // x axis (red) - left
+                        NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                        NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+                        NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                        NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
-                    // y axis (green) - up
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+                        // y axis (green) - up
+                        NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                        NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+                        NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                        NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
-                    // z axis (blue) - towards user
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+                        // z axis (blue) - towards user
+                        NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                        NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
-                    NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                    NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+                        NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                        NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
-                NativeMethods.glEnd();
+                    NativeMethods.glEnd();
+                }
             }
-
             #endregion
 
             NativeMethods.glFlush();
         }
 
-        private IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
+        IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
 //            Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
@@ -1562,6 +1571,10 @@ namespace DDD
                         case NativeMethods.VIRTUALKEY.VK_NEXT:
                             _zaxis = 0;
                             break;
+                        // show bounding box toggle
+                        case NativeMethods.VIRTUALKEY.VK_B:
+                            _showBoundingBox = !_showBoundingBox;
+                            break;
                         // reset
                         case NativeMethods.VIRTUALKEY.VK_R:
                             _wld2cam = Matrix.Identity();
@@ -1585,7 +1598,7 @@ namespace DDD
                     return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
             }
         }
-        private void PrintErrorAndExit(string cmd)
+        void PrintErrorAndExit(string cmd)
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
@@ -1610,7 +1623,7 @@ namespace DDD
             get {return _title;}
             set {_title = value;}
         }
-        private string _title;
+        string _title;
 
         protected override void BeginProcessing()
         {
@@ -1636,7 +1649,6 @@ namespace DDD
             _zaxisStart = DateTime.Now;
             _zDegreesCurrent = 0.0;
             _zDegreesAtButtonDown = 0.0;
-
             
             _width = 0;
             _height = 0;
@@ -1648,41 +1660,43 @@ namespace DDD
             _bboxMax_wld.Y = 0.0;
             _bboxMax_wld.Z = 0.0;
         }
-        private void ProcessObject(object input)
+        void UpdateBBox(Point p)
+        {
+            // bboxMin
+            if (p.X < _bboxMin_wld.X) _bboxMin_wld.X = p.X;
+            if (p.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = p.Y;
+            if (p.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = p.Z;
+
+            // bboxMax
+            if (p.X > _bboxMax_wld.X) _bboxMax_wld.X = p.X;
+            if (p.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = p.Y;
+            if (p.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = p.Z;
+        }
+        void ProcessObject(object input)
         {
             if (input is Point p)
             {
                 _objects.Add(input);
-                if (p.X > _bboxMax_wld.X) _bboxMax_wld.X = p.X;
-                if (p.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = p.Y;
-                if (p.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = p.Z;
-                if (p.X < _bboxMin_wld.X) _bboxMin_wld.X = p.X;
-                if (p.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = p.Y;
-                if (p.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = p.Z;
+                UpdateBBox(p);
                 Console.WriteLine($"Got point: {p}");
             }
             else if (input is Matrix m)
             {
                 _objects.Add(input);
-                Point o = new Point(0.0, 0.0, 0.0);
-                o = m * o;
-                if (o.X > _bboxMax_wld.X) _bboxMax_wld.X = o.X;
-                if (o.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = o.Y;
-                if (o.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = o.Z;
-                if (o.X < _bboxMin_wld.X) _bboxMin_wld.X = o.X;
-                if (o.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = o.Y;
-                if (o.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = o.Z;
-                Console.WriteLine($"Got matrix: {o}");
+                Point origin = m * new Point(0.0, 0.0, 0.0);
+                Point xaxis = m * new Point(1.0, 0.0, 0.0);
+                Point yaxis = m * new Point(0.0, 1.0, 0.0);
+                Point zaxis = m * new Point(0.0, 0.0, 1.0);
+                UpdateBBox(origin);
+                UpdateBBox(xaxis);
+                UpdateBBox(yaxis);
+                UpdateBBox(zaxis);
+                Console.WriteLine($"Got matrix: {origin}");
             }
             else if (input is Vector v)
             {
                 _objects.Add(input);
-                if (v.X > _bboxMax_wld.X) _bboxMax_wld.X = v.X;
-                if (v.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = v.Y;
-                if (v.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = v.Z;
-                if (v.X < _bboxMin_wld.X) _bboxMin_wld.X = v.X;
-                if (v.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = v.Y;
-                if (v.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = v.Z;
+                UpdateBBox(new Point(v.X, v.Y, v.Z));
                 Console.WriteLine($"Got vector: {v}"); 
             }
             else
@@ -1740,6 +1754,7 @@ namespace DDD
             double maxAxis = Math.Max(Math.Max(maxX, maxY), maxZ);                          // overall max distance for any axis
             _maxDistance = Math.Sqrt(3 * maxAxis * maxAxis);                                // Distance from origin to (maxAxis, maxAxis, maxAxis)
 
+            // initialize globals
             _xAxis_wld.X = _maxDistance;
             _xAxis_wld.Y = 0;
             _xAxis_wld.Z = 0;
@@ -1749,6 +1764,7 @@ namespace DDD
             _zAxis_wld.X = 0;
             _zAxis_wld.Y = 0;
             _zAxis_wld.Z = _maxDistance;
+            _showBoundingBox = false;
 
 #region WIN32
             // Create window
