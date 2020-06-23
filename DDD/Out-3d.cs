@@ -1359,8 +1359,9 @@ namespace DDD
                         NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
                         NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);                        
                             NativeMethods.glLineWidth(1.0f);
-                            NativeMethods.glColor3ub(_orange.R, _orange.G, _orange.B);
+                            NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
                             NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            NativeMethods.glColor3ub(_orange.R, _orange.G, _orange.B);
                             NativeMethods.glVertex3d(v_scr.X, v_scr.Y, v_scr.Z);
                         NativeMethods.glEnd();
                     }
