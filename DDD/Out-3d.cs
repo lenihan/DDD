@@ -23,6 +23,14 @@ namespace DDD
         {
             return ((int)lParam >> 16) & 0x0000FFFF;
         }
+        public static int GET_X_LPARAM(IntPtr lParam)
+        {
+            return (int)(short)LOWORD(lParam);
+        }
+        public static int GET_Y_LPARAM(IntPtr lParam)
+        {
+            return (int)(short)HIWORD(lParam);
+        }
     //}
     //class WinUser
     //{
@@ -512,8 +520,8 @@ namespace DDD
             WM_CTLCOLORDLG = 0x0136,
             WM_CTLCOLORSCROLLBAR = 0x0137,
             WM_CTLCOLORSTATIC = 0x0138,
-            WM_MOUSEFIRST = 0x0200,
             WM_MOUSEMOVE = 0x0200,
+            WM_MOUSEFIRST = 0x0200,
             WM_LBUTTONDOWN = 0x0201,
             WM_LBUTTONUP = 0x0202,
             WM_LBUTTONDBLCLK = 0x0203,
@@ -830,7 +838,11 @@ namespace DDD
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
         public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
         [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();        
+        [DllImport("user32.dll")]
         public static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetCapture(IntPtr hWnd);        
         [DllImport("user32.dll")]
         public static extern IntPtr SetActiveWindow(IntPtr hWnd);
         [DllImport("user32.dll")]
@@ -1175,6 +1187,11 @@ namespace DDD
         // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
         // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
         
+        System.Drawing.Point _mouseMovePos;
+        System.Drawing.Point _mouseLeftButtonDownPos;
+        System.Drawing.Point _mouseRightButtonDownPos;
+        bool _mouseLeftButtonDown;
+        bool _mouseRightButtonDown;
 
         List<object> _objects = new List<object>();
 
@@ -1270,6 +1287,22 @@ namespace DDD
                 double delta = _zDegreesCurrent - newCurrent;
                 cam2wld *= Matrix.RotateZ(delta);
                 _zDegreesCurrent = newCurrent;
+            }
+            if (_mouseLeftButtonDown)
+            {
+                int deltaX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
+                int deltaY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
+                double x = (double)deltaX / (double)_width;
+                double y = (double)deltaY / (double)_height;
+                Console.WriteLine($"LEFT: {x}, {y}");
+            }
+            if (_mouseRightButtonDown)
+            {
+                int deltaX = _mouseRightButtonDownPos.X - _mouseMovePos.X;
+                int deltaY = _mouseRightButtonDownPos.Y - _mouseMovePos.Y;
+                double x = (double)deltaX / (double)_width;
+                double y = (double)deltaY / (double)_height;
+                Console.WriteLine($"RIGHT: {x}, {y}");
             }
             _wld2cam = cam2wld.Transpose();
             #endregion
@@ -1477,10 +1510,45 @@ namespace DDD
         IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
-//            Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
+                // Left Mouse
+                case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
+                    _mouseLeftButtonDown = true;
+                    NativeMethods.SetCapture(hWnd);
+                    _mouseLeftButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
+                    _mouseLeftButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_LBUTTONUP:
+                {
+                    bool captureReleased = NativeMethods.ReleaseCapture();
+                    if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
+                    _mouseLeftButtonDown = false;
+                    return IntPtr.Zero;
+                }
+                // Right Mouse
+                case NativeMethods.WindowsMessage.WM_RBUTTONDOWN:
+                    _mouseRightButtonDown = true;
+                    NativeMethods.SetCapture(hWnd);
+                    _mouseRightButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
+                    _mouseRightButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    return IntPtr.Zero;
+                case NativeMethods.WindowsMessage.WM_RBUTTONUP:
+                {
+                    bool captureReleased = NativeMethods.ReleaseCapture();
+                    if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
+                    _mouseRightButtonDown = false;
+                    return IntPtr.Zero;
+                }
+                // Mouse move
+                case NativeMethods.WindowsMessage.WM_MOUSEMOVE:
+                    _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
+                    _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    return IntPtr.Zero;
+                
+                // Key down
                 case NativeMethods.WindowsMessage.WM_KEYDOWN:
                     switch ((uint)wParam)
                     {
@@ -1545,6 +1613,7 @@ namespace DDD
                             break;
                     }
                     return IntPtr.Zero;
+                // Key up
                 case NativeMethods.WindowsMessage.WM_KEYUP:
                     switch ((uint)wParam)
                     {
@@ -1584,6 +1653,7 @@ namespace DDD
                             break;
                     }
                     return IntPtr.Zero;
+                // Window resize
                 case NativeMethods.WindowsMessage.WM_SIZE:
                     const int x = 0;
                     const int y = 0;
@@ -1591,6 +1661,7 @@ namespace DDD
                     _height = NativeMethods.HIWORD(lParam);
                     NativeMethods.glViewport(x, y, _width, _height);
                     return IntPtr.Zero;
+                // Quit
                 case NativeMethods.WindowsMessage.WM_DESTROY:
                     NativeMethods.PostQuitMessage(0);
                     return IntPtr.Zero;
@@ -1766,6 +1837,9 @@ namespace DDD
             _zAxis_wld.Z = _maxDistance;
             _showBoundingBox = false;
 
+            _mouseLeftButtonDown = false;
+            _mouseRightButtonDown = false;
+
 #region WIN32
             // Create window
             IntPtr hInstance = NativeMethods.GetModuleHandle(null);
@@ -1869,6 +1943,9 @@ namespace DDD
 
             bool classUnregistered = NativeMethods.UnregisterClass(className, hInstance);            
             if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
+
+            bool captureReleased = NativeMethods.ReleaseCapture();
+            if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
             
             Console.WriteLine("EndProcessing - DONE");
 #endregion        
