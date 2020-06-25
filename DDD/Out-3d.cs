@@ -379,6 +379,8 @@ namespace DDD
         [DllImport("gdi32.dll")]
         public static extern bool DPtoLP(IntPtr hdc, [In, Out] POINT [] lpPoints, int nCount);
         [DllImport("gdi32.dll")]
+        public static extern int SetMapMode(IntPtr hdc, int fnMapMode);
+        [DllImport("gdi32.dll")]
         public static extern bool SetPixelFormat(IntPtr hdc, int format, in PixelFormatDescriptor pfd);
         [DllImport("gdi32.dll")]
         public static extern bool SwapBuffers(IntPtr hdc);
@@ -1628,30 +1630,34 @@ namespace DDD
                         }
                         else 
                         {
-                            _mouseRotateX = true;                        }
+                            _mouseRotateX = true;                        
+                        }
                     }
 
 
-                    // NativeMethods.POINT scr;
-                    // scr.X = _mouseMovePos.X;
-                    // scr.Y = _mouseMovePos.Y;
-                    // bool success = NativeMethods.ClientToScreen(hWnd, ref scr);
-                    // if (!success) PrintErrorAndExit("ClientToScreen");
+                    NativeMethods.POINT scr;
+                    scr.X = _mouseMovePos.X;
+                    scr.Y = _mouseMovePos.Y;
+                    bool success = NativeMethods.ClientToScreen(hWnd, ref scr);
+                    if (!success) PrintErrorAndExit("ClientToScreen");
 
-                    // // NativeMethods.POINT log;
-                    // // log.X = scr.X;
-                    // // log.Y = scr.Y;
-                    // // bool success2 = NativeMethods.PhysicalToLogicalPoint(hWnd, ref log);
-                    // // if (!success2) PrintErrorAndExit("PhysicalToLogicalPoint");
+                    // NativeMethods.POINT log;
+                    // log.X = scr.X;
+                    // log.Y = scr.Y;
+                    // bool success2 = NativeMethods.PhysicalToLogicalPoint(hWnd, ref log);
+                    // if (!success2) PrintErrorAndExit("PhysicalToLogicalPoint");
 
-                    // NativeMethods.POINT dp = new NativeMethods.POINT();
-                    // dp.X = _mouseMovePos.X;
-                    // dp.Y = _mouseMovePos.Y;
-                    // NativeMethods.POINT [] points = {dp};
-                    // bool success2 = NativeMethods.DPtoLP(NativeMethods.GetDC(hWnd), points, 1);
-                    // if (!success2) PrintErrorAndExit("DPtoLP");
+                    NativeMethods.POINT dp = new NativeMethods.POINT();
+                    dp.X = _mouseMovePos.X;
+                    dp.Y = _mouseMovePos.Y;
+                    NativeMethods.POINT [] points = {dp};
+                    int MM_TEXT = 1;
+                    NativeMethods.SetMapMode(NativeMethods.GetDC(hWnd), MM_TEXT);
 
-                    // Console.WriteLine($"client {_mouseMovePos}; scr {scr.X}, {scr.Y}; lp {points[0].X}, {points[0].Y}");
+                    bool success2 = NativeMethods.DPtoLP(NativeMethods.GetDC(hWnd), points, 1);
+                    if (!success2) PrintErrorAndExit("DPtoLP");
+
+                    Console.WriteLine($"client {_mouseMovePos}; scr {scr.X}, {scr.Y}; lp {points[0].X}, {points[0].Y}");
 
 
                     return IntPtr.Zero;
