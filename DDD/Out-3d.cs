@@ -750,6 +750,8 @@ namespace DDD
                 var mi = new MONITORINFO
                 {
                     cbSize = (ushort)Marshal.SizeOf(typeof(MONITORINFO)),
+                    rcMonitor = new RECT(),
+                    rcWork = new RECT()
                 };
                 return mi;
             }
