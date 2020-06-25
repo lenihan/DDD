@@ -727,6 +727,12 @@ namespace DDD
             IDC_APPSTARTING = 32650,
             IDC_HELP = 32651
         }
+        public enum MonitorOptions : uint
+        {
+            MONITOR_DEFAULTTONULL = 0x00000000,
+            MONITOR_DEFAULTTOPRIMARY = 0x00000001,
+            MONITOR_DEFAULTTONEAREST = 0x00000002
+        }
 
         // delegate
         public delegate IntPtr WndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam);
@@ -793,7 +799,6 @@ namespace DDD
 
 
         // DllImport
-
         [DllImport("user32.dll")]
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
         [DllImport("user32.dll")]
@@ -838,6 +843,8 @@ namespace DDD
         public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr MonitorFromPoint(POINT pt, MonitorOptions dwFlags);        
         [DllImport("user32.dll")]
         public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
         [DllImport("user32.dll")]
@@ -1559,29 +1566,7 @@ namespace DDD
             switch (msg)
             {
 
-// TODO: Looks like input structure could allow us to get mouse input across multiple monitors
-// https://docs.microsoft.com/en-us/windows/win32/gdi/multiple-monitor-applications-on-different-systems
-
-//      To map mouse input that is sent in absolute coordinates to the entire virtual screen, use the INPUT structure with MOUSEEVENTF_ABSOLUTE and MOUSEEVENTF_VIRTUALDESKTOP.
-
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput
-
-//      If MOUSEEVENTF_VIRTUALDESK is specified, the coordinates map to the entire virtual desktop.
-
-
-// using virtualdesk...
-// https://stackoverflow.com/questions/1937813/moving-the-mouse-without-acceleration-in-c-using-mouse-event
-
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-input?redirectedfrom=MSDN
-
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-physicaltologicalpoint
-// A pointer to a POINT structure that specifies the physical/screen coordinates to be converted. The new logical coordinates are copied into this structure if the function succeeds.
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-physicaltologicalpointforpermonitordpi
-// dpi aware verison
-
-
-
-                // Left Mouse
+               // Left Mouse
                 case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
                     _mouseLeftButtonDown = true;
                     NativeMethods.SetCapture(hWnd);
@@ -1635,11 +1620,16 @@ namespace DDD
                     }
 
 
-                    NativeMethods.POINT scr;
-                    scr.X = _mouseMovePos.X;
-                    scr.Y = _mouseMovePos.Y;
+                    NativeMethods.POINT client;
+                    client.X = _mouseMovePos.X;
+                    client.Y = _mouseMovePos.Y;
+                    NativeMethods.POINT scr = client;
                     bool success = NativeMethods.ClientToScreen(hWnd, ref scr);
                     if (!success) PrintErrorAndExit("ClientToScreen");
+
+                    IntPtr hMon = NativeMethods.MonitorFromPoint(scr, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONULL);
+                    // TODO get hMon info
+
 
                     // NativeMethods.POINT log;
                     // log.X = scr.X;
@@ -1647,17 +1637,17 @@ namespace DDD
                     // bool success2 = NativeMethods.PhysicalToLogicalPoint(hWnd, ref log);
                     // if (!success2) PrintErrorAndExit("PhysicalToLogicalPoint");
 
-                    NativeMethods.POINT dp = new NativeMethods.POINT();
-                    dp.X = _mouseMovePos.X;
-                    dp.Y = _mouseMovePos.Y;
-                    NativeMethods.POINT [] points = {dp};
-                    int MM_TEXT = 1;
-                    NativeMethods.SetMapMode(NativeMethods.GetDC(hWnd), MM_TEXT);
+                    // NativeMethods.POINT dp = new NativeMethods.POINT();
+                    // dp.X = _mouseMovePos.X;
+                    // dp.Y = _mouseMovePos.Y;
+                    // NativeMethods.POINT [] points = {dp};
+                    // int MM_TEXT = 1;
+                    // NativeMethods.SetMapMode(NativeMethods.GetDC(hWnd), MM_TEXT);
 
-                    bool success2 = NativeMethods.DPtoLP(NativeMethods.GetDC(hWnd), points, 1);
-                    if (!success2) PrintErrorAndExit("DPtoLP");
+                    // bool success2 = NativeMethods.DPtoLP(NativeMethods.GetDC(hWnd), points, 1);
+                    // if (!success2) PrintErrorAndExit("DPtoLP");
 
-                    Console.WriteLine($"client {_mouseMovePos}; scr {scr.X}, {scr.Y}; lp {points[0].X}, {points[0].Y}");
+                    Console.WriteLine($"client {_mouseMovePos}; scr {scr.X}, {scr.Y}; hmon {hMon}");
 
 
                     return IntPtr.Zero;
