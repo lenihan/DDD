@@ -738,10 +738,21 @@ namespace DDD
         public delegate IntPtr WndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam);
 
         // struct
-        public struct POINT
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct MONITORINFO
         {
-            public int X;
-            public int Y;
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+            public static MONITORINFO Build()
+            {
+                var mi = new MONITORINFO
+                {
+                    cbSize = (ushort)Marshal.SizeOf(typeof(MONITORINFO)),
+                };
+                return mi;
+            }
         }
         [StructLayout(LayoutKind.Sequential)]
         public struct MSG
@@ -754,14 +765,6 @@ namespace DDD
             public POINT pt;
         }
         [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
-        {
-            public int Left;        // x position of upper-left corner
-            public int Top;         // y position of upper-left corner
-            public int Right;       // x position of lower-right corner
-            public int Bottom;      // y position of lower-right corner
-        }
-        [StructLayout(LayoutKind.Sequential)]
         public struct PAINTSTRUCT
         {
             public IntPtr hdc;
@@ -771,6 +774,19 @@ namespace DDD
             public bool fIncUpdate;
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
             public byte[] rgbReserved;
+        }
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;        // x position of upper-left corner
+            public int Top;         // y position of upper-left corner
+            public int Right;       // x position of lower-right corner
+            public int Bottom;      // y position of lower-right corner
         }
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct WNDCLASSEX
@@ -796,6 +812,7 @@ namespace DDD
                 return wc;
             }
         }
+
 
 
         // DllImport
@@ -841,6 +858,8 @@ namespace DDD
         public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll", EntryPoint = "GetMessageW")]
         public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+        [DllImport("user32.dll")]
+        public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
         [DllImport("user32.dll", SetLastError = true)]
@@ -1626,8 +1645,11 @@ namespace DDD
                     NativeMethods.POINT scr = client;
                     bool success = NativeMethods.ClientToScreen(hWnd, ref scr);
                     if (!success) PrintErrorAndExit("ClientToScreen");
-
                     IntPtr hMon = NativeMethods.MonitorFromPoint(scr, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONULL);
+
+                    var mi = NativeMethods.MONITORINFO.Build();
+                    bool success3 = NativeMethods.GetMonitorInfo(hMon, ref mi);
+                    if (!success3) PrintErrorAndExit("GetMonitorInfo");
                     // TODO get hMon info
 
 
