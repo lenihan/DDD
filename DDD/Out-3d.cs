@@ -377,6 +377,8 @@ namespace DDD
         [DllImport("gdi32.dll")]
         public static extern int ChoosePixelFormat(IntPtr hdc, ref PixelFormatDescriptor pfd);
         [DllImport("gdi32.dll")]
+        public static extern bool DPtoLP(IntPtr hdc, [In, Out] POINT [] lpPoints, int nCount);
+        [DllImport("gdi32.dll")]
         public static extern bool SetPixelFormat(IntPtr hdc, int format, in PixelFormatDescriptor pfd);
         [DllImport("gdi32.dll")]
         public static extern bool SwapBuffers(IntPtr hdc);
@@ -789,8 +791,11 @@ namespace DDD
 
 
         // DllImport
+
         [DllImport("user32.dll")]
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
+        [DllImport("user32.dll")]
+        public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);        
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr CreateWindowEx(
             int dwExStyle,
@@ -833,6 +838,10 @@ namespace DDD
         public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
         [DllImport("user32.dll")]
         public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+        [DllImport("user32.dll")]
+        public static extern bool PhysicalToLogicalPoint(IntPtr hWnd, ref POINT lpPoint);
+        [DllImport("user32.dll")]
+        public static extern bool PhysicalToLogicalPointForPerMonitorDPI(IntPtr hWnd, ref POINT lpPoint);
         [DllImport("user32.dll")]
         public static extern void PostQuitMessage(int nExitCode);
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
@@ -1198,6 +1207,9 @@ namespace DDD
         int _xaxis = 0;
         int _yaxis = 0;
         int _zaxis = 0;
+
+        bool _mouseRotateX = false;
+        bool _mouseRotateY = false;
         
         Matrix _wld2cam = Matrix.Identity();     // world to camera
         Matrix _cam2scn = Matrix.Identity();     // camera to screen
@@ -1228,6 +1240,12 @@ namespace DDD
 
         bool _showBoundingBox;
 
+        static void ClampAngleFrom0To360(ref double angle)
+        {
+            while (angle >= 360.0) angle -= 360.0;
+            while (angle < 0.0) angle += 360.0;
+        }
+
         void Display()
         {
             /*
@@ -1250,9 +1268,7 @@ namespace DDD
                 double deg = 360.0 * rot * _xaxis;                                                              // degrees rotation since button down
                 double newCurrent = deg + _xDegreesAtButtonDown;
                 
-                // clamp to 0 to 360
-                while (newCurrent >= 360.0) newCurrent -= 360.0;
-                while (newCurrent < 0.0) newCurrent += 360.0;
+                ClampAngleFrom0To360(ref newCurrent);
 
                 double delta = _xDegreesCurrent - newCurrent;
                 cam2wld *= Matrix.RotateX(delta);
@@ -1265,9 +1281,7 @@ namespace DDD
                 double deg = 360.0 * rot * _yaxis;                                                              // degrees rotation since button down
                 double newCurrent = deg + _yDegreesAtButtonDown;
                 
-                // clamp to 0 to 360
-                while (newCurrent >= 360.0) newCurrent -= 360.0;
-                while (newCurrent < 0.0) newCurrent += 360.0;
+                ClampAngleFrom0To360(ref newCurrent);
 
                 double delta = _yDegreesCurrent - newCurrent;
                 cam2wld *= Matrix.RotateY(delta);
@@ -1280,9 +1294,7 @@ namespace DDD
                 double deg = 360.0 * rot * _zaxis;                                                              // degrees rotation since button down
                 double newCurrent = deg + _zDegreesAtButtonDown;
                 
-                // clamp to 0 to 360
-                while (newCurrent >= 360.0) newCurrent -= 360.0;
-                while (newCurrent < 0.0) newCurrent += 360.0;
+                ClampAngleFrom0To360(ref newCurrent);
 
                 double delta = _zDegreesCurrent - newCurrent;
                 cam2wld *= Matrix.RotateZ(delta);
@@ -1290,19 +1302,45 @@ namespace DDD
             }
             if (_mouseLeftButtonDown)
             {
-                int deltaX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
-                int deltaY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
-                double x = (double)deltaX / (double)_width;
-                double y = (double)deltaY / (double)_height;
-                Console.WriteLine($"LEFT: {x}, {y}");
+                if (_mouseRotateY) 
+                {
+                    int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
+                    double x = (double)deltaPosX / (double)_width;
+                    double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
+
+                    ClampAngleFrom0To360(ref newCurrentY);
+
+                    double deltaY = _yDegreesCurrent - newCurrentY;
+                    cam2wld *= Matrix.RotateY(deltaY);
+                    _yDegreesCurrent = newCurrentY;
+                    // _mouseLeftButtonDownPos.X = _mouseMovePos.X;
+                }
+                if (_mouseRotateX)
+                {
+                    int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
+                    double y = (double)deltaPosY / (double)_height;
+                    double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
+
+                    ClampAngleFrom0To360(ref newCurrentX);
+
+                    double deltaX = _xDegreesCurrent - newCurrentX;
+                    cam2wld *= Matrix.RotateX(deltaX);
+                    _xDegreesCurrent = newCurrentX;
+                    // _mouseLeftButtonDownPos.Y = _mouseMovePos.Y;
+                }
             }
             if (_mouseRightButtonDown)
             {
-                int deltaX = _mouseRightButtonDownPos.X - _mouseMovePos.X;
-                int deltaY = _mouseRightButtonDownPos.Y - _mouseMovePos.Y;
-                double x = (double)deltaX / (double)_width;
-                double y = (double)deltaY / (double)_height;
-                Console.WriteLine($"RIGHT: {x}, {y}");
+                int deltaPosX = _mouseRightButtonDownPos.X - _mouseMovePos.X;
+                double x = (double)deltaPosX / (double)_width;
+                double newCurrentZ = 360.0 * x + _zDegreesAtButtonDown;
+
+                ClampAngleFrom0To360(ref newCurrentZ);
+
+                double deltaZ = _zDegreesCurrent - newCurrentZ;
+                cam2wld *= Matrix.RotateZ(deltaZ);
+                _zDegreesCurrent = newCurrentZ;
+                // _mouseRightButtonDownPos.X = _mouseMovePos.X;
             }
             _wld2cam = cam2wld.Transpose();
             #endregion
@@ -1335,7 +1373,11 @@ namespace DDD
             #endregion
 
             Matrix wld2scr = cam2scr * _wld2cam;
-            NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT);
+
+
+            NativeMethods.glEnable(NativeMethods.GetTarget.GL_DEPTH_TEST);  // TODO: This only needs to be done once
+            NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT | 
+                                  NativeMethods.AttribMask.GL_DEPTH_BUFFER_BIT);
 
             #region DRAW AXES
             {
@@ -1510,42 +1552,108 @@ namespace DDD
         IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+            //  Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
+
+// TODO: Looks like input structure could allow us to get mouse input across multiple monitors
+// https://docs.microsoft.com/en-us/windows/win32/gdi/multiple-monitor-applications-on-different-systems
+
+//      To map mouse input that is sent in absolute coordinates to the entire virtual screen, use the INPUT structure with MOUSEEVENTF_ABSOLUTE and MOUSEEVENTF_VIRTUALDESKTOP.
+
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput
+
+//      If MOUSEEVENTF_VIRTUALDESK is specified, the coordinates map to the entire virtual desktop.
+
+
+// using virtualdesk...
+// https://stackoverflow.com/questions/1937813/moving-the-mouse-without-acceleration-in-c-using-mouse-event
+
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-input?redirectedfrom=MSDN
+
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-physicaltologicalpoint
+// A pointer to a POINT structure that specifies the physical/screen coordinates to be converted. The new logical coordinates are copied into this structure if the function succeeds.
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-physicaltologicalpointforpermonitordpi
+// dpi aware verison
+
+
+
                 // Left Mouse
                 case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
                     _mouseLeftButtonDown = true;
                     NativeMethods.SetCapture(hWnd);
                     _mouseLeftButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
                     _mouseLeftButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    _xDegreesAtButtonDown = _xDegreesCurrent; 
+                    _yDegreesAtButtonDown = _yDegreesCurrent; 
+                    _mouseRotateX = false;
+                    _mouseRotateY = false;
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_LBUTTONUP:
-                {
-                    bool captureReleased = NativeMethods.ReleaseCapture();
-                    if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
+                    if (!_mouseRightButtonDown)
+                    {
+                        bool captureReleased = NativeMethods.ReleaseCapture();
+                        if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
+                    }
                     _mouseLeftButtonDown = false;
                     return IntPtr.Zero;
-                }
+                
                 // Right Mouse
                 case NativeMethods.WindowsMessage.WM_RBUTTONDOWN:
                     _mouseRightButtonDown = true;
                     NativeMethods.SetCapture(hWnd);
                     _mouseRightButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
                     _mouseRightButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    _zDegreesAtButtonDown = _zDegreesCurrent; 
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_RBUTTONUP:
-                {
-                    bool captureReleased = NativeMethods.ReleaseCapture();
-                    if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
+                    if (!_mouseLeftButtonDown)
+                    {
+                        bool captureReleased = NativeMethods.ReleaseCapture();
+                        if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
+                    }
                     _mouseRightButtonDown = false;
                     return IntPtr.Zero;
-                }
+                
                 // Mouse move
                 case NativeMethods.WindowsMessage.WM_MOUSEMOVE:
                     _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
-                    _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam);
+                    if (_mouseLeftButtonDown && !_mouseRotateX && !_mouseRotateY)
+                    {
+                        if (Math.Abs(_mouseLeftButtonDownPos.X - _mouseMovePos.X) >= Math.Abs(_mouseLeftButtonDownPos.Y - _mouseMovePos.Y))
+                        {
+                            _mouseRotateY = true;
+                        }
+                        else 
+                        {
+                            _mouseRotateX = true;                        }
+                    }
+
+
+                    // NativeMethods.POINT scr;
+                    // scr.X = _mouseMovePos.X;
+                    // scr.Y = _mouseMovePos.Y;
+                    // bool success = NativeMethods.ClientToScreen(hWnd, ref scr);
+                    // if (!success) PrintErrorAndExit("ClientToScreen");
+
+                    // // NativeMethods.POINT log;
+                    // // log.X = scr.X;
+                    // // log.Y = scr.Y;
+                    // // bool success2 = NativeMethods.PhysicalToLogicalPoint(hWnd, ref log);
+                    // // if (!success2) PrintErrorAndExit("PhysicalToLogicalPoint");
+
+                    // NativeMethods.POINT dp = new NativeMethods.POINT();
+                    // dp.X = _mouseMovePos.X;
+                    // dp.Y = _mouseMovePos.Y;
+                    // NativeMethods.POINT [] points = {dp};
+                    // bool success2 = NativeMethods.DPtoLP(NativeMethods.GetDC(hWnd), points, 1);
+                    // if (!success2) PrintErrorAndExit("DPtoLP");
+
+                    // Console.WriteLine($"client {_mouseMovePos}; scr {scr.X}, {scr.Y}; lp {points[0].X}, {points[0].Y}");
+
+
                     return IntPtr.Zero;
                 
                 // Key down
@@ -1839,6 +1947,8 @@ namespace DDD
 
             _mouseLeftButtonDown = false;
             _mouseRightButtonDown = false;
+            _mouseRotateX = false;
+            _mouseRotateY = false;
 
 #region WIN32
             // Create window
