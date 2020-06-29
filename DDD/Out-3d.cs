@@ -390,6 +390,16 @@ namespace DDD
     //class User
     //{
         // enum
+        public enum MouseKeyStateMasks : byte
+        {
+            MK_LBUTTON = 0x0001,
+            MK_RBUTTON = 0x0002,
+            MK_SHIFT = 0x0004,
+            MK_CONTROL = 0x0008,
+            MK_MBUTTON = 0x0010,
+            MK_XBUTTON1 = 0x0020,
+            MK_XBUTTON2 = 0x0040
+        }
         public enum WindowsMessage : uint
         {
             WM_NULL = 0x0000,
@@ -1601,33 +1611,25 @@ namespace DDD
 
                // Left Mouse
                 case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
-                    _mouseLeftButtonDown = true;
-                    _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
-                    _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam);
-                    _mouseLeftButtonDownPos = _mouseMovePos;
-
+                    _mouseLeftButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
+                    _mouseLeftButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam);
                     _xDegreesAtButtonDown = _xDegreesCurrent; 
                     _yDegreesAtButtonDown = _yDegreesCurrent; 
-                    return IntPtr.Zero;
-                case NativeMethods.WindowsMessage.WM_LBUTTONUP:
-                    _mouseLeftButtonDown = false;
                     return IntPtr.Zero;
                 
                 // Right Mouse
                 case NativeMethods.WindowsMessage.WM_RBUTTONDOWN:
-                    _mouseRightButtonDown = true;
                     _mouseRightButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
                     _mouseRightButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
                     _zDegreesAtButtonDown = _zDegreesCurrent; 
-                    return IntPtr.Zero;
-                case NativeMethods.WindowsMessage.WM_RBUTTONUP:
-                    _mouseRightButtonDown = false;
                     return IntPtr.Zero;
                 
                 // Mouse move
                 case NativeMethods.WindowsMessage.WM_MOUSEMOVE:
                     _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
                     _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam);
+                    _mouseLeftButtonDown = (NativeMethods.MouseKeyStateMasks)wParam == NativeMethods.MouseKeyStateMasks.MK_LBUTTON ? true : false;
+                    _mouseRightButtonDown = (NativeMethods.MouseKeyStateMasks)wParam == NativeMethods.MouseKeyStateMasks.MK_RBUTTON ? true : false;
                     return IntPtr.Zero;
 
                 // Key down
