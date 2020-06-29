@@ -736,7 +736,8 @@ namespace DDD
 
         // delegate
         public delegate IntPtr WndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam);
-
+        public delegate bool EnumMonitorsDelegate(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
+        
         // struct
         [StructLayout(LayoutKind.Sequential)]
         internal struct MONITORINFO
@@ -845,6 +846,8 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool EndPaint(IntPtr hWnd, ref PAINTSTRUCT lpPaint);
         [DllImport("user32.dll")]
+        public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, EnumMonitorsDelegate lpfnEnum, IntPtr dwData);
+        [DllImport("user32.dll")]
         public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
         [DllImport("user32.dll")]
         public static extern IntPtr GetActiveWindow();
@@ -866,6 +869,8 @@ namespace DDD
         public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr MonitorFromPoint(POINT pt, MonitorOptions dwFlags);        
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromWindow(IntPtr hwnd, MonitorOptions dwFlags);        
         [DllImport("user32.dll")]
         public static extern bool PeekMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
         [DllImport("user32.dll")]
@@ -1231,6 +1236,8 @@ namespace DDD
         System.Drawing.Point _mouseRightButtonDownPos;
         bool _mouseLeftButtonDown;
         bool _mouseRightButtonDown;
+        // System.Drawing.Point _mouseLastPos;
+        // IntPtr _hMon;
 
         List<object> _objects = new List<object>();
 
@@ -1238,9 +1245,6 @@ namespace DDD
         int _yaxis = 0;
         int _zaxis = 0;
 
-        bool _mouseRotateX = false;
-        bool _mouseRotateY = false;
-        
         Matrix _wld2cam = Matrix.Identity();     // world to camera
         Matrix _cam2scn = Matrix.Identity();     // camera to screen
         
@@ -1290,7 +1294,12 @@ namespace DDD
             */
 
             #region UPDATE WLD2CAM
-            Matrix cam2wld = _wld2cam.Transpose();
+
+            Matrix cam2wld = Matrix.Identity();
+            cam2wld *= Matrix.RotateX(_xDegreesCurrent);
+            cam2wld *= Matrix.RotateY(_yDegreesCurrent);
+            cam2wld *= Matrix.RotateZ(_zDegreesCurrent);
+
             if (_xaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _xaxisStart;
@@ -1332,32 +1341,23 @@ namespace DDD
             }
             if (_mouseLeftButtonDown)
             {
-                if (_mouseRotateY) 
-                {
-                    int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
-                    double x = (double)deltaPosX / (double)_width;
-                    double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
+                int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
+                double x = (double)deltaPosX / (double)_width;
+                double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
 
-                    ClampAngleFrom0To360(ref newCurrentY);
+                ClampAngleFrom0To360(ref newCurrentY);
 
-                    double deltaY = _yDegreesCurrent - newCurrentY;
-                    cam2wld *= Matrix.RotateY(deltaY);
-                    _yDegreesCurrent = newCurrentY;
-                    // _mouseLeftButtonDownPos.X = _mouseMovePos.X;
-                }
-                if (_mouseRotateX)
-                {
-                    int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
-                    double y = (double)deltaPosY / (double)_height;
-                    double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
+                cam2wld *= Matrix.RotateY(newCurrentY - _yDegreesCurrent);
+                _yDegreesCurrent = newCurrentY;
 
-                    ClampAngleFrom0To360(ref newCurrentX);
+                int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
+                double y = (double)deltaPosY / (double)_height;
+                double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
 
-                    double deltaX = _xDegreesCurrent - newCurrentX;
-                    cam2wld *= Matrix.RotateX(deltaX);
-                    _xDegreesCurrent = newCurrentX;
-                    // _mouseLeftButtonDownPos.Y = _mouseMovePos.Y;
-                }
+                ClampAngleFrom0To360(ref newCurrentX);
+
+                cam2wld *= Matrix.RotateX(newCurrentX - _xDegreesCurrent);
+                _xDegreesCurrent = newCurrentX;
             }
             if (_mouseRightButtonDown)
             {
@@ -1367,10 +1367,8 @@ namespace DDD
 
                 ClampAngleFrom0To360(ref newCurrentZ);
 
-                double deltaZ = _zDegreesCurrent - newCurrentZ;
-                cam2wld *= Matrix.RotateZ(deltaZ);
+                cam2wld *= Matrix.RotateZ(newCurrentZ - _zDegreesCurrent);
                 _zDegreesCurrent = newCurrentZ;
-                // _mouseRightButtonDownPos.X = _mouseMovePos.X;
             }
             _wld2cam = cam2wld.Transpose();
             #endregion
@@ -1578,11 +1576,25 @@ namespace DDD
 
             NativeMethods.glFlush();
         }
-
+/*        
+        bool EnumMonitorsDelegate(IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
+        {
+            Console.WriteLine($"hMon {hMonitor}, hdc {hdcMonitor}, RECT (ltrb): {lprcMonitor.Left} {lprcMonitor.Top} {lprcMonitor.Right} {lprcMonitor.Bottom}, dwData {dwData}");
+            return true; // continue enumeration  
+        }
+        void UpdateMonitors()
+        {
+            IntPtr hdc = IntPtr.Zero;
+            IntPtr lprcClip = IntPtr.Zero;
+            NativeMethods.EnumMonitorsDelegate lpfnEnum = EnumMonitorsDelegate;
+            IntPtr dwData = IntPtr.Zero;
+            NativeMethods.EnumDisplayMonitors(hdc, lprcClip, lpfnEnum, dwData);
+        }
+*/        
         IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            //  Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
@@ -1590,37 +1602,25 @@ namespace DDD
                // Left Mouse
                 case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
                     _mouseLeftButtonDown = true;
-                    NativeMethods.SetCapture(hWnd);
-                    _mouseLeftButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
-                    _mouseLeftButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
+                    _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
+                    _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam);
+                    _mouseLeftButtonDownPos = _mouseMovePos;
+
                     _xDegreesAtButtonDown = _xDegreesCurrent; 
                     _yDegreesAtButtonDown = _yDegreesCurrent; 
-                    _mouseRotateX = false;
-                    _mouseRotateY = false;
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_LBUTTONUP:
-                    if (!_mouseRightButtonDown)
-                    {
-                        bool captureReleased = NativeMethods.ReleaseCapture();
-                        if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
-                    }
                     _mouseLeftButtonDown = false;
                     return IntPtr.Zero;
                 
                 // Right Mouse
                 case NativeMethods.WindowsMessage.WM_RBUTTONDOWN:
                     _mouseRightButtonDown = true;
-                    NativeMethods.SetCapture(hWnd);
                     _mouseRightButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
                     _mouseRightButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
                     _zDegreesAtButtonDown = _zDegreesCurrent; 
                     return IntPtr.Zero;
                 case NativeMethods.WindowsMessage.WM_RBUTTONUP:
-                    if (!_mouseLeftButtonDown)
-                    {
-                        bool captureReleased = NativeMethods.ReleaseCapture();
-                        if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
-                    }
                     _mouseRightButtonDown = false;
                     return IntPtr.Zero;
                 
@@ -1628,54 +1628,8 @@ namespace DDD
                 case NativeMethods.WindowsMessage.WM_MOUSEMOVE:
                     _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
                     _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam);
-                    if (_mouseLeftButtonDown && !_mouseRotateX && !_mouseRotateY)
-                    {
-                        if (Math.Abs(_mouseLeftButtonDownPos.X - _mouseMovePos.X) >= Math.Abs(_mouseLeftButtonDownPos.Y - _mouseMovePos.Y))
-                        {
-                            _mouseRotateY = true;
-                        }
-                        else 
-                        {
-                            _mouseRotateX = true;                        
-                        }
-                    }
-
-
-                    NativeMethods.POINT client;
-                    client.X = _mouseMovePos.X;
-                    client.Y = _mouseMovePos.Y;
-                    NativeMethods.POINT scr = client;
-                    bool success = NativeMethods.ClientToScreen(hWnd, ref scr);
-                    if (!success) PrintErrorAndExit("ClientToScreen");
-                    IntPtr hMon = NativeMethods.MonitorFromPoint(scr, NativeMethods.MonitorOptions.MONITOR_DEFAULTTONULL);
-
-                    var mi = NativeMethods.MONITORINFO.Build();
-                    bool success3 = NativeMethods.GetMonitorInfo(hMon, ref mi);
-                    if (!success3) PrintErrorAndExit("GetMonitorInfo");
-                    // TODO get hMon info
-
-
-                    // NativeMethods.POINT log;
-                    // log.X = scr.X;
-                    // log.Y = scr.Y;
-                    // bool success2 = NativeMethods.PhysicalToLogicalPoint(hWnd, ref log);
-                    // if (!success2) PrintErrorAndExit("PhysicalToLogicalPoint");
-
-                    // NativeMethods.POINT dp = new NativeMethods.POINT();
-                    // dp.X = _mouseMovePos.X;
-                    // dp.Y = _mouseMovePos.Y;
-                    // NativeMethods.POINT [] points = {dp};
-                    // int MM_TEXT = 1;
-                    // NativeMethods.SetMapMode(NativeMethods.GetDC(hWnd), MM_TEXT);
-
-                    // bool success2 = NativeMethods.DPtoLP(NativeMethods.GetDC(hWnd), points, 1);
-                    // if (!success2) PrintErrorAndExit("DPtoLP");
-
-                    Console.WriteLine($"client {_mouseMovePos}; scr {scr.X}, {scr.Y}; hmon {hMon}");
-
-
                     return IntPtr.Zero;
-                
+
                 // Key down
                 case NativeMethods.WindowsMessage.WM_KEYDOWN:
                     switch ((uint)wParam)
@@ -1775,12 +1729,19 @@ namespace DDD
                         // reset
                         case NativeMethods.VIRTUALKEY.VK_R:
                             _wld2cam = Matrix.Identity();
+                            _xDegreesCurrent = 0.0;
+                            _yDegreesCurrent = 0.0;
+                            _zDegreesCurrent = 0.0;
                             break;
                         case NativeMethods.VIRTUALKEY.VK_ESCAPE:
                             NativeMethods.DestroyWindow(hWnd);
                             break;
                     }
                     return IntPtr.Zero;
+                // case NativeMethods.WindowsMessage.WM_DISPLAYCHANGE:
+                //     UpdateMonitors();
+                //     return IntPtr.Zero;
+
                 // Window resize
                 case NativeMethods.WindowsMessage.WM_SIZE:
                     const int x = 0;
@@ -1967,10 +1928,11 @@ namespace DDD
 
             _mouseLeftButtonDown = false;
             _mouseRightButtonDown = false;
-            _mouseRotateX = false;
-            _mouseRotateY = false;
 
 #region WIN32
+
+            // UpdateMonitors();
+
             // Create window
             IntPtr hInstance = NativeMethods.GetModuleHandle(null);
             if (hInstance == null) PrintErrorAndExit("GetModuleHandle");
@@ -2073,9 +2035,6 @@ namespace DDD
 
             bool classUnregistered = NativeMethods.UnregisterClass(className, hInstance);            
             if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
-
-            bool captureReleased = NativeMethods.ReleaseCapture();
-            if (!captureReleased) PrintErrorAndExit("ReleaseCapture");
             
             Console.WriteLine("EndProcessing - DONE");
 #endregion        
