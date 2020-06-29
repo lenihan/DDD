@@ -45,6 +45,7 @@ namespace DDD
         public static extern int GetLastError();
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
+        
         public class VIRTUALKEY
         {
 
@@ -390,6 +391,7 @@ namespace DDD
     //class User
     //{
         // enum
+        [Flags]
         public enum ClassStyles : uint
         {
             CS_VREDRAW = 0x0001,
@@ -832,8 +834,6 @@ namespace DDD
             }
         }
 
-
-
         // DllImport
         [DllImport("user32.dll")]
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
@@ -935,7 +935,6 @@ namespace DDD
             GL_SCISSOR_BIT = 0x00080000,
             GL_ALL_ATTRIB_BITS = 0x000fffff,
         }
-        [Flags]
         public enum BeginMode : uint
         {
             GL_POINTS = 0x0000,
@@ -949,7 +948,6 @@ namespace DDD
             GL_QUAD_STRIP = 0x0008,
             GL_POLYGON = 0x0009,
         }
-        [Flags()]
         public enum GetTarget : uint
         {
             GL_CURRENT_COLOR = 0x0B00,
@@ -1162,7 +1160,6 @@ namespace DDD
             GL_SELECTION_BUFFER_POINTER = 0x0DF3,
             GL_SELECTION_BUFFER_SIZE = 0x0DF4,
         }        
-        [Flags()]
         public enum HintMode : uint
         {
             GL_DONT_CARE = 0x1100,
