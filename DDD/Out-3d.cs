@@ -390,6 +390,41 @@ namespace DDD
     //class User
     //{
         // enum
+        public enum ClassStyles : uint
+        {
+            CS_VREDRAW = 0x0001,
+            CS_HREDRAW = 0x0002,
+            CS_DBLCLKS = 0x0008,
+            CS_OWNDC = 0x0020,
+            CS_CLASSDC = 0x0040,
+            CS_PARENTDC = 0x0080,
+            CS_NOCLOSE = 0x0200,
+            CS_SAVEBITS = 0x0800,
+            CS_BYTEALIGNCLIENT = 0x1000,
+            CS_BYTEALIGNWINDOW = 0x2000,
+            CS_GLOBALCLASS = 0x4000,
+            CS_IME = 0x00010000,
+            CS_DROPSHADOW = 0x00020000
+        }
+        public enum IDC_STANDARD_CURSORS 
+        {
+            IDC_ARROW = 32512,
+            IDC_IBEAM = 32513,
+            IDC_WAIT = 32514,
+            IDC_CROSS = 32515,
+            IDC_UPARROW = 32516,
+            IDC_SIZE = 32640,
+            IDC_ICON = 32641,
+            IDC_SIZENWSE = 32642,
+            IDC_SIZENESW = 32643,
+            IDC_SIZEWE = 32644,
+            IDC_SIZENS = 32645,
+            IDC_SIZEALL = 32646,
+            IDC_NO = 32648,
+            IDC_HAND = 32649,
+            IDC_APPSTARTING = 32650,
+            IDC_HELP = 32651
+        }
         public enum MouseKeyStateMasks : byte
         {
             MK_LBUTTON = 0x0001,
@@ -399,6 +434,34 @@ namespace DDD
             MK_MBUTTON = 0x0010,
             MK_XBUTTON1 = 0x0020,
             MK_XBUTTON2 = 0x0040
+        }
+        public enum MonitorOptions : uint
+        {
+            MONITOR_DEFAULTTONULL = 0x00000000,
+            MONITOR_DEFAULTTOPRIMARY = 0x00000001,
+            MONITOR_DEFAULTTONEAREST = 0x00000002
+        }
+        public enum RegisterTouchFlags 
+        {
+            TWF_NONE = 0x00000000,
+            TWF_FINETOUCH = 0x00000001,     // Specifies that hWnd prefers noncoalesced touch input.
+            TWF_WANTPALM = 0x00000002       // Setting this flag disables palm rejection which reduces delays for getting WM_TOUCH messages.
+        }        
+        public enum ShowWindowCommand
+        {
+            Hide = 0,
+            Normal = 1,
+            ShowMinimized = 2,
+            Maximize = 3,
+            ShowMaximized = 3,
+            ShowNoActivate = 4,
+            Show = 5,
+            Minimize = 6,
+            ShowMinNoActive = 7,
+            ShowNA = 8,
+            Restore = 9,
+            ShowDefault = 10,
+            ForceMinimize = 11
         }
         public enum WindowsMessage : uint
         {
@@ -632,7 +695,6 @@ namespace DDD
             WM_USER = 0x0400,
             WM_DISPATCH_WORK_ITEM = WM_USER,
         }
-
         [Flags]
         public enum WindowStyles : uint
         {
@@ -685,64 +747,7 @@ namespace DDD
             WS_EX_COMPOSITED = 0x02000000,
             WS_EX_NOACTIVATE = 0x08000000
         }
-        public enum ShowWindowCommand
-        {
-            Hide = 0,
-            Normal = 1,
-            ShowMinimized = 2,
-            Maximize = 3,
-            ShowMaximized = 3,
-            ShowNoActivate = 4,
-            Show = 5,
-            Minimize = 6,
-            ShowMinNoActive = 7,
-            ShowNA = 8,
-            Restore = 9,
-            ShowDefault = 10,
-            ForceMinimize = 11
-        }
-        [Flags]
-        public enum ClassStyles : uint
-        {
-            CS_VREDRAW = 0x0001,
-            CS_HREDRAW = 0x0002,
-            CS_DBLCLKS = 0x0008,
-            CS_OWNDC = 0x0020,
-            CS_CLASSDC = 0x0040,
-            CS_PARENTDC = 0x0080,
-            CS_NOCLOSE = 0x0200,
-            CS_SAVEBITS = 0x0800,
-            CS_BYTEALIGNCLIENT = 0x1000,
-            CS_BYTEALIGNWINDOW = 0x2000,
-            CS_GLOBALCLASS = 0x4000,
-            CS_IME = 0x00010000,
-            CS_DROPSHADOW = 0x00020000
-        }
-        public enum IDC_STANDARD_CURSORS 
-        {
-            IDC_ARROW = 32512,
-            IDC_IBEAM = 32513,
-            IDC_WAIT = 32514,
-            IDC_CROSS = 32515,
-            IDC_UPARROW = 32516,
-            IDC_SIZE = 32640,
-            IDC_ICON = 32641,
-            IDC_SIZENWSE = 32642,
-            IDC_SIZENESW = 32643,
-            IDC_SIZEWE = 32644,
-            IDC_SIZENS = 32645,
-            IDC_SIZEALL = 32646,
-            IDC_NO = 32648,
-            IDC_HAND = 32649,
-            IDC_APPSTARTING = 32650,
-            IDC_HELP = 32651
-        }
-        public enum MonitorOptions : uint
-        {
-            MONITOR_DEFAULTTONULL = 0x00000000,
-            MONITOR_DEFAULTTOPRIMARY = 0x00000001,
-            MONITOR_DEFAULTTONEAREST = 0x00000002
-        }
+
 
         // delegate
         public delegate IntPtr WndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam);
@@ -788,6 +793,7 @@ namespace DDD
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
             public byte[] rgbReserved;
         }
+        [StructLayout(LayoutKind.Sequential)]
         public struct POINT
         {
             public int X;
@@ -834,19 +840,7 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);        
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr CreateWindowEx(
-            int dwExStyle,
-            uint lpClassName,
-            string lpWindowName,
-            WindowStyles dwStyle,
-            int x,
-            int y,
-            int nWidth,
-            int nHeight,
-            IntPtr hWndParent,
-            IntPtr hMenu,
-            IntPtr hInstance,
-            IntPtr lpParam);
+        public static extern IntPtr CreateWindowEx(int dwExStyle, uint lpClassName, string lpWindowName, WindowStyles dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
         [DllImport("user32.dll", EntryPoint = "DispatchMessageW")]
         public static extern IntPtr DispatchMessage(ref MSG lpmsg);
         [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
@@ -891,6 +885,8 @@ namespace DDD
         public static extern void PostQuitMessage(int nExitCode);
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "RegisterClassExW")]
         public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
+        [DllImport("user32.dll", SetLastError=true)]
+        public static extern bool RegisterTouchWindow(IntPtr hWnd, RegisterTouchFlags flags);        
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();        
         [DllImport("user32.dll")]
@@ -1604,7 +1600,7 @@ namespace DDD
         IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+             Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
@@ -1972,6 +1968,9 @@ namespace DDD
                 hInstance,
                 lpParam);
             if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
+
+            bool touchWindowRegistered = NativeMethods.RegisterTouchWindow(hWnd, NativeMethods.RegisterTouchFlags.TWF_WANTPALM);
+            if (!touchWindowRegistered) PrintErrorAndExit("RegisterTouchWindow");
 
             bool foregroundWindow = NativeMethods.SetForegroundWindow(hWnd);
             if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow");
