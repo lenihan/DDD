@@ -15,13 +15,13 @@ namespace DDD
     //internal class MinWinDef
     //{
         // Macros
-        public static int LOWORD(IntPtr lParam)
+        public static ushort LOWORD(IntPtr lParam)
         {
-            return ((int)lParam) & 0x0000FFFF;
+            return System.Convert.ToUInt16(lParam.ToInt32() & 0x0000FFFF);
         }
-        public static int HIWORD(IntPtr lParam)
+        public static ushort HIWORD(IntPtr lParam)
         {
-            return ((int)lParam >> 16) & 0x0000FFFF;
+            return System.Convert.ToUInt16((lParam.ToInt32() >> 16) & 0x0000FFFF);
         }
         public static int GET_X_LPARAM(IntPtr lParam)
         {
@@ -1601,6 +1601,9 @@ namespace DDD
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
+                case NativeMethods.WindowsMessage.WM_TOUCH:
+                    uint cInputs = NativeMethods.LOWORD(lParam);
+                    return IntPtr.Zero;
 
                // Left Mouse
                 case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
