@@ -13,8 +13,6 @@ HDC hDC;				/* device context */
 HPALETTE hPalette = 0;			/* custom palette (if needed) */
 GLboolean animate = GL_TRUE;		/* animation flag */
 
-VK_KEY_W
-VK_DOWN
 
 void
 display()
@@ -242,6 +240,8 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
     MSG   msg;				/* message */
     DWORD buffer = PFD_DOUBLEBUFFER;	/* buffering type */
     BYTE  color = PFD_TYPE_RGBA;	/* color type */
+    
+    int size = sizeof(TOUCHINPUT);
 
     //if (strstr(lpszCmdLine, "-sb")) {
     //    buffer = 0;

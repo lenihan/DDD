@@ -767,7 +767,7 @@ namespace DDD
             {
                 var mi = new MONITORINFO
                 {
-                    cbSize = (ushort)Marshal.SizeOf(typeof(MONITORINFO)),
+                    cbSize = Marshal.SizeOf(typeof(MONITORINFO)),
                     rcMonitor = new RECT(),
                     rcWork = new RECT()
                 };
@@ -809,6 +809,21 @@ namespace DDD
             public int Right;       // x position of lower-right corner
             public int Bottom;      // y position of lower-right corner
         }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TOUCHINPUT
+        {
+            public int x;
+            public int y;
+            public IntPtr hSource;
+            public uint dwID;
+            public uint dwFlags;
+            public uint dwMask;
+            public uint dwTime;
+            public UIntPtr dwExtraInfo;
+            public uint cxConact;
+            public uint cyContact;
+        }
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct WNDCLASSEX
         {
@@ -828,7 +843,7 @@ namespace DDD
             {
                 var wc = new WNDCLASSEX
                 {
-                    Size = (ushort)Marshal.SizeOf(typeof(WNDCLASSEX)),
+                    Size = Marshal.SizeOf(typeof(WNDCLASSEX)),
                 };
                 return wc;
             }
@@ -839,6 +854,8 @@ namespace DDD
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
         [DllImport("user32.dll")]
         public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);        
+        [DllImport("user32.dll")]
+        public static extern bool CloseTouchInputHandle(IntPtr hTouchInput);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr CreateWindowEx(int dwExStyle, uint lpClassName, string lpWindowName, WindowStyles dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
         [DllImport("user32.dll", EntryPoint = "DispatchMessageW")]
@@ -869,6 +886,24 @@ namespace DDD
         public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
         [DllImport("user32.dll")]
         public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+// WINUSERAPI
+// BOOL
+// WINAPI
+// GetTouchInputInfo(
+//     _In_ HTOUCHINPUT hTouchInput,               // input event handle; from touch message lParam
+//     _In_ UINT cInputs,                          // number of elements in the array
+//     _Out_writes_(cInputs) PTOUCHINPUT pInputs,  // array of touch inputs
+//     _In_ int cbSize);                           // sizeof(TOUCHINPUT)
+
+// https://csharp.hotexamples.com/site/file?hash=0xf11b055179fec93dc7e57b6b796a47c339c1df22019150b0ebf33f081fc4ba6f&fullName=TouchScript/Win7TouchInput.cs&project=sfszh/TouchScript
+
+        [DllImport("user32.dll")]
+         public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, [In, Out] TOUCHINPUT [] pInputs, int cbSize);
+        // public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, out TOUCHINPUT [] pInputs, int cbSize);
+        // public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, ref IntPtr pInputs, int cbSize);
+        // public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, ref TOUCHINPUT [] pInputs, int cbSize);
+        
+        
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
         [DllImport("user32.dll", SetLastError = true)]
@@ -1239,8 +1274,6 @@ namespace DDD
         System.Drawing.Point _mouseRightButtonDownPos;
         bool _mouseLeftButtonDown;
         bool _mouseRightButtonDown;
-        // System.Drawing.Point _mouseLastPos;
-        // IntPtr _hMon;
 
         List<object> _objects = new List<object>();
 
@@ -1579,30 +1612,41 @@ namespace DDD
 
             NativeMethods.glFlush();
         }
-/*        
-        bool EnumMonitorsDelegate(IntPtr hMonitor, IntPtr hdcMonitor, ref NativeMethods.RECT lprcMonitor, IntPtr dwData)
-        {
-            Console.WriteLine($"hMon {hMonitor}, hdc {hdcMonitor}, RECT (ltrb): {lprcMonitor.Left} {lprcMonitor.Top} {lprcMonitor.Right} {lprcMonitor.Bottom}, dwData {dwData}");
-            return true; // continue enumeration  
-        }
-        void UpdateMonitors()
-        {
-            IntPtr hdc = IntPtr.Zero;
-            IntPtr lprcClip = IntPtr.Zero;
-            NativeMethods.EnumMonitorsDelegate lpfnEnum = EnumMonitorsDelegate;
-            IntPtr dwData = IntPtr.Zero;
-            NativeMethods.EnumDisplayMonitors(hdc, lprcClip, lpfnEnum, dwData);
-        }
-*/        
+
         IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
-             Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+            //  Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
                 case NativeMethods.WindowsMessage.WM_TOUCH:
-                    uint cInputs = NativeMethods.LOWORD(lParam);
+                    uint cInputs = NativeMethods.LOWORD(wParam);
+                    NativeMethods.TOUCHINPUT[] pInputs = new NativeMethods.TOUCHINPUT[cInputs];
+                    // var pInputs = new NativeMethods.TOUCHINPUT[cInputs];
+                    // for (uint i = 0; i < cInputs; i++)
+                    // {
+                    //     pInputs[i] = new NativeMethods.TOUCHINPUT();
+                    // }
+                    for (uint i = 0; i < cInputs; i++)
+                    {
+                        NativeMethods.TOUCHINPUT ti = pInputs[i];
+                        // TODO: do something with ti
+                    }
+
+
+                    IntPtr hTouchInput = lParam;
+                    int cbSize = Marshal.SizeOf(typeof(NativeMethods.TOUCHINPUT));
+                    bool gotTouchInputInfo = NativeMethods.GetTouchInputInfo(hTouchInput, cInputs, pInputs, cbSize);
+                    if (!gotTouchInputInfo) PrintErrorAndExit("GetTouchInputInfo");
+                    for (uint i = 0; i < cInputs; i++)
+                    {
+                        NativeMethods.TOUCHINPUT ti = pInputs[i];
+                        // TODO: do something with ti
+                    }
+                    bool touchInputHandleClosed = NativeMethods.CloseTouchInputHandle(hTouchInput);
+                    if (!touchInputHandleClosed) PrintErrorAndExit("CloseTouchInputHandle");
+                    
                     return IntPtr.Zero;
 
                // Left Mouse
