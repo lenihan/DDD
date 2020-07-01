@@ -10,12 +10,12 @@ using System.Runtime.InteropServices;
 
 namespace DDD
 {
-    internal static class NativeMethods
+    class NativeMethods
     {
     //internal class MinWinDef
     //{
         // Macros
-        public static ushort LOWORD(IntPtr lParam)
+        static ushort LOWORD(IntPtr lParam)
         {
             return System.Convert.ToUInt16(lParam.ToInt32() & 0x0000FFFF);
         }
@@ -808,8 +808,8 @@ namespace DDD
         public struct GESTUREINFO
         {
             public uint cbSize;
-            public NativeMethods.GestureFlags dwFlags;
-            public NativeMethods.GestureID dwID;
+            public GestureFlags dwFlags;
+            public GestureID dwID;
             public IntPtr hwndTarget;
             public POINTS ptsLocation;
             public uint dwInstanceID;
@@ -1308,73 +1308,205 @@ namespace DDD
         public static extern bool wglMakeCurrent(IntPtr hDC, IntPtr hRC);
     //}
 
-    }
+        IntPtr MyWndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam)
+        {
+//#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+//#pragma warning restore CA1303 // Do not pass literals as localized parameters
+            switch (msg)
+            {
+                case WindowsMessage.WM_GESTURE:
+                    IntPtr hGestureInfo = lParam;
+                    var gi = new GESTUREINFO();
+                    gi.cbSize = (uint)Marshal.SizeOf(typeof(GESTUREINFO));
+                    bool gestureInfoGotten = GetGestureInfo(hGestureInfo, ref gi);
+                    if (!gestureInfoGotten) PrintErrorAndExit("GetGestureInfo");
 
-    [Cmdlet(VerbsData.Out, "3d")]
-    [Alias("o3d")]
-    public class Out3dCommand : Cmdlet
-    {
-        ////////////
-        // Constants
-        
-        const int MillisecondsPerRotation = 1000;
-        readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
-        
-        // colors
-        readonly System.Drawing.Color _black = System.Drawing.Color.FromArgb(0, 0, 0);          // Black https://rgbcolorcode.com/color/000000
-        readonly System.Drawing.Color _darkGray = System.Drawing.Color.FromArgb(74, 74, 74);    // Quartz https://rgbcolorcode.com/color/4a4a4a
-        readonly System.Drawing.Color _white = System.Drawing.Color.FromArgb(255, 255, 255);    // White https://rgbcolorcode.com/color/FFFFFF
-        readonly System.Drawing.Color _red = System.Drawing.Color.FromArgb(230, 38, 0);         // Ferrari Red https://rgbcolorcode.com/color/E62600
-        readonly System.Drawing.Color _green = System.Drawing.Color.FromArgb(25, 255, 25);      // Neon Green https://rgbcolorcode.com/color/19FF19
-        readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
-        readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
-        readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
-        // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
-        // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
-        
-        System.Drawing.Point _mouseMovePos;
-        System.Drawing.Point _mouseLeftButtonDownPos;
-        System.Drawing.Point _mouseRightButtonDownPos;
-        bool _mouseLeftButtonDown;
-        bool _mouseRightButtonDown;
+                    if (gi.dwID == GestureID.GID_ROTATE)
+                    {
+                        double angleInRadians = GID_ROTATE_ANGLE_FROM_ARGUMENT(gi.ulArguments);
+                        double angle = angleInRadians * 180.0 / Math.PI;
+                        if (gi.dwFlags == GestureFlags.GF_BEGIN)
+                        {
+                            _zDegreesAtRotateGestureBegin = _zDegreesCurrent;
+                        }
+                        else 
+                        {
+                            _zDegreesCurrent = _zDegreesAtRotateGestureBegin - angle;
+                        }
+                        return IntPtr.Zero;
+                    }
+                    return DefWindowProc(hWnd, msg, wParam, lParam);
 
-        List<object> _objects = new List<object>();
+                case WindowsMessage.WM_TOUCH:
+                    uint cInputs = LOWORD(wParam);
+                    TOUCHINPUT[] pInputs = new TOUCHINPUT[cInputs];
+                    IntPtr hTouchInput = lParam;
+                    int cbSize = Marshal.SizeOf(typeof(TOUCHINPUT));
+                    bool gotTouchInputInfo = GetTouchInputInfo(hTouchInput, cInputs, pInputs, cbSize);
+                    if (!gotTouchInputInfo) PrintErrorAndExit("GetTouchInputInfo");
+                    for (uint i = 0; i < cInputs; i++)
+                    {
+                        TOUCHINPUT ti = pInputs[i];
+                        // TODO: do something with ti
+                    }
+                    bool touchInputHandleClosed = CloseTouchInputHandle(hTouchInput);
+                    if (!touchInputHandleClosed) PrintErrorAndExit("CloseTouchInputHandle");
+                    
+                    return IntPtr.Zero;
 
-        int _xaxis = 0;
-        int _yaxis = 0;
-        int _zaxis = 0;
+               // Left Mouse
+                case WindowsMessage.WM_LBUTTONDOWN:
+                    _mouseLeftButtonDownPos.X = GET_X_LPARAM(lParam); 
+                    _mouseLeftButtonDownPos.Y = GET_Y_LPARAM(lParam);
+                    _xDegreesAtButtonDown = _xDegreesCurrent; 
+                    _yDegreesAtButtonDown = _yDegreesCurrent; 
+                    return IntPtr.Zero;
+                
+                // Right Mouse
+                case WindowsMessage.WM_RBUTTONDOWN:
+                    _mouseRightButtonDownPos.X = GET_X_LPARAM(lParam); 
+                    _mouseRightButtonDownPos.Y = GET_Y_LPARAM(lParam); 
+                    _zDegreesAtButtonDown = _zDegreesCurrent; 
+                    return IntPtr.Zero;
+                
+                // Mouse move
+                case WindowsMessage.WM_MOUSEMOVE:
+                    _mouseMovePos.X = GET_X_LPARAM(lParam); 
+                    _mouseMovePos.Y = GET_Y_LPARAM(lParam);
+                    _mouseLeftButtonDown = (MouseKeyStateMasks)wParam == MouseKeyStateMasks.MK_LBUTTON ? true : false;
+                    _mouseRightButtonDown = (MouseKeyStateMasks)wParam == MouseKeyStateMasks.MK_RBUTTON ? true : false;
+                    return IntPtr.Zero;
 
-        Matrix _wld2cam = Matrix.Identity();     // world to camera
-        Matrix _cam2scn = Matrix.Identity();     // camera to screen
-        
-        DateTime _xaxisStart = DateTime.Now;
-        double _xDegreesCurrent = 0.0;
-        double _xDegreesAtButtonDown = 0.0;
-        
-        DateTime _yaxisStart = DateTime.Now;
-        double _yDegreesCurrent = 0.0;
-        double _yDegreesAtButtonDown = 0.0;
-        
-        DateTime _zaxisStart = DateTime.Now;
-        double _zDegreesCurrent = 0.0;
-        double _zDegreesAtButtonDown = 0.0;
-        double _zDegreesAtRotateGestureBegin = 0.0;
+                // Key down
+                case WindowsMessage.WM_KEYDOWN:
+                    switch ((uint)wParam)
+                    {
+                        // x axis
+                        case VIRTUALKEY.VK_W:
+                        case VIRTUALKEY.VK_UP:
+                            if (_xaxis != 1)
+                            {
+                                _xaxis = 1;
+                                _xDegreesAtButtonDown = _xDegreesCurrent;
+                                _xaxisStart = DateTime.Now;
+                            }
+                            break;
+                        case VIRTUALKEY.VK_S:
+                        case VIRTUALKEY.VK_DOWN:
+                            if (_xaxis != -1)
+                            {
+                                _xaxis = -1;
+                                _xDegreesAtButtonDown = _xDegreesCurrent;
+                                _xaxisStart = DateTime.Now;
+                            }
+                            break;
+                        // y axis
+                        case VIRTUALKEY.VK_A:
+                        case VIRTUALKEY.VK_LEFT:
+                            if (_yaxis != 1)
+                            {
+                                _yaxis = 1;
+                                _yDegreesAtButtonDown = _yDegreesCurrent;
+                                _yaxisStart = DateTime.Now;
+                            }
+                            break;
+                        case VIRTUALKEY.VK_D:
+                        case VIRTUALKEY.VK_RIGHT:
+                            if (_yaxis != -1)
+                            {
+                                _yaxis = -1;
+                                _yDegreesAtButtonDown = _yDegreesCurrent;
+                                _yaxisStart = DateTime.Now;
+                            }
+                            break;
+                        // z axis
+                        case VIRTUALKEY.VK_Q:
+                        case VIRTUALKEY.VK_OEM_COMMA:
+                        case VIRTUALKEY.VK_PRIOR:
+                            if (_zaxis != 1)
+                            {
+                                _zaxis = 1;
+                                _zDegreesAtButtonDown = _zDegreesCurrent;
+                                _zaxisStart = DateTime.Now;
+                            }
+                            break;
+                        case VIRTUALKEY.VK_E:
+                        case VIRTUALKEY.VK_OEM_PERIOD:
+                        case VIRTUALKEY.VK_NEXT:
+                            if (_zaxis != -1)
+                            {
+                                _zaxis = -1;
+                                _zDegreesAtButtonDown = _zDegreesCurrent;
+                                _zaxisStart = DateTime.Now;
+                            }
+                            break;
+                    }
+                    return IntPtr.Zero;
+                // Key up
+                case WindowsMessage.WM_KEYUP:
+                    switch ((uint)wParam)
+                    {
+                        // x axis
+                        case VIRTUALKEY.VK_W:
+                        case VIRTUALKEY.VK_UP:
+                        case VIRTUALKEY.VK_S:
+                        case VIRTUALKEY.VK_DOWN:
+                            _xaxis = 0;
+                            break;
+                        // y axis
+                        case VIRTUALKEY.VK_A:
+                        case VIRTUALKEY.VK_LEFT:
+                        case VIRTUALKEY.VK_D:
+                        case VIRTUALKEY.VK_RIGHT:
+                            _yaxis = 0;
+                            break;
+                        // z axis
+                        case VIRTUALKEY.VK_Q:
+                        case VIRTUALKEY.VK_OEM_COMMA:
+                        case VIRTUALKEY.VK_PRIOR:
+                        case VIRTUALKEY.VK_E:
+                        case VIRTUALKEY.VK_OEM_PERIOD:
+                        case VIRTUALKEY.VK_NEXT:
+                            _zaxis = 0;
+                            break;
+                        // show bounding box toggle
+                        case VIRTUALKEY.VK_B:
+                            _showBoundingBox = !_showBoundingBox;
+                            break;
+                        // reset
+                        case VIRTUALKEY.VK_R:
+                            _wld2cam = Matrix.Identity();
+                            _xDegreesCurrent = 0.0;
+                            _yDegreesCurrent = 0.0;
+                            _zDegreesCurrent = 0.0;
+                            break;
+                        case VIRTUALKEY.VK_ESCAPE:
+                            DestroyWindow(hWnd);
+                            break;
+                    }
+                    return IntPtr.Zero;
+                // case WindowsMessage.WM_DISPLAYCHANGE:
+                //     UpdateMonitors();
+                //     return IntPtr.Zero;
 
-        int _width = 0;
-        int _height = 0;
-        
-        Point _bboxMin_wld;
-        Point _bboxMax_wld;
-        
-        double _maxDistance;
-        
-        Point _xAxis_wld;
-        Point _yAxis_wld;
-        Point _zAxis_wld;
-
-        bool _showBoundingBox;
-
-        static void ClampAngleFrom0To360(ref double angle)
+                // Window resize
+                case WindowsMessage.WM_SIZE:
+                    const int x = 0;
+                    const int y = 0;
+                    _width = LOWORD(lParam);
+                    _height = HIWORD(lParam);
+                    glViewport(x, y, _width, _height);
+                    return IntPtr.Zero;
+                // Quit
+                case WindowsMessage.WM_DESTROY:
+                    PostQuitMessage(0);
+                    return IntPtr.Zero;
+                default:
+                    return DefWindowProc(hWnd, msg, wParam, lParam);
+            }
+        }
+    static void ClampAngleFrom0To360(ref double angle)
         {
             while (angle >= 360.0) angle -= 360.0;
             while (angle < 0.0) angle += 360.0;
@@ -1503,9 +1635,8 @@ namespace DDD
             Matrix wld2scr = cam2scr * _wld2cam;
 
 
-            NativeMethods.glEnable(NativeMethods.GetTarget.GL_DEPTH_TEST);  // TODO: This only needs to be done once
-            NativeMethods.glClear(NativeMethods.AttribMask.GL_COLOR_BUFFER_BIT | 
-                                  NativeMethods.AttribMask.GL_DEPTH_BUFFER_BIT);
+            glEnable(GetTarget.GL_DEPTH_TEST);  // TODO: This only needs to be done once
+            glClear(AttribMask.GL_COLOR_BUFFER_BIT | AttribMask.GL_DEPTH_BUFFER_BIT);
 
             #region DRAW AXES
             {
@@ -1515,29 +1646,29 @@ namespace DDD
                 Point yaxis_scr = wld2scr * _yAxis_wld;
                 Point zaxis_scr = wld2scr * _zAxis_wld;
 
-                NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-                NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-                NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+                glEnable(GetTarget.GL_LINE_SMOOTH);
+                glHint(GetTarget.GL_LINE_SMOOTH_HINT, HintMode.GL_NICEST);
+                glBegin(BeginMode.GL_LINES);
 
                     // x axis (red) - left
-                    NativeMethods.glColor3ub(_red.R, _red.G, _red.B);
-                    NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                    NativeMethods.glColor3ub(_black.R, _black.G, _black.B);
-                    NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
+                    glColor3ub(_red.R, _red.G, _red.B);
+                    glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                    glColor3ub(_black.R, _black.G, _black.B);
+                    glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
 
                     // y axis (green) - up
-                    NativeMethods.glColor3ub(_green.R, _green.G, _green.B);
-                    NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                    NativeMethods.glColor3ub(_black.R, _black.G, _black.B);
-                    NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
+                    glColor3ub(_green.R, _green.G, _green.B);
+                    glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                    glColor3ub(_black.R, _black.G, _black.B);
+                    glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
 
                     // z axis (blue) - towards user
-                    NativeMethods.glColor3ub(_blue.R, _blue.G, _blue.B);
-                    NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                    NativeMethods.glColor3ub(_black.R, _black.G, _black.B);
-                    NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
+                    glColor3ub(_blue.R, _blue.G, _blue.B);
+                    glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                    glColor3ub(_black.R, _black.G, _black.B);
+                    glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
 
-                NativeMethods.glEnd();
+                glEnd();
             }
             #endregion
 
@@ -1547,27 +1678,27 @@ namespace DDD
                     if (o is Point p_wld) 
                     {
                         Point p_scr = wld2scr * p_wld;
-                        NativeMethods.glPointSize(5.0f);
-                        NativeMethods.glEnable(NativeMethods.GetTarget.GL_POINT_SMOOTH);
-                        NativeMethods.glHint(NativeMethods.GetTarget.GL_POINT_SMOOTH_HINT, NativeMethods.HintMode.GL_FASTEST);
-                        NativeMethods.glBegin(NativeMethods.BeginMode.GL_POINTS);
-                            NativeMethods.glColor3ub(_yellow.R, _yellow.G, _yellow.B);
-                            NativeMethods.glVertex3d(p_scr.X, p_scr.Y, p_scr.Z);
-                        NativeMethods.glEnd();
+                        glPointSize(5.0f);
+                        glEnable(GetTarget.GL_POINT_SMOOTH);
+                        glHint(GetTarget.GL_POINT_SMOOTH_HINT, HintMode.GL_FASTEST);
+                        glBegin(BeginMode.GL_POINTS);
+                            glColor3ub(_yellow.R, _yellow.G, _yellow.B);
+                            glVertex3d(p_scr.X, p_scr.Y, p_scr.Z);
+                        glEnd();
                     }
                     else if (o is Vector v_wld)
                     {
                         Vector v_scr = wld2scr * v_wld;
                         Vector origin_scr = wld2scr * new Vector(0.0, 0.0, 0.0);
-                        NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-                        NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-                        NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);                        
-                            NativeMethods.glLineWidth(1.0f);
-                            NativeMethods.glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
-                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                            NativeMethods.glColor3ub(_orange.R, _orange.G, _orange.B);
-                            NativeMethods.glVertex3d(v_scr.X, v_scr.Y, v_scr.Z);
-                        NativeMethods.glEnd();
+                        glEnable(GetTarget.GL_LINE_SMOOTH);
+                        glHint(GetTarget.GL_LINE_SMOOTH_HINT, HintMode.GL_NICEST);
+                        glBegin(BeginMode.GL_LINES);                        
+                            glLineWidth(1.0f);
+                            glColor3ub(_darkGray.R, _darkGray.G, _darkGray.B);
+                            glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            glColor3ub(_orange.R, _orange.G, _orange.B);
+                            glVertex3d(v_scr.X, v_scr.Y, v_scr.Z);
+                        glEnd();
                     }
                     else if (o is Matrix m_wld)
                     {
@@ -1577,26 +1708,26 @@ namespace DDD
                         Point yaxis_scr = m_scr * new Point(0.0, 1.0, 0.0);
                         Point zaxis_scr = m_scr * new Point(0.0, 0.0, 1.0);
                        
-                        NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-                        NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-                        NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+                        glEnable(GetTarget.GL_LINE_SMOOTH);
+                        glHint(GetTarget.GL_LINE_SMOOTH_HINT, HintMode.GL_NICEST);
+                        glBegin(BeginMode.GL_LINES);
 
                             // x axis (red) - left
-                            NativeMethods.glColor3ub(_red.R, _red.G, _red.B);
-                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                            NativeMethods.glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
+                            glColor3ub(_red.R, _red.G, _red.B);
+                            glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            glVertex3d(xaxis_scr.X, xaxis_scr.Y, xaxis_scr.Z);
 
                             // y axis (green) - up
-                             NativeMethods.glColor3ub(_green.R, _green.G, _green.B);
-                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                            NativeMethods.glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
+                            glColor3ub(_green.R, _green.G, _green.B);
+                            glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            glVertex3d(yaxis_scr.X, yaxis_scr.Y, yaxis_scr.Z);
 
                             // z axis (blue) - towards user
-                            NativeMethods.glColor3ub(_blue.R, _blue.G, _blue.B);
-                            NativeMethods.glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
-                            NativeMethods.glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
+                            glColor3ub(_blue.R, _blue.G, _blue.B);
+                            glVertex3d(origin_scr.X, origin_scr.Y, origin_scr.Z);
+                            glVertex3d(zaxis_scr.X, zaxis_scr.Y, zaxis_scr.Z);
 
-                        NativeMethods.glEnd();
+                        glEnd();
                     }
                 }
             #endregion
@@ -1619,277 +1750,257 @@ namespace DDD
                     Point ymax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
                     Point zmax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
 
-                    NativeMethods.glEnable(NativeMethods.GetTarget.GL_LINE_SMOOTH);
-                    NativeMethods.glHint(NativeMethods.GetTarget.GL_LINE_SMOOTH_HINT, NativeMethods.HintMode.GL_NICEST);
-                    NativeMethods.glBegin(NativeMethods.BeginMode.GL_LINES);
+                    glEnable(GetTarget.GL_LINE_SMOOTH);
+                    glHint(GetTarget.GL_LINE_SMOOTH_HINT, HintMode.GL_NICEST);
+                    glBegin(BeginMode.GL_LINES);
 
                         // x axis (red) - left
-                        NativeMethods.glColor3ub(_white.R, _white.G, _white.B);
-                        NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                        NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                        glColor3ub(_white.R, _white.G, _white.B);
+                        glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                        glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
 
                         // y axis (green) - up
-                        NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                        NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                        glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                        glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
 
                         // z axis (blue) - towards user
-                        NativeMethods.glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
-                        NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                        glVertex3d(min_scr.X, min_scr.Y, min_scr.Z);
+                        glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
 
                         // max x white
-                        NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                        NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+                        glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                        glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
                         // max y white
-                        NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                        NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+                        glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                        glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
                         // max z white
-                        NativeMethods.glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
-                        NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+                        glVertex3d(max_scr.X, max_scr.Y, max_scr.Z);
+                        glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
                         // x axis (red) - left
-                        NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
-                        NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+                        glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                        glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
-                        NativeMethods.glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
-                        NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+                        glVertex3d(xmin_scr.X, xmin_scr.Y, xmin_scr.Z);
+                        glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
                         // y axis (green) - up
-                        NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
-                        NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+                        glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                        glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                        NativeMethods.glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
-                        NativeMethods.glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
+                        glVertex3d(ymin_scr.X, ymin_scr.Y, ymin_scr.Z);
+                        glVertex3d(zmax_scr.X, zmax_scr.Y, zmax_scr.Z);
 
                         // z axis (blue) - towards user
-                        NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
-                        NativeMethods.glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
+                        glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                        glVertex3d(xmax_scr.X, xmax_scr.Y, xmax_scr.Z);
 
-                        NativeMethods.glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
-                        NativeMethods.glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
+                        glVertex3d(zmin_scr.X, zmin_scr.Y, zmin_scr.Z);
+                        glVertex3d(ymax_scr.X, ymax_scr.Y, ymax_scr.Z);
 
-                    NativeMethods.glEnd();
+                    glEnd();
                 }
             }
             #endregion
 
-            NativeMethods.glFlush();
-        }
-
-        IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
-        {
-//#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
-//#pragma warning restore CA1303 // Do not pass literals as localized parameters
-            switch (msg)
-            {
-                case NativeMethods.WindowsMessage.WM_GESTURE:
-                    IntPtr hGestureInfo = lParam;
-                    var gi = new NativeMethods.GESTUREINFO();
-                    gi.cbSize = (uint)Marshal.SizeOf(typeof(NativeMethods.GESTUREINFO));
-                    bool gestureInfoGotten = NativeMethods.GetGestureInfo(hGestureInfo, ref gi);
-                    if (!gestureInfoGotten) PrintErrorAndExit("GetGestureInfo");
-
-                    if (gi.dwID == NativeMethods.GestureID.GID_ROTATE)
-                    {
-                        double angleInRadians = NativeMethods.GID_ROTATE_ANGLE_FROM_ARGUMENT(gi.ulArguments);
-                        double angle = angleInRadians * 180.0 / Math.PI;
-                        if (gi.dwFlags == NativeMethods.GestureFlags.GF_BEGIN)
-                        {
-                            _zDegreesAtRotateGestureBegin = _zDegreesCurrent;
-                        }
-                        else 
-                        {
-                            _zDegreesCurrent = _zDegreesAtRotateGestureBegin - angle;
-                        }
-                        return IntPtr.Zero;
-                    }
-                    return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
-
-                case NativeMethods.WindowsMessage.WM_TOUCH:
-                    uint cInputs = NativeMethods.LOWORD(wParam);
-                    NativeMethods.TOUCHINPUT[] pInputs = new NativeMethods.TOUCHINPUT[cInputs];
-                    IntPtr hTouchInput = lParam;
-                    int cbSize = Marshal.SizeOf(typeof(NativeMethods.TOUCHINPUT));
-                    bool gotTouchInputInfo = NativeMethods.GetTouchInputInfo(hTouchInput, cInputs, pInputs, cbSize);
-                    if (!gotTouchInputInfo) PrintErrorAndExit("GetTouchInputInfo");
-                    for (uint i = 0; i < cInputs; i++)
-                    {
-                        NativeMethods.TOUCHINPUT ti = pInputs[i];
-                        // TODO: do something with ti
-                    }
-                    bool touchInputHandleClosed = NativeMethods.CloseTouchInputHandle(hTouchInput);
-                    if (!touchInputHandleClosed) PrintErrorAndExit("CloseTouchInputHandle");
-                    
-                    return IntPtr.Zero;
-
-               // Left Mouse
-                case NativeMethods.WindowsMessage.WM_LBUTTONDOWN:
-                    _mouseLeftButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
-                    _mouseLeftButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam);
-                    _xDegreesAtButtonDown = _xDegreesCurrent; 
-                    _yDegreesAtButtonDown = _yDegreesCurrent; 
-                    return IntPtr.Zero;
-                
-                // Right Mouse
-                case NativeMethods.WindowsMessage.WM_RBUTTONDOWN:
-                    _mouseRightButtonDownPos.X = NativeMethods.GET_X_LPARAM(lParam); 
-                    _mouseRightButtonDownPos.Y = NativeMethods.GET_Y_LPARAM(lParam); 
-                    _zDegreesAtButtonDown = _zDegreesCurrent; 
-                    return IntPtr.Zero;
-                
-                // Mouse move
-                case NativeMethods.WindowsMessage.WM_MOUSEMOVE:
-                    _mouseMovePos.X = NativeMethods.GET_X_LPARAM(lParam); 
-                    _mouseMovePos.Y = NativeMethods.GET_Y_LPARAM(lParam);
-                    _mouseLeftButtonDown = (NativeMethods.MouseKeyStateMasks)wParam == NativeMethods.MouseKeyStateMasks.MK_LBUTTON ? true : false;
-                    _mouseRightButtonDown = (NativeMethods.MouseKeyStateMasks)wParam == NativeMethods.MouseKeyStateMasks.MK_RBUTTON ? true : false;
-                    return IntPtr.Zero;
-
-                // Key down
-                case NativeMethods.WindowsMessage.WM_KEYDOWN:
-                    switch ((uint)wParam)
-                    {
-                        // x axis
-                        case NativeMethods.VIRTUALKEY.VK_W:
-                        case NativeMethods.VIRTUALKEY.VK_UP:
-                            if (_xaxis != 1)
-                            {
-                                _xaxis = 1;
-                                _xDegreesAtButtonDown = _xDegreesCurrent;
-                                _xaxisStart = DateTime.Now;
-                            }
-                            break;
-                        case NativeMethods.VIRTUALKEY.VK_S:
-                        case NativeMethods.VIRTUALKEY.VK_DOWN:
-                            if (_xaxis != -1)
-                            {
-                                _xaxis = -1;
-                                _xDegreesAtButtonDown = _xDegreesCurrent;
-                                _xaxisStart = DateTime.Now;
-                            }
-                            break;
-                        // y axis
-                        case NativeMethods.VIRTUALKEY.VK_A:
-                        case NativeMethods.VIRTUALKEY.VK_LEFT:
-                            if (_yaxis != 1)
-                            {
-                                _yaxis = 1;
-                                _yDegreesAtButtonDown = _yDegreesCurrent;
-                                _yaxisStart = DateTime.Now;
-                            }
-                            break;
-                        case NativeMethods.VIRTUALKEY.VK_D:
-                        case NativeMethods.VIRTUALKEY.VK_RIGHT:
-                            if (_yaxis != -1)
-                            {
-                                _yaxis = -1;
-                                _yDegreesAtButtonDown = _yDegreesCurrent;
-                                _yaxisStart = DateTime.Now;
-                            }
-                            break;
-                        // z axis
-                        case NativeMethods.VIRTUALKEY.VK_Q:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_COMMA:
-                        case NativeMethods.VIRTUALKEY.VK_PRIOR:
-                            if (_zaxis != 1)
-                            {
-                                _zaxis = 1;
-                                _zDegreesAtButtonDown = _zDegreesCurrent;
-                                _zaxisStart = DateTime.Now;
-                            }
-                            break;
-                        case NativeMethods.VIRTUALKEY.VK_E:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
-                        case NativeMethods.VIRTUALKEY.VK_NEXT:
-                            if (_zaxis != -1)
-                            {
-                                _zaxis = -1;
-                                _zDegreesAtButtonDown = _zDegreesCurrent;
-                                _zaxisStart = DateTime.Now;
-                            }
-                            break;
-                    }
-                    return IntPtr.Zero;
-                // Key up
-                case NativeMethods.WindowsMessage.WM_KEYUP:
-                    switch ((uint)wParam)
-                    {
-                        // x axis
-                        case NativeMethods.VIRTUALKEY.VK_W:
-                        case NativeMethods.VIRTUALKEY.VK_UP:
-                        case NativeMethods.VIRTUALKEY.VK_S:
-                        case NativeMethods.VIRTUALKEY.VK_DOWN:
-                            _xaxis = 0;
-                            break;
-                        // y axis
-                        case NativeMethods.VIRTUALKEY.VK_A:
-                        case NativeMethods.VIRTUALKEY.VK_LEFT:
-                        case NativeMethods.VIRTUALKEY.VK_D:
-                        case NativeMethods.VIRTUALKEY.VK_RIGHT:
-                            _yaxis = 0;
-                            break;
-                        // z axis
-                        case NativeMethods.VIRTUALKEY.VK_Q:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_COMMA:
-                        case NativeMethods.VIRTUALKEY.VK_PRIOR:
-                        case NativeMethods.VIRTUALKEY.VK_E:
-                        case NativeMethods.VIRTUALKEY.VK_OEM_PERIOD:
-                        case NativeMethods.VIRTUALKEY.VK_NEXT:
-                            _zaxis = 0;
-                            break;
-                        // show bounding box toggle
-                        case NativeMethods.VIRTUALKEY.VK_B:
-                            _showBoundingBox = !_showBoundingBox;
-                            break;
-                        // reset
-                        case NativeMethods.VIRTUALKEY.VK_R:
-                            _wld2cam = Matrix.Identity();
-                            _xDegreesCurrent = 0.0;
-                            _yDegreesCurrent = 0.0;
-                            _zDegreesCurrent = 0.0;
-                            break;
-                        case NativeMethods.VIRTUALKEY.VK_ESCAPE:
-                            NativeMethods.DestroyWindow(hWnd);
-                            break;
-                    }
-                    return IntPtr.Zero;
-                // case NativeMethods.WindowsMessage.WM_DISPLAYCHANGE:
-                //     UpdateMonitors();
-                //     return IntPtr.Zero;
-
-                // Window resize
-                case NativeMethods.WindowsMessage.WM_SIZE:
-                    const int x = 0;
-                    const int y = 0;
-                    _width = NativeMethods.LOWORD(lParam);
-                    _height = NativeMethods.HIWORD(lParam);
-                    NativeMethods.glViewport(x, y, _width, _height);
-                    return IntPtr.Zero;
-                // Quit
-                case NativeMethods.WindowsMessage.WM_DESTROY:
-                    NativeMethods.PostQuitMessage(0);
-                    return IntPtr.Zero;
-                default:
-                    return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
-            }
+            glFlush();
         }
         void PrintErrorAndExit(string cmd)
         {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
             // System Error Codes: https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
-            int error = NativeMethods.GetLastError();
+            int error = GetLastError();
             // Throw a terminating error for types that are not supported.
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
-            ErrorRecord er = new ErrorRecord(
-                new FormatException(msg),
-                "LastError",
-                ErrorCategory.NotSpecified,
-                null);
-            this.ThrowTerminatingError(er);
-#pragma warning restore CA1303 // Do not pass literals as localized parameters            
+            throw new System.InvalidOperationException(msg);
         }
+        public void UI(List<object> Objects, string Title)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Create window
+                IntPtr hInstance = GetModuleHandle(null);
+                if (hInstance == null) PrintErrorAndExit("GetModuleHandle");
+
+                const string className = "DDDWindow";
+                var wc = WNDCLASSEX.Build();
+                wc.WndProc = new WndProc(MyWndProc);
+                wc.ClassName = className;
+                wc.Instance = hInstance;
+                wc.Cursor = LoadCursor(IntPtr.Zero, IDC_STANDARD_CURSORS.IDC_ARROW);
+
+                ushort atom = RegisterClassEx(ref wc);
+                if (atom == 0) PrintErrorAndExit("RegisterClassEx");
+
+                const int dwExStyle = 0;
+                const int x = CW_USEDEFAULT;
+                const int y = CW_USEDEFAULT;
+                const int width = CW_USEDEFAULT;
+                const int height = CW_USEDEFAULT;
+                IntPtr hWndParent = IntPtr.Zero;
+                IntPtr hMenu = IntPtr.Zero;
+                IntPtr lpParam = IntPtr.Zero;
+
+                IntPtr hWnd = CreateWindowEx(
+                    dwExStyle,
+                    atom,
+                    Title, 
+                    WindowStyles.WS_OVERLAPPEDWINDOW,
+                    x,
+                    y,
+                    width,
+                    height,
+                    hWndParent,
+                    hMenu,
+                    hInstance,
+                    lpParam);
+                if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
+
+                const uint dwReserved = 0;
+                const uint cIDs = 1;
+                var pGestureConfig = new GESTURECONFIG[cIDs];            
+                pGestureConfig[0].dwID = GestureID.GID_ROTATE;
+                pGestureConfig[0].dwWant = GC_ROTATE;
+                pGestureConfig[0].dwBlock = 0;
+                uint cbSize = (uint)Marshal.SizeOf(typeof(GESTURECONFIG));
+                bool gestureConfigSet = SetGestureConfig(hWnd, dwReserved, cIDs, pGestureConfig, cbSize);
+                if (!gestureConfigSet) PrintErrorAndExit("SetGestureConfig");
+
+                bool foregroundWindow = SetForegroundWindow(hWnd);
+                if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow");
+
+                // Set pixel format
+                var pfd = PixelFormatDescriptor.Build();
+                pfd.Flags = PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW |
+                            PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL |
+                            PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
+                pfd.PixelType = PixelType.PFD_TYPE_RGBA;
+                pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
+
+                IntPtr hDC = GetDC(hWnd);
+                if (hDC == IntPtr.Zero) PrintErrorAndExit("GetDC");
+
+                int pf = ChoosePixelFormat(hDC, ref pfd);
+                if (pf == 0) PrintErrorAndExit("ChoosePixelFormat");
+
+                bool pixelFormatSet = SetPixelFormat(hDC, pf, in pfd);
+                if (!pixelFormatSet) PrintErrorAndExit("SetPixelFormat");
+
+                IntPtr hRC = wglCreateContext(hDC);
+                if (hRC == IntPtr.Zero) PrintErrorAndExit("wglCreateContext");
+                
+                bool makeCurrent = wglMakeCurrent(hDC, hRC);
+                if (!makeCurrent) PrintErrorAndExit("wglMakeCurrent");
+
+                ShowWindow(hWnd, ShowWindowCommand.Show);
+                    
+                // Message loop
+                bool running = true;
+                while (running)
+                {
+                    Display();
+
+                    bool buffersSwapped = SwapBuffers(hDC);
+                    if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
+                    
+                    // Do not use 100% of CPU. Yield to others for a minimal amount of time (1 millisecond)
+                    System.Threading.Tasks.Task.Delay(1).Wait();    
+
+                    MSG msg;
+                    while (PeekMessage(out msg, IntPtr.Zero, 0, 0, PM_NOREMOVE))
+                    {
+                        if (GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
+                        {
+                            TranslateMessage(ref msg);
+                            DispatchMessage(ref msg);
+                        }
+                        else // Got WM_QUIT
+                        {                        
+                            running = false;
+                            break;
+                        }
+                    }
+                }
+
+                bool makeCurrentZeroed = wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
+                if (!makeCurrentZeroed) PrintErrorAndExit("wglMakeCurrent");
+
+                bool contextDeleted = wglDeleteContext(hRC);
+                if (!contextDeleted) PrintErrorAndExit("wglDeleteContext");
+
+                bool classUnregistered = UnregisterClass(className, hInstance);            
+                if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
+            }
+        }        
+    }
+
+    [Cmdlet(VerbsData.Out, "3d")]
+    [Alias("o3d")]
+    public class Out3dCommand : Cmdlet
+    {
+        ////////////
+        // Constants
+        
+        const int MillisecondsPerRotation = 1000;
+        readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
+        
+        // colors
+        readonly System.Drawing.Color _black = System.Drawing.Color.FromArgb(0, 0, 0);          // Black https://rgbcolorcode.com/color/000000
+        readonly System.Drawing.Color _darkGray = System.Drawing.Color.FromArgb(74, 74, 74);    // Quartz https://rgbcolorcode.com/color/4a4a4a
+        readonly System.Drawing.Color _white = System.Drawing.Color.FromArgb(255, 255, 255);    // White https://rgbcolorcode.com/color/FFFFFF
+        readonly System.Drawing.Color _red = System.Drawing.Color.FromArgb(230, 38, 0);         // Ferrari Red https://rgbcolorcode.com/color/E62600
+        readonly System.Drawing.Color _green = System.Drawing.Color.FromArgb(25, 255, 25);      // Neon Green https://rgbcolorcode.com/color/19FF19
+        readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
+        readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
+        readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
+        // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
+        // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
+        
+        System.Drawing.Point _mouseMovePos;
+        System.Drawing.Point _mouseLeftButtonDownPos;
+        System.Drawing.Point _mouseRightButtonDownPos;
+        bool _mouseLeftButtonDown;
+        bool _mouseRightButtonDown;
+
+        List<object> _objects = new List<object>();
+
+        int _xaxis = 0;
+        int _yaxis = 0;
+        int _zaxis = 0;
+
+        Matrix _wld2cam = Matrix.Identity();     // world to camera
+        Matrix _cam2scn = Matrix.Identity();     // camera to screen
+        
+        DateTime _xaxisStart = DateTime.Now;
+        double _xDegreesCurrent = 0.0;
+        double _xDegreesAtButtonDown = 0.0;
+        
+        DateTime _yaxisStart = DateTime.Now;
+        double _yDegreesCurrent = 0.0;
+        double _yDegreesAtButtonDown = 0.0;
+        
+        DateTime _zaxisStart = DateTime.Now;
+        double _zDegreesCurrent = 0.0;
+        double _zDegreesAtButtonDown = 0.0;
+        double _zDegreesAtRotateGestureBegin = 0.0;
+
+        int _width = 0;
+        int _height = 0;
+        
+        Point _bboxMin_wld;
+        Point _bboxMax_wld;
+        
+        double _maxDistance;
+        
+        Point _xAxis_wld;
+        Point _yAxis_wld;
+        Point _zAxis_wld;
+
+        bool _showBoundingBox;
+
+    
+
         
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public object[] InputObject;
@@ -2023,6 +2134,7 @@ namespace DDD
         {
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("EndProcessing");
+
             if (_objects.Count == 0) return;
             
             // compute _maxDistance
@@ -2047,127 +2159,24 @@ namespace DDD
             _mouseLeftButtonDown = false;
             _mouseRightButtonDown = false;
 
-#region WIN32
-
-            // UpdateMonitors();
-
-            // Create window
-            IntPtr hInstance = NativeMethods.GetModuleHandle(null);
-            if (hInstance == null) PrintErrorAndExit("GetModuleHandle");
-
-            const string className = "DDDWindow";
-            var wc = NativeMethods.WNDCLASSEX.Build();
-            wc.WndProc = new NativeMethods.WndProc(MyWndProc);
-            wc.ClassName = className;
-            wc.Instance = hInstance;
-            wc.Cursor = NativeMethods.LoadCursor(IntPtr.Zero, NativeMethods.IDC_STANDARD_CURSORS.IDC_ARROW);
-
-            ushort atom = NativeMethods.RegisterClassEx(ref wc);
-            if (atom == 0) PrintErrorAndExit("RegisterClassEx");
-
-            const int dwExStyle = 0;
-            const int x = NativeMethods.CW_USEDEFAULT;
-            const int y = NativeMethods.CW_USEDEFAULT;
-            const int width = NativeMethods.CW_USEDEFAULT;
-            const int height = NativeMethods.CW_USEDEFAULT;
-            IntPtr hWndParent = IntPtr.Zero;
-            IntPtr hMenu = IntPtr.Zero;
-            IntPtr lpParam = IntPtr.Zero;
-
-            IntPtr hWnd = NativeMethods.CreateWindowEx(
-                dwExStyle,
-                atom,
-                _title, 
-                NativeMethods.WindowStyles.WS_OVERLAPPEDWINDOW,
-                x,
-                y,
-                width,
-                height,
-                hWndParent,
-                hMenu,
-                hInstance,
-                lpParam);
-            if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
-
-            // bool touchWindowRegistered = NativeMethods.RegisterTouchWindow(hWnd, NativeMethods.RegisterTouchFlags.TWF_WANTPALM);
-            // if (!touchWindowRegistered) PrintErrorAndExit("RegisterTouchWindow");
-            const uint dwReserved = 0;
-            const uint cIDs = 1;
-            var pGestureConfig = new NativeMethods.GESTURECONFIG[cIDs];            
-            pGestureConfig[0].dwID = NativeMethods.GestureID.GID_ROTATE;
-            pGestureConfig[0].dwWant = NativeMethods.GC_ROTATE;
-            pGestureConfig[0].dwBlock = 0;
-            uint cbSize = (uint)Marshal.SizeOf(typeof(NativeMethods.GESTURECONFIG));
-            bool gestureConfigSet = NativeMethods.SetGestureConfig(hWnd, dwReserved, cIDs, pGestureConfig, cbSize);
-            if (!gestureConfigSet) PrintErrorAndExit("SetGestureConfig");
-
-            bool foregroundWindow = NativeMethods.SetForegroundWindow(hWnd);
-            if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow");
-
-            // Set pixel format
-            var pfd = NativeMethods.PixelFormatDescriptor.Build();
-            pfd.Flags = NativeMethods.PixelFormatDescriptorFlags.PFD_DRAW_TO_WINDOW |
-                        NativeMethods.PixelFormatDescriptorFlags.PFD_SUPPORT_OPENGL |
-                        NativeMethods.PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
-            pfd.PixelType = NativeMethods.PixelType.PFD_TYPE_RGBA;
-            pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
-
-            IntPtr hDC = NativeMethods.GetDC(hWnd);
-            if (hDC == IntPtr.Zero) PrintErrorAndExit("GetDC");
-
-            int pf = NativeMethods.ChoosePixelFormat(hDC, ref pfd);
-            if (pf == 0) PrintErrorAndExit("ChoosePixelFormat");
-
-            bool pixelFormatSet = NativeMethods.SetPixelFormat(hDC, pf, in pfd);
-            if (!pixelFormatSet) PrintErrorAndExit("SetPixelFormat");
-
-            IntPtr hRC = NativeMethods.wglCreateContext(hDC);
-            if (hRC == IntPtr.Zero) PrintErrorAndExit("wglCreateContext");
-            
-            bool makeCurrent = NativeMethods.wglMakeCurrent(hDC, hRC);
-            if (!makeCurrent) PrintErrorAndExit("wglMakeCurrent");
-
-            NativeMethods.ShowWindow(hWnd, NativeMethods.ShowWindowCommand.Show);
-                
-            // Message loop
-            bool running = true;
-            while (running)
+// TODO: VERIFY EXCEPTIONS WORK
+            try
             {
-                Display();
-
-                bool buffersSwapped = NativeMethods.SwapBuffers(hDC);
-                if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
-                
-                // Do not use 100% of CPU. Yield to others for a minimal amount of time (1 millisecond)
-                System.Threading.Tasks.Task.Delay(1).Wait();    
-
-                NativeMethods.MSG msg;
-                while (NativeMethods.PeekMessage(out msg, IntPtr.Zero, 0, 0, NativeMethods.PM_NOREMOVE))
-                {
-                    if (NativeMethods.GetMessage(out msg, IntPtr.Zero, 0, 0) != 0)
-                    {
-                        NativeMethods.TranslateMessage(ref msg);
-                        NativeMethods.DispatchMessage(ref msg);
-                    }
-                    else // Got WM_QUIT
-                    {                        
-                        running = false;
-                        break;
-                    }
-                }
+                var nm = new NativeMethods();
+                nm.UI(_objects, _title);
+            }
+            catch (System.Exception ex)
+            {
+                ErrorRecord er = new ErrorRecord(
+                    new FormatException(ex.Message),
+                    "LastError",
+                    ErrorCategory.NotSpecified,
+                    null);
+                ThrowTerminatingError(er);
             }
 
-            bool makeCurrentZeroed = NativeMethods.wglMakeCurrent(IntPtr.Zero, IntPtr.Zero);
-            if (!makeCurrentZeroed) PrintErrorAndExit("wglMakeCurrent");
 
-            bool contextDeleted = NativeMethods.wglDeleteContext(hRC);
-            if (!contextDeleted) PrintErrorAndExit("wglDeleteContext");
-
-            bool classUnregistered = NativeMethods.UnregisterClass(className, hInstance);            
-            if (!classUnregistered) PrintErrorAndExit("UnregisterClass");
-            
             Console.WriteLine("EndProcessing - DONE");
-#endregion        
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
         }
     }
