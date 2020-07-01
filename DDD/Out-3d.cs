@@ -12,6 +12,62 @@ namespace DDD
 {
     class NativeMethods
     {
+        ////////////
+        // Constants
+        
+        const int MillisecondsPerRotation = 1000;
+        readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
+        
+        // colors
+        readonly System.Drawing.Color _black = System.Drawing.Color.FromArgb(0, 0, 0);          // Black https://rgbcolorcode.com/color/000000
+        readonly System.Drawing.Color _darkGray = System.Drawing.Color.FromArgb(74, 74, 74);    // Quartz https://rgbcolorcode.com/color/4a4a4a
+        readonly System.Drawing.Color _white = System.Drawing.Color.FromArgb(255, 255, 255);    // White https://rgbcolorcode.com/color/FFFFFF
+        readonly System.Drawing.Color _red = System.Drawing.Color.FromArgb(230, 38, 0);         // Ferrari Red https://rgbcolorcode.com/color/E62600
+        readonly System.Drawing.Color _green = System.Drawing.Color.FromArgb(25, 255, 25);      // Neon Green https://rgbcolorcode.com/color/19FF19
+        readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
+        readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
+        readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
+        // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
+        // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
+        
+        System.Drawing.Point _mouseMovePos;
+        System.Drawing.Point _mouseLeftButtonDownPos;
+        System.Drawing.Point _mouseRightButtonDownPos;
+        bool _mouseLeftButtonDown = false;
+        bool _mouseRightButtonDown = false;
+
+        int _xaxis = 0;
+        int _yaxis = 0;
+        int _zaxis = 0;
+
+        Matrix _wld2cam = Matrix.Identity();     // world to camera
+        Matrix _cam2scn = Matrix.Identity();     // camera to screen
+        
+        DateTime _xaxisStart = DateTime.Now;
+        double _xDegreesCurrent = 0.0;
+        double _xDegreesAtButtonDown = 0.0;
+        
+        DateTime _yaxisStart = DateTime.Now;
+        double _yDegreesCurrent = 0.0;
+        double _yDegreesAtButtonDown = 0.0;
+        
+        DateTime _zaxisStart = DateTime.Now;
+        double _zDegreesCurrent = 0.0;
+        double _zDegreesAtButtonDown = 0.0;
+        double _zDegreesAtRotateGestureBegin = 0.0;
+
+        int _width = 0;
+        int _height = 0;
+        
+        double _maxDistance = 0.0;
+        
+        Point _xAxis_wld;
+        Point _yAxis_wld;
+        Point _zAxis_wld;
+
+        bool _showBoundingBox = false;
+
+
     //internal class MinWinDef
     //{
         // Macros
@@ -1735,20 +1791,20 @@ namespace DDD
             #region DRAW BOUNDING BOX
             if (_showBoundingBox) 
             {
-                Vector delta_bbox = _bboxMax_wld - _bboxMin_wld;
+                Vector delta_bbox = BoundingBoxMax - BoundingBoxMin;
                 if (delta_bbox.X != 0 && delta_bbox.Y != 0 && delta_bbox.Z != 0)
                 {
                     // Map bounding box to screen space
-                    Point min_scr = wld2scr * _bboxMin_wld;
-                    Point max_scr = wld2scr * _bboxMax_wld;
+                    Point min_scr = wld2scr * BoundingBoxMin;
+                    Point max_scr = wld2scr * BoundingBoxMax;
 
-                    Point xmin_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMin_wld.Z);
-                    Point ymin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
-                    Point zmin_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
+                    Point xmin_scr = wld2scr * new Point(BoundingBoxMax.X, BoundingBoxMin.Y, BoundingBoxMin.Z);
+                    Point ymin_scr = wld2scr * new Point(BoundingBoxMin.X, BoundingBoxMax.Y, BoundingBoxMin.Z);
+                    Point zmin_scr = wld2scr * new Point(BoundingBoxMin.X, BoundingBoxMin.Y, BoundingBoxMax.Z);
 
-                    Point xmax_scr = wld2scr * new Point(_bboxMin_wld.X, _bboxMax_wld.Y, _bboxMax_wld.Z);
-                    Point ymax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMin_wld.Y, _bboxMax_wld.Z);
-                    Point zmax_scr = wld2scr * new Point(_bboxMax_wld.X, _bboxMax_wld.Y, _bboxMin_wld.Z);
+                    Point xmax_scr = wld2scr * new Point(BoundingBoxMin.X, BoundingBoxMax.Y, BoundingBoxMax.Z);
+                    Point ymax_scr = wld2scr * new Point(BoundingBoxMax.X, BoundingBoxMin.Y, BoundingBoxMax.Z);
+                    Point zmax_scr = wld2scr * new Point(BoundingBoxMax.X, BoundingBoxMax.Y, BoundingBoxMin.Z);
 
                     glEnable(GetTarget.GL_LINE_SMOOTH);
                     glHint(GetTarget.GL_LINE_SMOOTH_HINT, HintMode.GL_NICEST);
@@ -1815,8 +1871,30 @@ namespace DDD
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
             throw new System.InvalidOperationException(msg);
         }
-        public void UI(List<object> Objects, string Title)
+        public void UI(List<object> Objects, Point BoundingBoxMin, Point BoundingBoxMax, string Title)
         {
+            // compute _maxDistance
+            double maxX = Math.Max(Math.Abs(BoundingBoxMin.X), Math.Abs(BoundingBoxMax.X)); // max distance from origin in X direction
+            double maxY = Math.Max(Math.Abs(BoundingBoxMin.Y), Math.Abs(BoundingBoxMax.Y)); // max distance from origin in Y direction
+            double maxZ = Math.Max(Math.Abs(BoundingBoxMin.Z), Math.Abs(BoundingBoxMax.Z)); // max distance from origin in Z direction
+            double maxAxis = Math.Max(Math.Max(maxX, maxY), maxZ);                          // overall max distance for any axis
+            _maxDistance = Math.Sqrt(3 * maxAxis * maxAxis);                                // Distance from origin to (maxAxis, maxAxis, maxAxis)
+
+            // initialize globals
+            _xAxis_wld.X = _maxDistance;
+            _xAxis_wld.Y = 0;
+            _xAxis_wld.Z = 0;
+            _yAxis_wld.X = 0;
+            _yAxis_wld.Y = _maxDistance;
+            _yAxis_wld.Z = 0;
+            _zAxis_wld.X = 0;
+            _zAxis_wld.Y = 0;
+            _zAxis_wld.Z = _maxDistance;
+            _showBoundingBox = false;
+
+            _mouseLeftButtonDown = false;
+            _mouseRightButtonDown = false;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Create window
@@ -1939,68 +2017,10 @@ namespace DDD
     [Alias("o3d")]
     public class Out3dCommand : Cmdlet
     {
-        ////////////
-        // Constants
-        
-        const int MillisecondsPerRotation = 1000;
-        readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
-        
-        // colors
-        readonly System.Drawing.Color _black = System.Drawing.Color.FromArgb(0, 0, 0);          // Black https://rgbcolorcode.com/color/000000
-        readonly System.Drawing.Color _darkGray = System.Drawing.Color.FromArgb(74, 74, 74);    // Quartz https://rgbcolorcode.com/color/4a4a4a
-        readonly System.Drawing.Color _white = System.Drawing.Color.FromArgb(255, 255, 255);    // White https://rgbcolorcode.com/color/FFFFFF
-        readonly System.Drawing.Color _red = System.Drawing.Color.FromArgb(230, 38, 0);         // Ferrari Red https://rgbcolorcode.com/color/E62600
-        readonly System.Drawing.Color _green = System.Drawing.Color.FromArgb(25, 255, 25);      // Neon Green https://rgbcolorcode.com/color/19FF19
-        readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
-        readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
-        readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
-        // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
-        // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
-        
-        System.Drawing.Point _mouseMovePos;
-        System.Drawing.Point _mouseLeftButtonDownPos;
-        System.Drawing.Point _mouseRightButtonDownPos;
-        bool _mouseLeftButtonDown;
-        bool _mouseRightButtonDown;
-
         List<object> _objects = new List<object>();
-
-        int _xaxis = 0;
-        int _yaxis = 0;
-        int _zaxis = 0;
-
-        Matrix _wld2cam = Matrix.Identity();     // world to camera
-        Matrix _cam2scn = Matrix.Identity();     // camera to screen
-        
-        DateTime _xaxisStart = DateTime.Now;
-        double _xDegreesCurrent = 0.0;
-        double _xDegreesAtButtonDown = 0.0;
-        
-        DateTime _yaxisStart = DateTime.Now;
-        double _yDegreesCurrent = 0.0;
-        double _yDegreesAtButtonDown = 0.0;
-        
-        DateTime _zaxisStart = DateTime.Now;
-        double _zDegreesCurrent = 0.0;
-        double _zDegreesAtButtonDown = 0.0;
-        double _zDegreesAtRotateGestureBegin = 0.0;
-
-        int _width = 0;
-        int _height = 0;
-        
-        Point _bboxMin_wld;
-        Point _bboxMax_wld;
-        
-        double _maxDistance;
-        
-        Point _xAxis_wld;
-        Point _yAxis_wld;
-        Point _zAxis_wld;
-
-        bool _showBoundingBox;
-
-    
-
+        string _title = "";
+        Point _bboxMin = new Point(0.0, 0.0, 0.0);
+        Point _bboxMax = new Point(0.0, 0.0, 0.0);
         
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public object[] InputObject;
@@ -2011,7 +2031,6 @@ namespace DDD
             get {return _title;}
             set {_title = value;}
         }
-        string _title;
 
         protected override void BeginProcessing()
         {
@@ -2020,46 +2039,18 @@ namespace DDD
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
 
             _objects = new List<object>();
-            _xaxis = 0;
-            _yaxis = 0;
-            _zaxis = 0;
-            _wld2cam = Matrix.Identity();     // world to camera
-            _cam2scn = Matrix.Identity();     // camera to screen
-            
-            _xaxisStart = DateTime.Now;
-            _xDegreesCurrent = 0.0;
-            _xDegreesAtButtonDown = 0.0;
-            
-            _yaxisStart = DateTime.Now;
-            _yDegreesCurrent = 0.0;
-            _yDegreesAtButtonDown = 0.0;
-
-            _zaxisStart = DateTime.Now;
-            _zDegreesCurrent = 0.0;
-            _zDegreesAtButtonDown = 0.0;
-            _zDegreesAtRotateGestureBegin = 0.0;
-            
-            _width = 0;
-            _height = 0;
-
-            _bboxMin_wld.X = 0.0;
-            _bboxMin_wld.Y = 0.0;
-            _bboxMin_wld.Z = 0.0;
-            _bboxMax_wld.X = 0.0;
-            _bboxMax_wld.Y = 0.0;
-            _bboxMax_wld.Z = 0.0;
         }
         void UpdateBBox(Point p)
         {
             // bboxMin
-            if (p.X < _bboxMin_wld.X) _bboxMin_wld.X = p.X;
-            if (p.Y < _bboxMin_wld.Y) _bboxMin_wld.Y = p.Y;
-            if (p.Z < _bboxMin_wld.Z) _bboxMin_wld.Z = p.Z;
+            if (p.X < _bboxMin.X) _bboxMin.X = p.X;
+            if (p.Y < _bboxMin.Y) _bboxMin.Y = p.Y;
+            if (p.Z < _bboxMin.Z) _bboxMin.Z = p.Z;
 
             // bboxMax
-            if (p.X > _bboxMax_wld.X) _bboxMax_wld.X = p.X;
-            if (p.Y > _bboxMax_wld.Y) _bboxMax_wld.Y = p.Y;
-            if (p.Z > _bboxMax_wld.Z) _bboxMax_wld.Z = p.Z;
+            if (p.X > _bboxMax.X) _bboxMax.X = p.X;
+            if (p.Y > _bboxMax.Y) _bboxMax.Y = p.Y;
+            if (p.Z > _bboxMax.Z) _bboxMax.Z = p.Z;
         }
         void ProcessObject(object input)
         {
@@ -2137,33 +2128,12 @@ namespace DDD
 
             if (_objects.Count == 0) return;
             
-            // compute _maxDistance
-            double maxX = Math.Max(Math.Abs(_bboxMin_wld.X), Math.Abs(_bboxMax_wld.X));     // max distance from origin in X direction
-            double maxY = Math.Max(Math.Abs(_bboxMin_wld.Y), Math.Abs(_bboxMax_wld.Y));     // max distance from origin in Y direction
-            double maxZ = Math.Max(Math.Abs(_bboxMin_wld.Z), Math.Abs(_bboxMax_wld.Z));     // max distance from origin in Z direction
-            double maxAxis = Math.Max(Math.Max(maxX, maxY), maxZ);                          // overall max distance for any axis
-            _maxDistance = Math.Sqrt(3 * maxAxis * maxAxis);                                // Distance from origin to (maxAxis, maxAxis, maxAxis)
-
-            // initialize globals
-            _xAxis_wld.X = _maxDistance;
-            _xAxis_wld.Y = 0;
-            _xAxis_wld.Z = 0;
-            _yAxis_wld.X = 0;
-            _yAxis_wld.Y = _maxDistance;
-            _yAxis_wld.Z = 0;
-            _zAxis_wld.X = 0;
-            _zAxis_wld.Y = 0;
-            _zAxis_wld.Z = _maxDistance;
-            _showBoundingBox = false;
-
-            _mouseLeftButtonDown = false;
-            _mouseRightButtonDown = false;
 
 // TODO: VERIFY EXCEPTIONS WORK
             try
             {
                 var nm = new NativeMethods();
-                nm.UI(_objects, _title);
+                nm.UI(_objects, _bboxMin, _bboxMax, _title);
             }
             catch (System.Exception ex)
             {
