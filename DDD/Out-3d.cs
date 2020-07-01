@@ -390,6 +390,19 @@ namespace DDD
     //}
     //class User
     //{
+        // Macros
+        public const uint GC_ALLGESTURES = 0x00000001;
+        public const uint GC_ZOOM = 0x00000001;
+        public const uint GC_PAN = 0x00000001;
+        public const uint GC_PAN_WITH_SINGLE_FINGER_VERTICALLY = 0x00000002;
+        public const uint GC_PAN_WITH_SINGLE_FINGER_HORIZONTALLY = 0x00000004;
+        public const uint GC_PAN_WITH_GUTTER = 0x00000008;
+        public const uint GC_PAN_WITH_INERTIA = 0x00000010;
+        public const uint GC_ROTATE = 0x00000001;
+        public const uint GC_TWOFINGERTAP = 0x00000001;
+        public const uint GC_PRESSANDTAP = 0x00000001;
+        public const uint GC_ROLLOVER = GC_PRESSANDTAP;
+
         // enum
         [Flags]
         public enum ClassStyles : uint
@@ -426,6 +439,24 @@ namespace DDD
             IDC_HAND = 32649,
             IDC_APPSTARTING = 32650,
             IDC_HELP = 32651
+        }
+        [Flags]
+        public enum GestureFlags : uint
+        {
+            GF_BEGIN = 0x00000001,
+            GF_INERTIA = 0x00000002,
+            GF_END = 0x00000004            
+        }
+        public enum GestureID : uint
+        {
+            GID_BEGIN = 1,
+            GID_END = 2,
+            GID_ZOOM = 3,
+            GID_PAN = 4,
+            GID_ROTATE = 5,
+            GID_TWOFINGERTAP = 6,
+            GID_PRESSANDTAP = 7,
+            GID_ROLLOVER = GID_PRESSANDTAP
         }
         public enum MouseKeyStateMasks : byte
         {
@@ -582,6 +613,7 @@ namespace DDD
             WM_INITMENU = 0x0116,
             WM_INITMENUPOPUP = 0x0117,
             WM_MENUSELECT = 0x011F,
+            WM_GESTURE = 0x0119,
             WM_MENUCHAR = 0x0120,
             WM_ENTERIDLE = 0x0121,
             WM_MENURBUTTONUP = 0x0122,
@@ -756,6 +788,31 @@ namespace DDD
         public delegate bool EnumMonitorsDelegate(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
         
         // struct
+// typedef struct tagGESTURECONFIG {
+//     DWORD dwID;                     // gesture ID
+//     DWORD dwWant;                   // settings related to gesture ID that are to be turned on
+//     DWORD dwBlock;                  // settings related to gesture ID that are to be turned off
+// } GESTURECONFIG, *PGESTURECONFIG;        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct GESTURECONFIG
+        {
+            public GestureID dwID;
+            public uint dwWant;
+            public uint dwBlock;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        public struct GESTUREINFO
+        {
+            public uint cbSize;
+            public NativeMethods.GestureFlags dwFlags;
+            public NativeMethods.GestureID dwID;
+            public IntPtr hwndTarget;
+            public POINTS ptsLocation;
+            public uint dwInstanceID;
+            public uint dwSequenceID;
+            public ulong ulArguments;
+            public uint cbExtraArgs;
+        }
         [StructLayout(LayoutKind.Sequential)]
         internal struct MONITORINFO
         {
@@ -798,8 +855,13 @@ namespace DDD
         [StructLayout(LayoutKind.Sequential)]
         public struct POINT
         {
-            public int X;
-            public int Y;
+            public int x;
+            public int y;
+        }
+        public struct POINTS
+        {
+            public short x;
+            public short y;
         }
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
@@ -823,7 +885,6 @@ namespace DDD
             public uint cxConact;
             public uint cyContact;
         }
-
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct WNDCLASSEX
         {
@@ -886,24 +947,12 @@ namespace DDD
         public static extern sbyte GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
         [DllImport("user32.dll")]
         public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
-// WINUSERAPI
-// BOOL
-// WINAPI
-// GetTouchInputInfo(
-//     _In_ HTOUCHINPUT hTouchInput,               // input event handle; from touch message lParam
-//     _In_ UINT cInputs,                          // number of elements in the array
-//     _Out_writes_(cInputs) PTOUCHINPUT pInputs,  // array of touch inputs
-//     _In_ int cbSize);                           // sizeof(TOUCHINPUT)
-
-// https://csharp.hotexamples.com/site/file?hash=0xf11b055179fec93dc7e57b6b796a47c339c1df22019150b0ebf33f081fc4ba6f&fullName=TouchScript/Win7TouchInput.cs&project=sfszh/TouchScript
-
         [DllImport("user32.dll")]
-         public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, [In, Out] TOUCHINPUT [] pInputs, int cbSize);
-        // public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, out TOUCHINPUT [] pInputs, int cbSize);
-        // public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, ref IntPtr pInputs, int cbSize);
-        // public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, ref TOUCHINPUT [] pInputs, int cbSize);
-        
-        
+        public static extern bool GetGestureInfo(IntPtr hGestureInfo, ref GESTUREINFO pGestureInfo);
+        // Learned from here:
+        // https://csharp.hotexamples.com/site/file?hash=0xd551f7506b56063e7c47779993980c8a93ce6a2a04c1a2d26de34cc2b1b5d754&fullName=src/WMTouchForm.cs&project=EXOPC/EXOxtender
+        [DllImport("user32.dll")]
+        public static extern bool GetTouchInputInfo(IntPtr hTouchInput, uint cInputs, [In, Out] TOUCHINPUT [] pInputs, int cbSize);
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursor(IntPtr hInstance, IDC_STANDARD_CURSORS lpCursorName);
         [DllImport("user32.dll", SetLastError = true)]
@@ -927,11 +976,21 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
         [DllImport("user32.dll")]
-        public static extern IntPtr SetCapture(IntPtr hWnd);        
-        [DllImport("user32.dll")]
         public static extern IntPtr SetActiveWindow(IntPtr hWnd);
         [DllImport("user32.dll")]
+        public static extern IntPtr SetCapture(IntPtr hWnd);        
+        [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")]
+       
+// BOOL SetGestureConfig(
+//   HWND           hwnd,
+//   DWORD          dwReserved,
+//   UINT           cIDs,
+//   PGESTURECONFIG pGestureConfig,
+//   UINT           cbSize
+// );
+        public static extern bool SetGestureConfig(IntPtr hWnd, uint dwReserved, uint cIDs, [In, Out] GESTURECONFIG [] pGestureConfig, uint cbSize);
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
         [DllImport("user32.dll")]
@@ -1616,25 +1675,27 @@ namespace DDD
         IntPtr MyWndProc(IntPtr hWnd, NativeMethods.WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
 //#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            //  Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
+            // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
 //#pragma warning restore CA1303 // Do not pass literals as localized parameters
             switch (msg)
             {
+                case NativeMethods.WindowsMessage.WM_GESTURE:
+                    IntPtr hGestureInfo = lParam;
+                    var gi = new NativeMethods.GESTUREINFO();
+                    gi.cbSize = (uint)Marshal.SizeOf(typeof(NativeMethods.GESTUREINFO));
+                    bool gestureInfoGotten = NativeMethods.GetGestureInfo(hGestureInfo, ref gi);
+                    if (!gestureInfoGotten) PrintErrorAndExit("GetGestureInfo");
+
+                    if (gi.dwID == NativeMethods.GestureID.GID_ROTATE)
+                    {
+                        Console.WriteLine($"{gi.dwID}, flags={gi.dwFlags}, x={gi.ptsLocation.x}, y={gi.ptsLocation.y}, instanceId={gi.dwInstanceID}, sequenceId={gi.dwSequenceID}, args={gi.ulArguments}, extraAgs={gi.cbExtraArgs}");
+                        return IntPtr.Zero;
+                    }
+                    return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
+
                 case NativeMethods.WindowsMessage.WM_TOUCH:
                     uint cInputs = NativeMethods.LOWORD(wParam);
                     NativeMethods.TOUCHINPUT[] pInputs = new NativeMethods.TOUCHINPUT[cInputs];
-                    // var pInputs = new NativeMethods.TOUCHINPUT[cInputs];
-                    // for (uint i = 0; i < cInputs; i++)
-                    // {
-                    //     pInputs[i] = new NativeMethods.TOUCHINPUT();
-                    // }
-                    for (uint i = 0; i < cInputs; i++)
-                    {
-                        NativeMethods.TOUCHINPUT ti = pInputs[i];
-                        // TODO: do something with ti
-                    }
-
-
                     IntPtr hTouchInput = lParam;
                     int cbSize = Marshal.SizeOf(typeof(NativeMethods.TOUCHINPUT));
                     bool gotTouchInputInfo = NativeMethods.GetTouchInputInfo(hTouchInput, cInputs, pInputs, cbSize);
@@ -2013,8 +2074,17 @@ namespace DDD
                 lpParam);
             if (hWnd == IntPtr.Zero) PrintErrorAndExit("CreateWindowEx");
 
-            bool touchWindowRegistered = NativeMethods.RegisterTouchWindow(hWnd, NativeMethods.RegisterTouchFlags.TWF_WANTPALM);
-            if (!touchWindowRegistered) PrintErrorAndExit("RegisterTouchWindow");
+            // bool touchWindowRegistered = NativeMethods.RegisterTouchWindow(hWnd, NativeMethods.RegisterTouchFlags.TWF_WANTPALM);
+            // if (!touchWindowRegistered) PrintErrorAndExit("RegisterTouchWindow");
+            const uint dwReserved = 0;
+            const uint cIDs = 1;
+            var pGestureConfig = new NativeMethods.GESTURECONFIG[cIDs];            
+            pGestureConfig[0].dwID = NativeMethods.GestureID.GID_ROTATE;
+            pGestureConfig[0].dwWant = NativeMethods.GC_ROTATE;
+            pGestureConfig[0].dwBlock = 0;
+            uint cbSize = (uint)Marshal.SizeOf(typeof(NativeMethods.GESTURECONFIG));
+            bool gestureConfigSet = NativeMethods.SetGestureConfig(hWnd, dwReserved, cIDs, pGestureConfig, cbSize);
+            if (!gestureConfigSet) PrintErrorAndExit("SetGestureConfig");
 
             bool foregroundWindow = NativeMethods.SetForegroundWindow(hWnd);
             if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow");
