@@ -402,7 +402,11 @@ namespace DDD
         public const uint GC_TWOFINGERTAP = 0x00000001;
         public const uint GC_PRESSANDTAP = 0x00000001;
         public const uint GC_ROLLOVER = GC_PRESSANDTAP;
-
+        public static double GID_ROTATE_ANGLE_FROM_ARGUMENT(ulong arg)
+        {
+            return (((double)(arg) / 65535.0) * 4.0 * 3.14159265) - 2.0 * 3.14159265;
+        }   
+        
         // enum
         [Flags]
         public enum ClassStyles : uint
@@ -1354,6 +1358,7 @@ namespace DDD
         DateTime _zaxisStart = DateTime.Now;
         double _zDegreesCurrent = 0.0;
         double _zDegreesAtButtonDown = 0.0;
+        double _zDegreesAtRotateGestureBegin = 0.0;
 
         int _width = 0;
         int _height = 0;
@@ -1688,7 +1693,16 @@ namespace DDD
 
                     if (gi.dwID == NativeMethods.GestureID.GID_ROTATE)
                     {
-                        Console.WriteLine($"{gi.dwID}, flags={gi.dwFlags}, x={gi.ptsLocation.x}, y={gi.ptsLocation.y}, instanceId={gi.dwInstanceID}, sequenceId={gi.dwSequenceID}, args={gi.ulArguments}, extraAgs={gi.cbExtraArgs}");
+                        double angleInRadians = NativeMethods.GID_ROTATE_ANGLE_FROM_ARGUMENT(gi.ulArguments);
+                        double angle = angleInRadians * 180.0 / Math.PI;
+                        if (gi.dwFlags == NativeMethods.GestureFlags.GF_BEGIN)
+                        {
+                            _zDegreesAtRotateGestureBegin = _zDegreesCurrent;
+                        }
+                        else 
+                        {
+                            _zDegreesCurrent = _zDegreesAtRotateGestureBegin - angle;
+                        }
                         return IntPtr.Zero;
                     }
                     return NativeMethods.DefWindowProc(hWnd, msg, wParam, lParam);
@@ -1912,6 +1926,7 @@ namespace DDD
             _zaxisStart = DateTime.Now;
             _zDegreesCurrent = 0.0;
             _zDegreesAtButtonDown = 0.0;
+            _zDegreesAtRotateGestureBegin = 0.0;
             
             _width = 0;
             _height = 0;
