@@ -1,16 +1,61 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-// Defining input from the pipeline
-// https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/adding-parameters-that-process-pipeline-input?view=powershell-7
-
-// Samples here:
-// C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0\Samples\sysmgmt\WindowsPowerShell\
 
 namespace DDD
 {
     partial class UIWindows : UI
     {
+        const int MillisecondsPerRotation = 1000;
+        readonly Point Origin_wld = new Point(0.0, 0.0, 0.0);
+        
+        // colors
+        readonly System.Drawing.Color _black = System.Drawing.Color.FromArgb(0, 0, 0);          // Black https://rgbcolorcode.com/color/000000
+        readonly System.Drawing.Color _darkGray = System.Drawing.Color.FromArgb(74, 74, 74);    // Quartz https://rgbcolorcode.com/color/4a4a4a
+        readonly System.Drawing.Color _white = System.Drawing.Color.FromArgb(255, 255, 255);    // White https://rgbcolorcode.com/color/FFFFFF
+        readonly System.Drawing.Color _red = System.Drawing.Color.FromArgb(230, 38, 0);         // Ferrari Red https://rgbcolorcode.com/color/E62600
+        readonly System.Drawing.Color _green = System.Drawing.Color.FromArgb(25, 255, 25);      // Neon Green https://rgbcolorcode.com/color/19FF19
+        readonly System.Drawing.Color _blue = System.Drawing.Color.FromArgb(0, 68, 204);        // Sapphire https://rgbcolorcode.com/color/0044CC
+        readonly System.Drawing.Color _yellow = System.Drawing.Color.FromArgb(255, 255, 0);     // Electric Yellow https://rgbcolorcode.com/color/FFFF00
+        readonly System.Drawing.Color _orange = System.Drawing.Color.FromArgb(255, 140, 25);    // Carrot Orange https://rgbcolorcode.com/color/FF8C19
+        // readonly System.Drawing.Color _cyan = System.Drawing.Color.FromArgb(0, 255, 255);       // Aqua https://rgbcolorcode.com/color/00FFFF
+        // readonly System.Drawing.Color _magenta = System.Drawing.Color.FromArgb(255, 0, 255);    // Fuchsia https://rgbcolorcode.com/color/FF00FF
+        
+        System.Drawing.Point _mouseMovePos;
+        System.Drawing.Point _mouseLeftButtonDownPos;
+        System.Drawing.Point _mouseRightButtonDownPos;
+        bool _mouseLeftButtonDown = false;
+        bool _mouseRightButtonDown = false;
+
+        int _xaxis = 0;
+        int _yaxis = 0;
+        int _zaxis = 0;
+
+        Matrix _wld2cam = Matrix.Identity();     // world to camera
+        
+        DateTime _xaxisStart = DateTime.Now;
+        double _xDegreesCurrent = 0.0;
+        double _xDegreesAtButtonDown = 0.0;
+        
+        DateTime _yaxisStart = DateTime.Now;
+        double _yDegreesCurrent = 0.0;
+        double _yDegreesAtButtonDown = 0.0;
+        
+        DateTime _zaxisStart = DateTime.Now;
+        double _zDegreesCurrent = 0.0;
+        double _zDegreesAtButtonDown = 0.0;
+        double _zDegreesAtRotateGestureBegin = 0.0;
+
+        int _width = 0;
+        int _height = 0;
+        
+        double _maxDistance = 0.0;
+        
+        Point _xAxis_wld;
+        Point _yAxis_wld;
+        Point _zAxis_wld;
+
+        bool _showBoundingBox = false;        
         IntPtr MyWndProc(IntPtr hWnd, WindowsMessage msg, IntPtr wParam, IntPtr lParam)
         {
             // Console.WriteLine($"MyWndProc: {hWnd}, {msg}, {wParam}, {lParam}");
@@ -81,7 +126,7 @@ namespace DDD
 
                 // Key down
                 case WindowsMessage.WM_KEYDOWN:
-                    switch ((uint)wParam)
+                    switch ((VIRTUALKEY)wParam)
                     {
                         // x axis
                         case VIRTUALKEY.VK_W:
@@ -146,7 +191,7 @@ namespace DDD
                     return IntPtr.Zero;
                 // Key up
                 case WindowsMessage.WM_KEYUP:
-                    switch ((uint)wParam)
+                    switch ((VIRTUALKEY)wParam)
                     {
                         // x axis
                         case VIRTUALKEY.VK_W:
