@@ -1042,14 +1042,6 @@ namespace DDD
         [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("user32.dll")]
-       
-// BOOL SetGestureConfig(
-//   HWND           hwnd,
-//   DWORD          dwReserved,
-//   UINT           cIDs,
-//   PGESTURECONFIG pGestureConfig,
-//   UINT           cbSize
-// );
         public static extern bool SetGestureConfig(IntPtr hWnd, uint dwReserved, uint cIDs, [In, Out] GESTURECONFIG [] pGestureConfig, uint cbSize);
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommand nCmdShow);
@@ -1562,13 +1554,13 @@ namespace DDD
                     return DefWindowProc(hWnd, msg, wParam, lParam);
             }
         }
-    static void ClampAngleFrom0To360(ref double angle)
+        static void ClampAngleFrom0To360(ref double angle)
         {
             while (angle >= 360.0) angle -= 360.0;
             while (angle < 0.0) angle += 360.0;
         }
 
-        void Display()
+        void Display(List<object> Objects, Point BoundingBoxMin, Point BoundingBoxMax)
         {
             /*
                 Coordinate System Definitions
@@ -1729,7 +1721,7 @@ namespace DDD
             #endregion
 
             #region DRAW OBJECTS
-                foreach (object o in _objects)
+                foreach (object o in Objects)
                 {
                     if (o is Point p_wld) 
                     {
@@ -1763,7 +1755,7 @@ namespace DDD
                         Point xaxis_scr = m_scr * new Point(1.0, 0.0, 0.0);
                         Point yaxis_scr = m_scr * new Point(0.0, 1.0, 0.0);
                         Point zaxis_scr = m_scr * new Point(0.0, 0.0, 1.0);
-                       
+
                         glEnable(GetTarget.GL_LINE_SMOOTH);
                         glHint(GetTarget.GL_LINE_SMOOTH_HINT, HintMode.GL_NICEST);
                         glBegin(BeginMode.GL_LINES);
@@ -1977,7 +1969,7 @@ namespace DDD
                 bool running = true;
                 while (running)
                 {
-                    Display();
+                    Display(Objects, BoundingBoxMin, BoundingBoxMax);
 
                     bool buffersSwapped = SwapBuffers(hDC);
                     if (!buffersSwapped) PrintErrorAndExit("SwapBuffers");
@@ -2037,8 +2029,6 @@ namespace DDD
 #pragma warning disable CA1303 // Do not pass literals as localized parameters
             Console.WriteLine("BeginProcessing");
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
-
-            _objects = new List<object>();
         }
         void UpdateBBox(Point p)
         {
@@ -2103,7 +2093,7 @@ namespace DDD
             }
             else if (InputObject.Length == 0)
             {
-                 Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
+                Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
             }
             else if (InputObject.Length == 1) 
             {
@@ -2135,10 +2125,10 @@ namespace DDD
                 var nm = new NativeMethods();
                 nm.UI(_objects, _bboxMin, _bboxMax, _title);
             }
-            catch (System.Exception ex)
+            catch (System.InvalidOperationException ioex)
             {
                 ErrorRecord er = new ErrorRecord(
-                    new FormatException(ex.Message),
+                    new FormatException(ioex.Message),
                     "LastError",
                     ErrorCategory.NotSpecified,
                     null);
