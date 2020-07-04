@@ -257,6 +257,7 @@ namespace DDD
 
             #region UPDATE WLD2CAM
 
+Console.WriteLine($"{_xDegreesCurrent}, {_yDegreesCurrent}, {_zDegreesCurrent}");
             Matrix cam2wld = Matrix.Identity();
             cam2wld *= Matrix.RotateX(_xDegreesCurrent);
             cam2wld *= Matrix.RotateY(_yDegreesCurrent);
@@ -545,7 +546,7 @@ namespace DDD
             string msg = string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} returned error code 0x{1:X}. \nSee https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes", cmd, error);
             throw new System.InvalidOperationException(msg);
         }
-        new public void ShowWindow(List<object> Objects, Point BoundingBoxMin, Point BoundingBoxMax, string Title)
+        public void ShowWindow(List<object> Objects, Point BoundingBoxMin, Point BoundingBoxMax, string Title)
         {
             // compute _maxDistance
             double maxX = Math.Max(Math.Abs(BoundingBoxMin.X), Math.Abs(BoundingBoxMax.X)); // max distance from origin in X direction
