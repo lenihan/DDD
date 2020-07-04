@@ -32,7 +32,7 @@ namespace DDD
 
         protected override void BeginProcessing()
         {
-            Console.WriteLine("BeginProcessing");
+            // Console.WriteLine("BeginProcessing");
         }
         void UpdateBBox(Point p)
         {
@@ -52,7 +52,7 @@ namespace DDD
             {
                 _objects.Add(input);
                 UpdateBBox(p);
-                Console.WriteLine($"Got point: {p}");
+                // Console.WriteLine($"Got point: {p}");
             }
             else if (input is Matrix m)
             {
@@ -65,13 +65,13 @@ namespace DDD
                 UpdateBBox(xaxis);
                 UpdateBBox(yaxis);
                 UpdateBBox(zaxis);
-                Console.WriteLine($"Got matrix: {origin}");
+                // Console.WriteLine($"Got matrix: {origin}");
             }
             else if (input is Vector v)
             {
                 _objects.Add(input);
                 UpdateBBox(new Point(v.X, v.Y, v.Z));
-                Console.WriteLine($"Got vector: {v}"); 
+                // Console.WriteLine($"Got vector: {v}"); 
             }
             else
             {
@@ -86,33 +86,31 @@ namespace DDD
         }
         protected override void ProcessRecord()
         {
-            Console.WriteLine("ProcessRecord");
             if (InputObject == null)
             {
-                Console.WriteLine("Got null");                
+                // Console.WriteLine("Got null");                
             }
             else if (InputObject.Length == 0)
             {
-                Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
+                // Console.WriteLine("Got empty array of type {0}", InputObject[0].GetType().ToString());
             }
             else if (InputObject.Length == 1) 
             {
-                Console.WriteLine("Got array length 1 of type {0}", InputObject[0].GetType().ToString());
+                // Console.WriteLine("Got array length 1 of type {0}", InputObject[0].GetType().ToString());
                 ProcessObject(InputObject[0]);
             }
             else 
             {   
-                Console.WriteLine("Got array length {0} containing...", InputObject.Length);
+                // Console.WriteLine("Got array length {0} containing...", InputObject.Length);
                 foreach(object obj in InputObject) 
                 {
-                    Console.WriteLine("    Type: {0}", obj.GetType().ToString());
+                    // Console.WriteLine("    Type: {0}", obj.GetType().ToString());
                     ProcessObject(obj);
                 }
             }
         }
         protected override void EndProcessing()
         {
-            Console.WriteLine("EndProcessing");
             if (_objects.Count == 0) return;
 
 // TODO: VERIFY EXCEPTIONS WORK
@@ -135,7 +133,7 @@ namespace DDD
                 ThrowTerminatingError(er);
             }
 
-            Console.WriteLine("EndProcessing - DONE");
+            // Console.WriteLine("EndProcessing - DONE");
         }
     }
 #pragma warning restore CA1303 // Do not pass literals as localized parameters

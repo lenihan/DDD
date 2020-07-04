@@ -84,23 +84,6 @@ namespace DDD
                     }
                     return DefWindowProc(hWnd, msg, wParam, lParam);
 
-                case WindowsMessage.WM_TOUCH:
-                    uint cInputs = LOWORD(wParam);
-                    TOUCHINPUT[] pInputs = new TOUCHINPUT[cInputs];
-                    IntPtr hTouchInput = lParam;
-                    int cbSize = Marshal.SizeOf(typeof(TOUCHINPUT));
-                    bool gotTouchInputInfo = GetTouchInputInfo(hTouchInput, cInputs, pInputs, cbSize);
-                    if (!gotTouchInputInfo) PrintErrorAndExit("GetTouchInputInfo");
-                    for (uint i = 0; i < cInputs; i++)
-                    {
-                        TOUCHINPUT ti = pInputs[i];
-                        // TODO: do something with ti
-                    }
-                    bool touchInputHandleClosed = CloseTouchInputHandle(hTouchInput);
-                    if (!touchInputHandleClosed) PrintErrorAndExit("CloseTouchInputHandle");
-                    
-                    return IntPtr.Zero;
-
                // Left Mouse
                 case WindowsMessage.WM_LBUTTONDOWN:
                     _mouseLeftButtonDownPos.X = GET_X_LPARAM(lParam); 
@@ -226,6 +209,11 @@ namespace DDD
                             _xDegreesCurrent = 0.0;
                             _yDegreesCurrent = 0.0;
                             _zDegreesCurrent = 0.0;
+                            _xaxis = 0;
+                            _yaxis = 0;
+                            _zaxis = 0;
+                            _mouseLeftButtonDown = false;
+                            _mouseRightButtonDown = false;
                             break;
                         case VIRTUALKEY.VK_ESCAPE:
                             DestroyWindow(hWnd);
