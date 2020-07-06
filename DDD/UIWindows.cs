@@ -243,12 +243,6 @@ namespace DDD
                     return DefWindowProc(hWnd, msg, wParam, lParam);
             }
         }
-        static void ClampAngleFrom0To360(ref double angle)
-        {
-            while (angle >= 360.0) angle -= 360.0;
-            while (angle < 0.0) angle += 360.0;
-        }
-
         private void Display(List<object> Objects, Point BoundingBoxMin, Point BoundingBoxMax)
         {
             /*
@@ -264,52 +258,17 @@ namespace DDD
 
             #region UPDATE WLD2CAM
 
-            // Matrix cam2wld = Matrix.Identity();
-            // cam2wld *= Matrix.RotateX(_xDegreesCurrent);
-            // cam2wld *= Matrix.RotateY(_yDegreesCurrent);
-            // cam2wld *= Matrix.RotateZ(_zDegreesCurrent);
+            // update cam2wld
+            Matrix cam2wld = _wld2cam;
+            cam2wld.Invert();
 
-            // Matrix cam2wld = Matrix.Identity(); //_wld2cam.Invert();
-            // if (_xaxis != 0)
-            // {
-            //     TimeSpan interval = DateTime.Now - _xaxisStart;
-            //     double rot = interval.TotalMilliseconds % MillisecondsPerRotation / MillisecondsPerRotation;    // 0.0 to 1.0 rotation since button down
-            //     // double deg = 360.0 * rot * -_xaxis;                                                              // degrees rotation since button down
-            //     double deg = 360.0 * rot * _xaxis;                                                              // degrees rotation since button down
-            //     double newCurrent = deg + _xDegreesAtButtonDown;
-                
-            //     // ClampAngleFrom0To360(ref newCurrent);
-
-            //     // double delta = newCurrent - _xDegreesCurrent;
-            //     double delta = _xDegreesCurrent - newCurrent;
-            //     cam2wld *= Matrix.RotateX(delta);
-            //     _xDegreesCurrent = newCurrent;
-            // }
-            // if (_yaxis != 0)
-            // {
-            //     TimeSpan interval = DateTime.Now - _yaxisStart;
-            //     double rot = interval.TotalMilliseconds % MillisecondsPerRotation / MillisecondsPerRotation;    // 0.0 to 1.0 rotation since button down
-            //     double deg = 360.0 * rot * -_yaxis;                                                              // degrees rotation since button down
-            //     // double deg = 360.0 * rot * _yaxis;                                                              // degrees rotation since button down
-            //     double newCurrent = deg + _yDegreesAtButtonDown;
-                
-            //     // ClampAngleFrom0To360(ref newCurrent);
-
-            //     double delta = newCurrent - _yDegreesCurrent;
-            //     // double delta = _yDegreesCurrent - newCurrent;
-            //     cam2wld *= Matrix.RotateY(delta);
-            //     _yDegreesCurrent = newCurrent;
-            // }
-
-            // Matrix cam2wld = _wld2cam;
-            _wld2cam.Invert();
             if (_xaxis != 0)
             {
                 TimeSpan interval = DateTime.Now - _xaxisStart;
                 double rotations = interval.TotalMilliseconds / MillisecondsPerRotation;    // 1.0 equals 360 degree rotation
                 double degrees = 360.0 * rotations * -_xaxis;
                 double deltaDegrees = degrees - _xDegreesRotated;                           // degrees to rotate since last rotation
-                _wld2cam *= Matrix.RotateX(deltaDegrees);
+                cam2wld *= Matrix.RotateX(deltaDegrees);
                 _xDegreesRotated += deltaDegrees;
             }
             if (_yaxis != 0)
@@ -318,7 +277,7 @@ namespace DDD
                 double rotations = interval.TotalMilliseconds / MillisecondsPerRotation;    // 1.0 equals 360 degree rotation
                 double degrees = 360.0 * rotations * -_yaxis;
                 double deltaDegrees = degrees - _yDegreesRotated;                           // degrees to rotate since last rotation
-                _wld2cam *= Matrix.RotateY(deltaDegrees);
+                cam2wld *= Matrix.RotateY(deltaDegrees);
                 _yDegreesRotated += deltaDegrees;
             }
             if (_zaxis != 0)
@@ -327,44 +286,39 @@ namespace DDD
                 double rotations = interval.TotalMilliseconds / MillisecondsPerRotation;    // 1.0 equals 360 degree rotation
                 double degrees = 360.0 * rotations * -_zaxis;
                 double deltaDegrees = degrees - _zDegreesRotated;                           // degrees to rotate since last rotation
-                _wld2cam *= Matrix.RotateZ(deltaDegrees);
+                cam2wld *= Matrix.RotateZ(deltaDegrees);
                 _zDegreesRotated += deltaDegrees;
             }
-            // if (_mouseLeftButtonDown)
-            // {
-            //     int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
-            //     double x = (double)deltaPosX / (double)_width;
-            //     double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
+            if (_mouseLeftButtonDown)
+            {
+                // y axis via horizontal movement
+                int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
+                double x = (double)deltaPosX / (double)_width;
+                double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
+                cam2wld *= Matrix.RotateY(newCurrentY - _yDegreesCurrent);
+                _yDegreesCurrent = newCurrentY;
 
-            //     // ClampAngleFrom0To360(ref newCurrentY);
+                // x axis via vertical movement
+                int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
+                double y = (double)deltaPosY / (double)_height;
+                double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
+                cam2wld *= Matrix.RotateX(newCurrentX - _xDegreesCurrent);
+                _xDegreesCurrent = newCurrentX;
+            }
+            if (_mouseRightButtonDown)
+            {
+                // z axis via horizontal movement
+                int deltaPosX = _mouseRightButtonDownPos.X - _mouseMovePos.X;
+                double x = (double)deltaPosX / (double)_width;
+                double newCurrentZ = 360.0 * x + _zDegreesAtButtonDown;
+                cam2wld *= Matrix.RotateZ(newCurrentZ - _zDegreesCurrent);
+                _zDegreesCurrent = newCurrentZ;
+            }
 
-            //     cam2wld *= Matrix.RotateY(newCurrentY - _yDegreesCurrent);
-            //     _yDegreesCurrent = newCurrentY;
-
-            //     int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
-            //     double y = (double)deltaPosY / (double)_height;
-            //     double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
-
-            //     // ClampAngleFrom0To360(ref newCurrentX);
-
-            //     cam2wld *= Matrix.RotateX(newCurrentX - _xDegreesCurrent);
-            //     _xDegreesCurrent = newCurrentX;
-            // }
-            // if (_mouseRightButtonDown)
-            // {
-            //     int deltaPosX = _mouseRightButtonDownPos.X - _mouseMovePos.X;
-            //     double x = (double)deltaPosX / (double)_width;
-            //     double newCurrentZ = 360.0 * x + _zDegreesAtButtonDown;
-
-            //     // ClampAngleFrom0To360(ref newCurrentZ);
-
-            //     cam2wld *= Matrix.RotateZ(newCurrentZ - _zDegreesCurrent);
-            //     _zDegreesCurrent = newCurrentZ;
-            // }
+            // update wld2cam
+            _wld2cam = cam2wld;
             _wld2cam.Invert();
             #endregion
-            
-
 
             #region CAM2SCR
             Matrix cam2scr = Matrix.Identity();
