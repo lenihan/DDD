@@ -1,4 +1,12 @@
-Param([Switch]$PowerShellGallery,[Switch]$Release)
+Param(
+    [Switch]$PowerShellGallery,
+    [Switch]$Release, 
+    [Switch]$KillPrev
+)
+
+if ($KillPrev && $pwshId) {
+    Stop-Process $pwshId -ErrorAction SilentlyContinue
+}
 
 # How to write a PowerShell module manifest
 # https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
@@ -90,5 +98,5 @@ else {
     $process = Invoke-Expression $cmd
     $global:pwshId = $process.Id
     Write-Host "# To run again..." -ForegroundColor Green
-    Write-Host "# kill `$pwshId; $($MyInvocation.InvocationName)" -ForegroundColor Green
+    Write-Host "# $($MyInvocation.InvocationName) -KillPrev" -ForegroundColor Green
 }

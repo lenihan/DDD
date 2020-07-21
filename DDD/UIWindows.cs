@@ -51,6 +51,7 @@ namespace DDD
 
         int _width = 0;
         int _height = 0;
+        int _minDimension = 0;
         
         double _maxDistance = 0.0;
         
@@ -118,9 +119,6 @@ namespace DDD
                     _mouseLeftButtonDown = ((uint)wParam & (uint)MouseKeyStateMasks.MK_LBUTTON) > 0 ? true : false;
                     _mouseRightButtonDown = ((uint)wParam & (uint)MouseKeyStateMasks.MK_RBUTTON) > 0 ? true : false;
                     return IntPtr.Zero;
-
-
-
                 // Key down
                 case WindowsMessage.WM_KEYDOWN:
                     switch ((VIRTUALKEY)wParam)
@@ -244,6 +242,7 @@ namespace DDD
                     const int y = 0;
                     _width = LOWORD(lParam);
                     _height = HIWORD(lParam);
+                    _minDimension = _width < _height ? _width : _height;
                     glViewport(x, y, _width, _height);
                     return IntPtr.Zero;
                 // Quit
@@ -302,63 +301,16 @@ namespace DDD
             }
             if (_mouseLeftButtonDown)
             {
-
-                // new way...
-                // x1,y1 = position at left mouse button down
-                // x2,y2 = position of mouse now
-                //
-                // Create new matrix newmat with...
-                //   x in direction of mouse
-                //   z same as cam2wld.z
-                //   y = z X x
-
-                // rotate y in newmat by length of tan(height/width)x / width of ???
-                //  ???
-                //     when all x use width
-                //     when all y use height
-                //     when half x and y (45 def), use 
-
-
-
-                // new old way...
-                // int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
-                // int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
-                // double angle_rad = Math.Atan2(deltaPosY, -deltaPosX);
-
-                // // Console.WriteLine($"angle={angle_rad * 180.0/Math.PI}");
-
-                // // y axis via horizontal movement
-                // if (deltaPosX != 0)
-                // {
-                //     double x = (double)deltaPosX / (double)_width / Math.Cos(angle_rad);
-                //     // Console.WriteLine($"x={x}");
-                //     double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
-                //     cam2wld *= Matrix.RotateY(newCurrentY - _yDegreesCurrent);
-                //     _yDegreesCurrent = newCurrentY;
-                // }
-
-                // // x axis via vertical movement
-                // if (deltaPosY != 0)
-                // {
-                //     double y = (double)deltaPosY / (double)_height / Math.Sin(angle_rad);
-                //     // Console.WriteLine($"y={y}");
-                //     double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
-                //     cam2wld *= Matrix.RotateX(newCurrentX - _xDegreesCurrent);
-                //     _xDegreesCurrent = newCurrentX;
-                // }
-
-                // old way...
-
                 // y axis via horizontal movement
                 int deltaPosX = _mouseLeftButtonDownPos.X - _mouseMovePos.X;
-                double x = (double)deltaPosX / (double)_width;
+                double x = (double)deltaPosX / (double)_minDimension;
                 double newCurrentY = 360.0 * x + _yDegreesAtButtonDown;
                 cam2wld *= Matrix.RotateY(newCurrentY - _yDegreesCurrent);
                 _yDegreesCurrent = newCurrentY;
 
                 // x axis via vertical movement
                 int deltaPosY = _mouseLeftButtonDownPos.Y - _mouseMovePos.Y;
-                double y = (double)deltaPosY / (double)_height;
+                double y = (double)deltaPosY / (double)_minDimension;
                 double newCurrentX = 360.0 * y + _xDegreesAtButtonDown;
                 cam2wld *= Matrix.RotateX(newCurrentX - _xDegreesCurrent);
                 _xDegreesCurrent = newCurrentX;
