@@ -4,15 +4,14 @@ Param(
     [Switch]$KillPrev
 )
 
-if ($KillPrev && $pwshId) {
+if ($KillPrev -and $pwshId) {
     Stop-Process $pwshId -ErrorAction SilentlyContinue
 }
-
 # How to write a PowerShell module manifest
 # https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
 
 $root           = $PSScriptRoot
-$version        = '0.0.3'
+$version        = '0.0.4'
 $name           = 'David Lenihan'
 $moduleName     = 'DDD'
 $description    = 'Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.'
