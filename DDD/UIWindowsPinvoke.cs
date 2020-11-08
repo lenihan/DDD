@@ -1132,7 +1132,6 @@ namespace DDD
 
         [DllImport("gdi32.dll")]
         public static extern bool SetPixelFormat(IntPtr hdc, int format, ref PixelFormatDescriptor pfd);
-        
         public static bool HACK_SetPixelFormat(IntPtr hdc, int format, ref PixelFormatDescriptor pfd)
         {
             // Hack to force opengl32.dll to overwrite gdi32.dll 'SetPixelFormat'.
