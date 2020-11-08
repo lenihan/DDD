@@ -570,6 +570,7 @@ namespace DDD
 
             const string className = "DDDWindow";
             var wc = WNDCLASSEX.Build();
+            wc.Style = ClassStyles.CS_OWNDC;
             wc.WndProc = new WndProc(MyWndProc);
             wc.ClassName = className;
             wc.Instance = hInstance;
@@ -591,7 +592,7 @@ namespace DDD
                 dwExStyle,
                 atom,
                 Title, 
-                WindowStyles.WS_OVERLAPPEDWINDOW,
+                WindowStyles.WS_CLIPCHILDREN | WindowStyles.WS_CLIPSIBLINGS | WindowStyles.WS_OVERLAPPEDWINDOW,
                 x,
                 y,
                 width,
@@ -613,7 +614,10 @@ namespace DDD
             if (!gestureConfigSet) PrintErrorAndExit("SetGestureConfig");
 
             bool foregroundWindow = SetForegroundWindow(hWnd);
-            if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow");
+            // NOTE: The following line is commented out because it fails in Windows Terminal because of a bug.
+            //       When bug fixed, uncomment next line.
+            //       Bug report: https://github.com/microsoft/terminal/issues/2988
+            // if (!foregroundWindow) PrintErrorAndExit("SetForegroundWindow"); 
 
             // Set pixel format
             var pfd = PixelFormatDescriptor.Build();
@@ -622,6 +626,12 @@ namespace DDD
                         PixelFormatDescriptorFlags.PFD_DOUBLEBUFFER;
             pfd.PixelType = PixelType.PFD_TYPE_RGBA;
             pfd.ColorBits = 24; // bits for color: 8 red + 8 blue + 8 green = 24
+            pfd.AlphaBits = 0;
+            pfd.AccumBits = 0;
+            pfd.DepthBits = 32;
+            pfd.StencilBits = 0;
+            pfd.AuxBuffers = 0;
+            pfd.LayerType = 0; // PFD_MAIN_PLANE
 
             IntPtr hDC = GetDC(hWnd);
             if (hDC == IntPtr.Zero) PrintErrorAndExit("GetDC");
@@ -629,8 +639,8 @@ namespace DDD
             int pf = ChoosePixelFormat(hDC, ref pfd);
             if (pf == 0) PrintErrorAndExit("ChoosePixelFormat");
 
-            bool pixelFormatSet = SetPixelFormat(hDC, pf, in pfd);
-            if (!pixelFormatSet) PrintErrorAndExit("SetPixelFormat");
+            bool pixelFormatSet = HACK_SetPixelFormat(hDC, pf, ref pfd);
+            if (!pixelFormatSet) PrintErrorAndExit("HACK_SetPixelFormat");
 
             IntPtr hRC = wglCreateContext(hDC);
             if (hRC == IntPtr.Zero) PrintErrorAndExit("wglCreateContext");

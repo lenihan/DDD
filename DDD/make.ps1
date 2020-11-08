@@ -11,7 +11,7 @@ if ($KillPrev -and $pwshId) {
 # https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
 
 $root           = $PSScriptRoot
-$version        = '0.0.4'
+$version        = '0.0.6'
 $name           = 'David Lenihan'
 $moduleName     = 'DDD'
 $description    = 'Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.'
@@ -87,7 +87,7 @@ $manifestArgs = [ordered]@{
     Invoke-Expression $cmd
     
 if ($PowerShellGallery) {
-    $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey oy2ig7ftcymwygzfh7oaeychbiaumxyuld27f2zetouyca"
+    $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey oy2hd7beoaffjsjqnpcquyyngvydomqerpg46a5lrsixve"  # My Second Key
     Write-Host "# $cmd" -ForegroundColor Green
     Invoke-Expression $cmd   
 }

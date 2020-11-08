@@ -1122,19 +1122,39 @@ namespace DDD
         [DllImport("gdi32.dll")]
         public static extern int ChoosePixelFormat(IntPtr hdc, ref PixelFormatDescriptor pfd);
         [DllImport("gdi32.dll")]
+        public static extern int DescribePixelFormat(IntPtr hdc, int format, uint bytes, ref PixelFormatDescriptor pfd);
+        [DllImport("gdi32.dll")]
         public static extern bool DPtoLP(IntPtr hdc, [In, Out] POINT [] lpPoints, int nCount);
         [DllImport("gdi32.dll")]
-        public static extern int SetMapMode(IntPtr hdc, int fnMapMode);
+        public static extern int GetPixelFormat(IntPtr hdc);
         [DllImport("gdi32.dll")]
-        public static extern bool SetPixelFormat(IntPtr hdc, int format, in PixelFormatDescriptor pfd);
+        public static extern int SetMapMode(IntPtr hdc, int fnMapMode);
+
+        [DllImport("gdi32.dll")]
+        public static extern bool SetPixelFormat(IntPtr hdc, int format, ref PixelFormatDescriptor pfd);
+        
+        public static bool HACK_SetPixelFormat(IntPtr hdc, int format, ref PixelFormatDescriptor pfd)
+        {
+            // Hack to force opengl32.dll to overwrite gdi32.dll 'SetPixelFormat'.
+            // Without this hack, SetPixelFormat will not work in Windows Sandbox or VMWare Fusion.
+            // Learned from...
+            // https://stackoverflow.com/questions/199016/wglcreatecontext-in-c-sharp-failing-but-not-in-managed-c
+            LoadLibrary("opengl32.dll");
+            return SetPixelFormat(hdc, format, ref pfd);
+        }
+
         [DllImport("gdi32.dll")]
         public static extern bool SwapBuffers(IntPtr hdc);
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode)]
         public static extern bool TextOut(IntPtr hdc, int nXStart, int nYStart, string lpString, int cbString);
+        
         [DllImport("kernel32.dll")]
         public static extern int GetLastError();
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
+        [DllImport("kernel32", CharSet = CharSet.Unicode)]
+        public static extern IntPtr LoadLibrary(string lpFileName);       
+        
         [DllImport("opengl32.dll")]
         public static extern void glBegin(BeginMode mode);
         [DllImport("opengl32.dll")]
@@ -1175,10 +1195,13 @@ namespace DDD
         public static extern bool wglDeleteContext(IntPtr hRC);
         [DllImport("opengl32.dll")]
         public static extern bool wglMakeCurrent(IntPtr hDC, IntPtr hRC);
+        
         [DllImport("user32.dll")]
         public static extern IntPtr BeginPaint(IntPtr hwnd, out PAINTSTRUCT lpPaint);
         [DllImport("user32.dll")]
         public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);        
+        [DllImport("user32.dll")]
+        public static extern bool BringWindowToTop(IntPtr hWnd);        
         [DllImport("user32.dll")]
         public static extern bool CloseTouchInputHandle(IntPtr hTouchInput);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]

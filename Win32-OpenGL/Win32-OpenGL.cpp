@@ -150,6 +150,24 @@ CreateOpenGLWindow(char* title, int x, int y, int width, int height,
     pfd.iPixelType = type;
     pfd.cColorBits = 32;
 
+// LENIHAN - track down issue in sandbox
+
+    int maxIndex = DescribePixelFormat(hDC, 1, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+    printf("maxIndex = %d\n", maxIndex);
+    printf("size of PIXELFORMATDESCRIPTOR = %d\n", (int)sizeof(PIXELFORMATDESCRIPTOR));
+
+    pf = ChoosePixelFormat(hDC, &pfd);
+    printf("ChoosePixelFormat returns %d\n", pf);
+
+    int beforePf = GetPixelFormat(hDC);
+    printf("beforePf = %d\n", beforePf);
+
+// LENIHAN - track down issue in sandbox
+
+
+
+
+
     pf = ChoosePixelFormat(hDC, &pfd);
     if (pf == 0) {
         MessageBox(NULL, "ChoosePixelFormat() failed:  "
@@ -162,6 +180,11 @@ CreateOpenGLWindow(char* title, int x, int y, int width, int height,
             "Cannot set format specified.", "Error", MB_OK);
         return 0;
     }
+
+
+    int afterPf = GetPixelFormat(hDC);
+    printf("afterPf = %d\n", afterPf);
+
 
     //DescribePixelFormat(hDC, pf, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
