@@ -1,7 +1,8 @@
 Param(
     [Switch]$PowerShellGallery,
     [Switch]$Release, 
-    [Switch]$KillPrev
+    [Switch]$KillPrev,
+    [String]$ApiKey
 )
 
 if ($KillPrev -and $pwshId) {
@@ -11,10 +12,10 @@ if ($KillPrev -and $pwshId) {
 # https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
 
 $root           = $PSScriptRoot
-$version        = '0.0.6'
+$version        = '0.0.7'
 $name           = 'David Lenihan'
 $moduleName     = 'DDD'
-$description    = 'Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.'
+$description    = "Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.`nhttp://www.davidlenihan.com/category/ddd/"
 $reqAssemblies  = @('DDD.dll')
 $tags           = @('3D', 'ply', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
@@ -87,9 +88,13 @@ $manifestArgs = [ordered]@{
     Invoke-Expression $cmd
     
 if ($PowerShellGallery) {
-    $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey oy2hd7beoaffjsjqnpcquyyngvydomqerpg46a5lrsixve"  # My Second Key
+    if (!$ApiKey) {
+        Write-Host "No API Key provided. To publish, pass the API Key via -ApiKey option.`nTo generate an API Key: https://www.powershellgallery.com/account/apikeys" -ForegroundColor Yellow
+        return
+    }
+    $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey $ApiKey"
     Write-Host "# $cmd" -ForegroundColor Green
-    Invoke-Expression $cmd   
+    # Invoke-Expression $cmd   
 }
 else {
     $cmd = "Start-Process -FilePath 'pwsh' -ArgumentList '-NoExit -Command Import-Module -Force -Verbose $root\publish\DDD' -PassThru"
