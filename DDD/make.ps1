@@ -94,7 +94,7 @@ if ($PowerShellGallery) {
     }
     $cmd = "Publish-Module -Name '$root\publish\DDD' -NuGetApiKey $ApiKey"
     Write-Host "# $cmd" -ForegroundColor Green
-    # Invoke-Expression $cmd   
+    Invoke-Expression $cmd   
 }
 else {
     $cmd = "Start-Process -FilePath 'pwsh' -ArgumentList '-NoExit -Command Import-Module -Force -Verbose $root\publish\DDD' -PassThru"
