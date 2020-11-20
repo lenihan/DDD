@@ -1,5 +1,5 @@
 # create a coil
-Install-Module DDD
+Install-Module DDD -Repository PSGallery
 Import-Module DDD
 0..3600 | ForEach-Object {
     $deg = $_ 

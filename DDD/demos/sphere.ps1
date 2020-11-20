@@ -1,5 +1,5 @@
 # create a sphere
-Install-Module DDD
+Install-Module DDD -Repository PSGallery
 Import-Module DDD
 $allPoints = @() # empty array
 for($degY = 0; $degY -lt 360; $degY += 10) {
