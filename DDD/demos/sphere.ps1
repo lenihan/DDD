@@ -1,16 +1,12 @@
 # create a sphere
 Install-Module DDD -Repository PSGallery
 Import-Module DDD
-$allPoints = @() # empty array
-for($degY = 0; $degY -lt 360; $degY += 10) {
+$points = for($degY = 0; $degY -lt 360; $degY += 10) {
     for($degZ = 0; $degZ -lt 360; $degZ += 10) {
-        $x = 1
-        $y = 0
-        $z = 0
-        $pt = New-Point $x $y $z
+        $point = New-Point 1 0 0
         $rotZ = New-RotateZMatrix $degZ
         $rotY = New-RotateYMatrix $degY
-        $allPoints += $rotZ * $rotY * $pt
+        $rotZ * $rotY * $point
     } 
 } 
-$allPoints | Out-3d
+$points | Out-3d
