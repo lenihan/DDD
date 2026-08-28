@@ -41,7 +41,9 @@ the solution — run it first on a new machine.
 - [x] Redesign `UI.cs` interface for looping render
 - [x] `DDD/UISixel.cs`: turntable loop (X 360°, then Y 360°, repeat), Ctrl+C clean exit
 - [x] Remove Windows-only check in `Out-3d.cs` `EndProcessing`
-- [x] Clear error when terminal doesn't support sixel (best-effort env-var heuristic)
+- [x] Clear error when terminal doesn't support sixel — narrowed to a `TERM=dumb` denylist
+      after real-world testing showed the original allowlist (env vars like `WT_SESSION`) false-
+      negatived on a genuinely working Windows Terminal window spawned via `Start-Process`
 
 ## 6. Tests
 - [x] `UnitTest-Point` still green after modernization — 95/95 passing
@@ -49,9 +51,20 @@ the solution — run it first on a new machine.
 - [x] Rasterizer projection math tests — `UnitTest_Rasterizer.cs`
 
 ## 7. CI, packaging, docs
-- [x] `.github/workflows/ci.yml`: build+test matrix on windows/ubuntu/macos, net10.0
+- [x] `.github/workflows/ci.yml`: 6-way matrix — every OS (Windows/Linux/macOS) × every CPU
+      architecture GitHub offers hosted runners for (amd64/arm64): `windows-latest` (amd64),
+      `windows-11-arm` (arm64), `ubuntu-latest` (amd64), `ubuntu-24.04-arm` (arm64),
+      `macos-latest` (arm64/Apple Silicon), `macos-15-intel` (amd64). The `-arm`/`-intel` labels
+      are free-for-public-repos only — `lenihan/DDD` is public, so this costs nothing, but note
+      for later: if the repo ever goes private, those two ARM labels stop working entirely
+      (workflow fails outright), not just start costing money.
 - [x] Update `README.md` (accurate cross-platform claim, sixel terminal requirements)
 - [x] `make.ps1` path fix (covered in milestone 2)
+
+**No literal 32-bit x86 coverage** — GitHub doesn't offer 32-bit hosted runners on any OS (nobody
+ships 32-bit CI images anymore); "amd64" *is* the 64-bit x86 family, so this isn't a gap against
+what "x86" usually means today. `DDD.dll` is `AnyCPU` managed IL either way (see PE-header check
+below), so this isn't expected to be architecture-sensitive even for the untested case.
 
 ## Verification
 - [x] `dotnet build DDD.sln` succeeds (only `DDD` + `UnitTest-Point` remain) — clean build,
@@ -62,11 +75,17 @@ the solution — run it first on a new machine.
       frames with correct DCS header, raster attributes, and palette color percentages
       (hand-verified against the `Rasterizer` palette's RGB values). Confirms the full
       `Out-3d` → `UISixel` → `Rasterizer` → `SixelEncoder` pipeline works end-to-end.
-- [ ] Manual: actually *view* a demo's turntable animation in a real sixel-capable terminal
-      (e.g. Windows Terminal with sixel enabled) — **not done; needs a human with such a
-      terminal open, this environment has no visual terminal to check against**
+- [x] Manual: actually *view* a demo's turntable animation in a real sixel-capable terminal —
+      **confirmed by David**: renders correctly in Windows Terminal on Windows, and in WSL
+      (Ubuntu, ARM64) running PowerShell 7.6.5 against the same `DDD.dll`, same Windows Terminal
+      window. Proves the "single artifact, no rebuild" cross-platform goal, not just the theory.
 - [ ] Manual: same demo in a non-sixel terminal gives a clear error, not garbled output — not
-      yet explicitly tried (the `EnsureSixelSupported` heuristic treated the redirected-output
-      smoke test above as "supported" via its `Console.IsOutputRedirected` escape hatch, so this
-      specific path is still unverified)
-- [ ] CI matrix green on all three OSes — **not yet run; needs the branch pushed / a PR opened**
+      yet explicitly tried
+- [ ] macOS: untested — no Mac available to verify. Should work by the same reasoning (managed-
+      only assembly, same runtime model), but needs iTerm2 or WezTerm (Terminal.app has no sixel
+      support) and an actual human check before calling it confirmed
+- [x] Architecture-independence spot-check: `DDD.dll` (built on this ARM64 machine) reports PE
+      machine type "Intel i386" via `file` — the standard placeholder for `AnyCPU`/pure-IL
+      assemblies, confirming no architecture-specific bytes regardless of which SDK built it
+- [ ] CI matrix green across all 6 OS×architecture combinations — **not yet run; needs the
+      branch pushed / a PR opened**

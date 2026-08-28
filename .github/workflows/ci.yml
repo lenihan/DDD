@@ -10,8 +10,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - name: windows-amd64
+            runner: windows-latest
+          - name: windows-arm64
+            runner: windows-11-arm
+          - name: linux-amd64
+            runner: ubuntu-latest
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
+          - name: macos-arm64
+            runner: macos-latest
+          - name: macos-amd64
+            runner: macos-15-intel
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
