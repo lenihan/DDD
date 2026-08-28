@@ -1,1 +1,0 @@
-__declspec(dllimport) int main();
