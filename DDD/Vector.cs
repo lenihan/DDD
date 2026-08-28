@@ -21,7 +21,7 @@ namespace DDD
             Y = v.Y;
             Z = v.Z;
         }
-        public Vector(double[] arr)
+        public Vector(double[]? arr)
         {
             X = 0;
             Y = 0;
@@ -31,7 +31,7 @@ namespace DDD
             if (arr.Length > 1) Y = arr[1];
             if (arr.Length > 2) Z = arr[2];
         }
-        public Vector(string str)
+        public Vector(string? str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
             char[] trimChars      = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
@@ -46,7 +46,7 @@ namespace DDD
             if (values.Length > 2) Z = double.Parse(values[2], System.Globalization.CultureInfo.InvariantCulture);
         }
         public bool Equals(Vector v) => v == null ? false : (X == v.X) && (Y == v.Y) && (Z == v.Z);
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if ((obj is null) || !GetType().Equals(obj.GetType()))
             {

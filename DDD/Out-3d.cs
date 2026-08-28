@@ -20,7 +20,7 @@ namespace DDD
         Point _bboxMax = new Point(0.0, 0.0, 0.0);
         
         [Parameter(ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
-        public object[] InputObject;
+        public object[]? InputObject;
         
         [Parameter()]
         public string Title

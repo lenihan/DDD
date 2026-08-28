@@ -26,7 +26,7 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithNullArray()
         {
-            double[] arr = null;
+            double[]? arr = null;
             DDD.Vector v = new DDD.Vector(arr);
             Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
@@ -67,7 +67,7 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithNullString()
         {
-            string str = null;
+            string? str = null;
             DDD.Vector v = new DDD.Vector(str);
             Assert.IsTrue(v.ToString() == "[0 0 0]\n");
         }
@@ -153,7 +153,7 @@ namespace DDD_UnitTest
             Assert.IsTrue(v1.Equals(v3));
             Assert.IsTrue(!v1.Equals(v4));
 
-            Assert.IsTrue(!v1.Equals((object)v2));
+            Assert.IsTrue(!v1.Equals((object?)v2));
             Assert.IsTrue(!v1.Equals((object)123));
             Assert.IsTrue(v1.Equals((object)v3));
             Assert.IsTrue(!v1.Equals((object)v4));

@@ -25,6 +25,14 @@ the solution — run it first on a new machine.
 - [x] `UnitTest-Point/UnitTest.csproj`: migrate to `MSTest.Sdk` / Microsoft.Testing.Platform
 - [x] Update `DDD/make.ps1` output paths (`netcoreapp3.1` → `net10.0`)
 - [x] `dotnet test` passes after the modernization pass — verified (see Verification)
+- [x] Fix the 10 real pre-existing warnings that `Nullable`/analyzers surfaced (nullable
+      annotations on `Point`/`Vector`/`Matrix` constructors and `Equals(object?)` overrides,
+      `Out-3d.cs`'s `InputObject` field, matching test-file locals), suppress `CA1707` for the
+      legacy `DDD_UnitTest` namespace in `.editorconfig` (same pattern as the existing CA1051
+      suppression), and set `TreatWarningsAsErrors` in `Directory.Build.props` so this stays
+      clean — confirmed 0 warnings / 0 errors after the fix, `dotnet test` still 95/95
+- [x] Bump `actions/checkout` (v4→v7) and `actions/setup-dotnet` (v4→v6) in `ci.yml` — clears the
+      11th CI warning (a platform-level "Node.js 20 is deprecated" notice, unrelated to our code)
 
 ## 3. Software rasterizer (replaces immediate-mode OpenGL)
 - [x] Minimal RGB framebuffer (no `System.Drawing`) — `DDD/Framebuffer.cs`
@@ -68,7 +76,8 @@ below), so this isn't expected to be architecture-sensitive even for the unteste
 
 ## Verification
 - [x] `dotnet build DDD.sln` succeeds (only `DDD` + `UnitTest-Point` remain) — clean build,
-      18 pre-existing nullable/CA warnings on old code, no errors
+      **0 warnings**, 0 errors, `TreatWarningsAsErrors` enabled (was 18 warnings locally / 66
+      across the CI matrix before the cleanup above)
 - [x] `dotnet test` passes via MTP, including new encoder/rasterizer tests — **95/95 passed**
 - [x] Manual smoke test: ran `Out-3d` against real `Point` objects in an isolated child process,
       captured stdout for 3s, force-killed it. Zero stderr output; captured 20 complete sixel
@@ -87,5 +96,7 @@ below), so this isn't expected to be architecture-sensitive even for the unteste
 - [x] Architecture-independence spot-check: `DDD.dll` (built on this ARM64 machine) reports PE
       machine type "Intel i386" via `file` — the standard placeholder for `AnyCPU`/pure-IL
       assemblies, confirming no architecture-specific bytes regardless of which SDK built it
-- [ ] CI matrix green across all 6 OS×architecture combinations — **not yet run; needs the
-      branch pushed / a PR opened**
+- [x] CI matrix green across all 6 OS×architecture combinations — **confirmed on merge to
+      master (commit `dbbd97f`)**: windows-amd64, windows-arm64, linux-amd64, linux-arm64,
+      macos-amd64, macos-arm64 all passed.
+      https://github.com/lenihan/DDD/actions/runs/33167330418

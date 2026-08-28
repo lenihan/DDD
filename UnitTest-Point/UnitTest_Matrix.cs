@@ -46,7 +46,7 @@ namespace DDD_UnitTest
         [TestMethod]
         public void ConstructorWithNullArray()
         {
-            double[] arr = null;
+            double[]? arr = null;
             DDD.Matrix m = new DDD.Matrix(arr);
             string ans = "               0                0                0                0\n" +
                          "               0                0                0                0\n" +
@@ -133,7 +133,7 @@ namespace DDD_UnitTest
             Assert.IsTrue(m1.Equals(m3));
             Assert.IsTrue(!m1.Equals(m4));
 
-            Assert.IsTrue(!m1.Equals((object)m2));
+            Assert.IsTrue(!m1.Equals((object?)m2));
             Assert.IsTrue(!m1.Equals((object)123));
             Assert.IsTrue(m1.Equals((object)m3));
             Assert.IsTrue(!m1.Equals((object)m4));

@@ -38,7 +38,7 @@ namespace DDD
             M31 = mat.M31; M32 = mat.M32; M33 = mat.M33; M34 = mat.M34;
             M41 = mat.M41; M42 = mat.M42; M43 = mat.M43; M44 = mat.M44;
         }
-        public Matrix(double[] arr)
+        public Matrix(double[]? arr)
         {
             M11 = 0; M12 = 0; M13 = 0; M14 = 0;
             M21 = 0; M22 = 0; M23 = 0; M24 = 0;
@@ -74,7 +74,7 @@ namespace DDD
                                                             (M21 == m.M21) && (M22 == m.M22) && (M23 == m.M23) && (M24 == m.M24) &&
                                                             (M31 == m.M31) && (M32 == m.M32) && (M33 == m.M33) && (M34 == m.M34) &&
                                                             (M41 == m.M41) && (M42 == m.M42) && (M43 == m.M43) && (M44 == m.M44);
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if ((obj is null) || !GetType().Equals(obj.GetType()))
             {

@@ -22,7 +22,7 @@ namespace DDD
             Y = p.Y;
             Z = p.Z;
         }
-        public Point(double[] arr)
+        public Point(double[]? arr)
         {
             X = 0;
             Y = 0;
@@ -32,7 +32,7 @@ namespace DDD
             if (arr.Length > 1) Y = arr[1];
             if (arr.Length > 2) Z = arr[2];
         }
-        public Point(string str)
+        public Point(string? str)
         {
             char[] delimiterChars = { ' ', ',', '\t' };
             char[] trimChars      = { ' ', '(', ')', '[', ']', '{', '}', '<', '>', };
@@ -46,7 +46,7 @@ namespace DDD
             if (values.Length > 2) Z = double.Parse(values[2], System.Globalization.CultureInfo.InvariantCulture);
         }
         public bool Equals(Point p) => p == null ? false : (X == p.X) && (Y == p.Y) && (Z == p.Z);
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if ((obj is null) || !GetType().Equals(obj.GetType()))
             {
