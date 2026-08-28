@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Management.Automation;             // Windows PowerShell namespace
-using System.Runtime.InteropServices;
 // Defining input from the pipeline
 // https://docs.microsoft.com/en-us/powershell/scripting/developer/cmdlet/adding-parameters-that-process-pipeline-input?view=powershell-7
 
@@ -113,16 +112,10 @@ namespace DDD
         {
             if (_objects.Count == 0) return;
 
-// TODO: VERIFY EXCEPTIONS WORK
             try
             {
-                // var ui = new UI();
-                // if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) ui = new UIWindows();
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    new UIWindows().ShowWindow(_objects, _bboxMin, _bboxMax, _title);
-                }
-            } 
+                new UISixel().Render(_objects, _bboxMin, _bboxMax, _title);
+            }
             catch (System.InvalidOperationException ioex)
             {
                 ErrorRecord er = new ErrorRecord(
@@ -132,8 +125,6 @@ namespace DDD
                     null);
                 ThrowTerminatingError(er);
             }
-
-            // Console.WriteLine("EndProcessing - DONE");
         }
     }
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
