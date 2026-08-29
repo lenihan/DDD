@@ -29,6 +29,15 @@ namespace DDD
             set {_title = value;}
         }
 
+        [Parameter()]
+        public SwitchParameter Perspective { get; set; }
+
+        [Parameter()]
+        public SwitchParameter ShowFps { get; set; }
+
+        [Parameter()]
+        public SwitchParameter HideInstructions { get; set; }
+
         protected override void BeginProcessing()
         {
             // Console.WriteLine("BeginProcessing");
@@ -114,7 +123,13 @@ namespace DDD
 
             try
             {
-                new UISixel().Render(_objects, _bboxMin, _bboxMax, _title);
+                var options = new RenderOptions
+                {
+                    InitialPerspective = Perspective.IsPresent,
+                    InitialShowFps = ShowFps.IsPresent,
+                    InitialShowInstructions = !HideInstructions.IsPresent,
+                };
+                new UISixel().Render(_objects, _bboxMin, _bboxMax, _title, options);
             }
             catch (System.InvalidOperationException ioex)
             {
