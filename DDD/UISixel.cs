@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 
 namespace DDD
@@ -9,12 +10,37 @@ namespace DDD
     {
         const double DegreesPerSecond = 60.0;
         const int TargetFramesPerSecond = 12;
-        const int FramebufferWidth = 480;
-        const int FramebufferHeight = 480;
 
-        public void Render(List<object> objects, Point boundingBoxMin, Point boundingBoxMax, string title)
+        // Fallback framebuffer size used when the console's pixel dimensions can't be
+        // determined (e.g. redirected output) - matches the fixed size this used before
+        // console-filling was added.
+        const int DefaultFramebufferWidth = 480;
+        const int DefaultFramebufferHeight = 480;
+
+        // Rough terminal cell size in pixels, used to translate Console.WindowWidth/Height
+        // (character cells - .NET has no cross-platform API for actual cell pixel size) into a
+        // sixel image size that approximately fills the visible window.
+        const int AssumedCellPixelWidth = 10;
+        const int AssumedCellPixelHeight = 20;
+        const int WindowRowMargin = 2; // leave a couple rows unfilled so the image doesn't force a scroll
+        const int MinFramebufferDimension = 200;
+        const int MaxFramebufferDimension = 2400;
+
+        const double RotationStepDegrees = 3.0;
+        const double ZoomStepFactor = 1.1;
+        const double ZoomMin = 0.1;
+        const double ZoomMax = 10.0;
+        const double EmaAlpha = 0.15;
+        const int TextScale = 2;
+        const int OverlayMargin = 4;
+        static readonly (byte R, byte G, byte B) OverlayColor = (200, 200, 200);
+        const string InstructionsText = "ARROWS:ROTATE  []:ROLL  +/-:ZOOM  T:TURNTABLE  P:PERSP  F:FPS  H:HELP  ESC:QUIT";
+
+        public void Render(List<object> objects, Point boundingBoxMin, Point boundingBoxMax, string title, RenderOptions options)
         {
             EnsureSixelSupported();
+
+            (int framebufferWidth, int framebufferHeight) = DetermineFramebufferSize();
 
             using var stopRequested = new ManualResetEventSlim(false);
             ConsoleCancelEventHandler onCancel = (_, e) =>
@@ -24,31 +50,148 @@ namespace DDD
             };
             Console.CancelKeyPress += onCancel;
 
+            bool titlePrinted = !string.IsNullOrEmpty(title);
+            bool firstFrame = true;
+            int frameLines = (framebufferHeight + 5) / 6;
+
             try
             {
-                if (!string.IsNullOrEmpty(title))
+                if (titlePrinted)
                 {
                     Console.WriteLine(title);
                 }
-                Console.Write("[?25l");
+                Console.Write("\x1b[?25l");
 
                 var stopwatch = Stopwatch.StartNew();
-                bool firstFrame = true;
-                int frameLines = (FramebufferHeight + 5) / 6;
                 double frameIntervalMs = 1000.0 / TargetFramesPerSecond;
+                bool canPollKeys = !Console.IsInputRedirected;
+
+                var palette = new List<(byte R, byte G, byte B)>(Rasterizer.Palette) { OverlayColor };
+
+                double angleX = 0.0, angleY = 0.0, angleZ = 0.0;
+                bool manualRotation = false;
+                double zoom = 1.0;
+                bool perspective = options.InitialPerspective;
+                bool showFps = options.InitialShowFps;
+                bool showInstructions = options.InitialShowInstructions;
+
+                double lastFrameStartMs = stopwatch.Elapsed.TotalMilliseconds;
+                double emaFrameMs = 0.0;
 
                 while (!stopRequested.IsSet)
                 {
                     double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-                    (double angleX, double angleY) = TurntableAngles(elapsedSeconds);
+
+                    if (!manualRotation)
+                    {
+                        (angleX, angleY) = TurntableAngles(elapsedSeconds);
+                    }
+
+                    void EnsureManualMode()
+                    {
+                        if (manualRotation) return;
+                        (angleX, angleY) = TurntableAngles(elapsedSeconds);
+                        manualRotation = true;
+                    }
+
+                    if (canPollKeys)
+                    {
+                        while (Console.KeyAvailable)
+                        {
+                            ConsoleKeyInfo key = Console.ReadKey(intercept: true);
+
+                            if (key.Key == ConsoleKey.Escape)
+                            {
+                                stopRequested.Set();
+                                break;
+                            }
+                            else if (key.Key == ConsoleKey.UpArrow)
+                            {
+                                EnsureManualMode();
+                                angleX -= RotationStepDegrees;
+                            }
+                            else if (key.Key == ConsoleKey.DownArrow)
+                            {
+                                EnsureManualMode();
+                                angleX += RotationStepDegrees;
+                            }
+                            else if (key.Key == ConsoleKey.LeftArrow)
+                            {
+                                EnsureManualMode();
+                                angleY -= RotationStepDegrees;
+                            }
+                            else if (key.Key == ConsoleKey.RightArrow)
+                            {
+                                EnsureManualMode();
+                                angleY += RotationStepDegrees;
+                            }
+                            else
+                            {
+                                switch (key.KeyChar)
+                                {
+                                    case '[':
+                                        EnsureManualMode();
+                                        angleZ -= RotationStepDegrees;
+                                        break;
+                                    case ']':
+                                        EnsureManualMode();
+                                        angleZ += RotationStepDegrees;
+                                        break;
+                                    case '+':
+                                    case '=':
+                                        zoom = Math.Min(ZoomMax, zoom * ZoomStepFactor);
+                                        break;
+                                    case '-':
+                                        zoom = Math.Max(ZoomMin, zoom / ZoomStepFactor);
+                                        break;
+                                    case 't':
+                                    case 'T':
+                                        manualRotation = false;
+                                        break;
+                                    case 'p':
+                                    case 'P':
+                                        perspective = !perspective;
+                                        break;
+                                    case 'f':
+                                    case 'F':
+                                        showFps = !showFps;
+                                        break;
+                                    case 'h':
+                                    case 'H':
+                                        showInstructions = !showInstructions;
+                                        break;
+                                }
+                            }
+                        }
+                    }
 
                     Framebuffer framebuffer = Rasterizer.Render(objects, boundingBoxMin, boundingBoxMax,
-                        angleX, angleY, FramebufferWidth, FramebufferHeight);
-                    string frame = SixelEncoder.Encode(framebuffer, Rasterizer.Palette);
+                        angleX, angleY, framebufferWidth, framebufferHeight, angleZ, perspective, zoom);
+
+                    double nowMs = stopwatch.Elapsed.TotalMilliseconds;
+                    double instantFrameMs = nowMs - lastFrameStartMs;
+                    lastFrameStartMs = nowMs;
+                    emaFrameMs = emaFrameMs == 0.0 ? instantFrameMs : (EmaAlpha * instantFrameMs) + ((1 - EmaAlpha) * emaFrameMs);
+
+                    if (showInstructions)
+                    {
+                        BitmapFont.DrawText(framebuffer, InstructionsText, OverlayMargin, OverlayMargin,
+                            OverlayColor.R, OverlayColor.G, OverlayColor.B, TextScale);
+                    }
+                    if (showFps)
+                    {
+                        double fps = emaFrameMs > 0.0 ? 1000.0 / emaFrameMs : 0.0;
+                        string fpsText = $"FPS: {fps:0.0}";
+                        int textWidth = BitmapFont.MeasureWidth(fpsText, TextScale);
+                        BitmapFont.DrawText(framebuffer, fpsText, framebufferWidth - textWidth - OverlayMargin, OverlayMargin,
+                            OverlayColor.R, OverlayColor.G, OverlayColor.B, TextScale);
+                    }
+
+                    string frame = SixelEncoder.Encode(framebuffer, palette);
 
                     if (!firstFrame)
                     {
-                        Console.Write($"[{frameLines}A");
+                        Console.Write($"\x1b[{frameLines}A");
                     }
                     firstFrame = false;
                     Console.Write(frame);
@@ -62,9 +205,36 @@ namespace DDD
             }
             finally
             {
-                Console.Write("[?25h");
-                Console.WriteLine();
+                // Erase everything this call printed (title + the last-drawn frame) so the
+                // console looks exactly like it did before Out-3d ran, cursor included.
+                int linesToErase = (titlePrinted ? 1 : 0) + (firstFrame ? 0 : frameLines);
+                if (linesToErase > 0)
+                {
+                    Console.Write($"\x1b[{linesToErase}A\x1b[0J");
+                }
+                Console.Write("\x1b[?25h");
                 Console.CancelKeyPress -= onCancel;
+            }
+        }
+
+        static (int Width, int Height) DetermineFramebufferSize()
+        {
+            if (Console.IsOutputRedirected)
+            {
+                return (DefaultFramebufferWidth, DefaultFramebufferHeight);
+            }
+
+            try
+            {
+                int columns = Math.Max(Console.WindowWidth, 20);
+                int rows = Math.Max(Console.WindowHeight - WindowRowMargin, 10);
+                int width = Math.Clamp(columns * AssumedCellPixelWidth, MinFramebufferDimension, MaxFramebufferDimension);
+                int height = Math.Clamp(rows * AssumedCellPixelHeight, MinFramebufferDimension, MaxFramebufferDimension);
+                return (width, height);
+            }
+            catch (IOException)
+            {
+                return (DefaultFramebufferWidth, DefaultFramebufferHeight);
             }
         }
 

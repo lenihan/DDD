@@ -5,6 +5,9 @@ namespace DDD
 {
     internal static class Rasterizer
     {
+        const double FitFraction = 0.38;
+        const double FovYDegrees = 40.0;
+
         static readonly (byte R, byte G, byte B) Background = (0, 0, 0);
         static readonly (byte R, byte G, byte B) AxisX = (220, 60, 60);
         static readonly (byte R, byte G, byte B) AxisY = (60, 200, 90);
@@ -19,7 +22,8 @@ namespace DDD
         };
 
         public static Framebuffer Render(List<object> objects, Point boundingBoxMin, Point boundingBoxMax,
-            double angleXDegrees, double angleYDegrees, int width, int height)
+            double angleXDegrees, double angleYDegrees, int width, int height,
+            double angleZDegrees = 0.0, bool perspective = false, double zoom = 1.0)
         {
             var framebuffer = new Framebuffer(width, height);
             framebuffer.Clear(Background.R, Background.G, Background.B);
@@ -33,16 +37,37 @@ namespace DDD
             double radius = Math.Max(Distance(center, boundingBoxMax), Distance(center, new Point(0.0, 0.0, 0.0)));
             radius = Math.Max(radius, 1e-6);
 
-            double scale = Math.Min(width, height) * 0.38 / radius;
-            Matrix rotation = Matrix.RotateY(angleYDegrees) * Matrix.RotateX(angleXDegrees);
+            Matrix rotation = Matrix.RotateY(angleYDegrees) * Matrix.RotateX(angleXDegrees) * Matrix.RotateZ(angleZDegrees);
 
-            (int X, int Y) Project(Point p)
+            double fovYRadians = FovYDegrees * Math.PI / 180.0;
+            double halfFovTan = Math.Tan(fovYRadians / 2.0);
+
+            // Orthographic scale, or a perspective camera whose distance is derived from the
+            // same fit convention so switching modes at zoom=1 doesn't jump in apparent size.
+            double orthoScale = Math.Min(width, height) * FitFraction / radius * zoom;
+            double cameraDistance = Math.Max(radius / (FitFraction * halfFovTan) / zoom, radius * 1.05);
+            double focalLengthPixels = (height / 2.0) / halfFovTan;
+
+            (int X, int Y, bool Visible) Project(Point p)
             {
                 Point local = new Point(p.X - center.X, p.Y - center.Y, p.Z - center.Z);
                 Point rotated = rotation * local;
-                int sx = (int)Math.Round(width / 2.0 + rotated.X * scale);
-                int sy = (int)Math.Round(height / 2.0 - rotated.Y * scale);
-                return (sx, sy);
+
+                if (perspective)
+                {
+                    double viewZ = cameraDistance - rotated.Z;
+                    if (viewZ <= 1e-6) return (0, 0, false);
+                    double s = focalLengthPixels / viewZ;
+                    int px = (int)Math.Round(width / 2.0 + rotated.X * s);
+                    int py = (int)Math.Round(height / 2.0 - rotated.Y * s);
+                    return (px, py, true);
+                }
+                else
+                {
+                    int sx = (int)Math.Round(width / 2.0 + rotated.X * orthoScale);
+                    int sy = (int)Math.Round(height / 2.0 - rotated.Y * orthoScale);
+                    return (sx, sy, true);
+                }
             }
 
             double axisLength = radius * 1.15;
@@ -80,8 +105,9 @@ namespace DDD
             return Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
 
-        static void DrawMarker(Framebuffer framebuffer, (int X, int Y) at, (byte R, byte G, byte B) color)
+        static void DrawMarker(Framebuffer framebuffer, (int X, int Y, bool Visible) at, (byte R, byte G, byte B) color)
         {
+            if (!at.Visible) return;
             framebuffer.SetPixel(at.X, at.Y, color.R, color.G, color.B);
             framebuffer.SetPixel(at.X + 1, at.Y, color.R, color.G, color.B);
             framebuffer.SetPixel(at.X - 1, at.Y, color.R, color.G, color.B);
@@ -89,14 +115,15 @@ namespace DDD
             framebuffer.SetPixel(at.X, at.Y - 1, color.R, color.G, color.B);
         }
 
-        static void DrawSegment(Framebuffer framebuffer, Func<Point, (int X, int Y)> project, Point from, Point to, (byte R, byte G, byte B) color)
+        static void DrawSegment(Framebuffer framebuffer, Func<Point, (int X, int Y, bool Visible)> project, Point from, Point to, (byte R, byte G, byte B) color)
         {
             var a = project(from);
             var b = project(to);
+            if (!a.Visible || !b.Visible) return;
             framebuffer.DrawLine(a.X, a.Y, b.X, b.Y, color.R, color.G, color.B);
         }
 
-        static void DrawBoundingBox(Framebuffer framebuffer, Func<Point, (int X, int Y)> project, Point min, Point max, (byte R, byte G, byte B) color)
+        static void DrawBoundingBox(Framebuffer framebuffer, Func<Point, (int X, int Y, bool Visible)> project, Point min, Point max, (byte R, byte G, byte B) color)
         {
             var corners = new[]
             {
