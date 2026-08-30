@@ -43,8 +43,8 @@ Run the unit tests with `-Test` (add `-Release` to run them against the Release 
 
 ## Controls
 
-An on-screen instructions line is shown by default (hide it with `-HideInstructions`, or toggle
-it live with `H`):
+An on-screen instructions line (bottom-left) and an FPS counter (top-right) are shown by default
+(hide them with `-HideInstructions`/`-HideFps`, or toggle either live with `H`/`F`):
 
 | Keys            | Action                                             |
 |-----------------|----------------------------------------------------|
@@ -63,7 +63,7 @@ it live with `H`):
 Tapping a rotation key nudges the view by a fixed step; holding it down rotates continuously via
 your OS's normal keyboard auto-repeat. The auto-rotate turntable runs until the first rotation
 keypress, then hands control to you until you press `T` to resume it. `Out-3d` also takes
-`-Perspective`, `-ShowFps`, `-HideInstructions`, `-RenderMode <Points|Wireframe|Solid>`, and
+`-Perspective`, `-HideFps`, `-HideInstructions`, `-RenderMode <Points|Wireframe|Solid>`, and
 `-ShowNormals` switches to set the initial state non-interactively (e.g. for a demo script).
 `Mesh` render mode only affects `Mesh` objects (vertices/faces) - `Point`/`Vector`/`Matrix`
 objects always render the same way. Solid mode culls faces pointing away from the camera and

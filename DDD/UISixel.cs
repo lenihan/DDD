@@ -201,8 +201,15 @@ namespace DDD
 
                     if (showInstructions)
                     {
-                        BitmapFont.DrawText(framebuffer, InstructionsText, OverlayMargin, OverlayMargin,
-                            OverlayColor.R, OverlayColor.G, OverlayColor.B, TextScale);
+                        string[] instructionLines = BitmapFont.Wrap(InstructionsText, framebufferWidth - 2 * OverlayMargin, TextScale);
+                        int lineHeight = BitmapFont.GlyphHeight * TextScale + OverlayMargin;
+                        int y = framebufferHeight - OverlayMargin - BitmapFont.GlyphHeight * TextScale - (instructionLines.Length - 1) * lineHeight;
+                        foreach (string line in instructionLines)
+                        {
+                            BitmapFont.DrawText(framebuffer, line, OverlayMargin, y,
+                                OverlayColor.R, OverlayColor.G, OverlayColor.B, TextScale);
+                            y += lineHeight;
+                        }
                     }
                     if (showFps)
                     {

@@ -33,7 +33,7 @@ namespace DDD
         public SwitchParameter Perspective { get; set; }
 
         [Parameter()]
-        public SwitchParameter ShowFps { get; set; }
+        public SwitchParameter HideFps { get; set; }
 
         [Parameter()]
         public SwitchParameter HideInstructions { get; set; }
@@ -140,7 +140,7 @@ namespace DDD
                 var options = new RenderOptions
                 {
                     InitialPerspective = Perspective.IsPresent,
-                    InitialShowFps = ShowFps.IsPresent,
+                    InitialShowFps = !HideFps.IsPresent,
                     InitialShowInstructions = !HideInstructions.IsPresent,
                     InitialRenderMode = RenderMode,
                     InitialShowNormals = ShowNormals.IsPresent,
