@@ -76,6 +76,34 @@ namespace DDD
             return text.Length * (GlyphWidth + GlyphSpacingPixels) * scale - GlyphSpacingPixels * scale;
         }
 
+        // Greedily packs double-space-separated tokens onto as few lines as fit within
+        // maxWidthPixels, splitting only when the text doesn't already fit on one line. A single
+        // token wider than maxWidthPixels still gets its own (overflowing) line rather than being
+        // split mid-token - clipped at the framebuffer edge, same as any oversized draw.
+        public static string[] Wrap(string text, int maxWidthPixels, int scale = 1)
+        {
+            string[] tokens = text.Split("  ");
+            var lines = new List<string>();
+            string currentLine = "";
+
+            foreach (string token in tokens)
+            {
+                string candidate = currentLine.Length == 0 ? token : currentLine + "  " + token;
+                if (currentLine.Length == 0 || MeasureWidth(candidate, scale) <= maxWidthPixels)
+                {
+                    currentLine = candidate;
+                }
+                else
+                {
+                    lines.Add(currentLine);
+                    currentLine = token;
+                }
+            }
+            if (currentLine.Length > 0) lines.Add(currentLine);
+
+            return lines.ToArray();
+        }
+
         static void DrawGlyph(Framebuffer framebuffer, string[] rows, int x, int y, byte r, byte g, byte b, int scale)
         {
             for (int row = 0; row < rows.Length; row++)

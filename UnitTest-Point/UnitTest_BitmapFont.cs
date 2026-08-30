@@ -44,5 +44,34 @@ namespace DDD_UnitTest
             int expected = (3 * DDD.BitmapFont.GlyphWidth) + (2 * DDD.BitmapFont.GlyphSpacingPixels);
             Assert.AreEqual(expected, DDD.BitmapFont.MeasureWidth("ABC"));
         }
+
+        [TestMethod]
+        public void WrapKeepsTextOnOneLineWhenItAlreadyFits()
+        {
+            // MeasureWidth("AB  CD") == 6*6-1 == 35, so it fits comfortably under 100.
+            string[] lines = DDD.BitmapFont.Wrap("AB  CD", 100);
+            string[] expected = { "AB  CD" };
+            CollectionAssert.AreEqual(expected, lines);
+        }
+
+        [TestMethod]
+        public void WrapSplitsOntoANewLineOnlyWhenTheNextTokenWouldOverflow()
+        {
+            // MeasureWidth("AB  CD") == 35 (fits in 40); MeasureWidth("AB  CD  EF") == 10*6-1 == 59
+            // (doesn't fit in 40), so EF has to start a new line.
+            string[] lines = DDD.BitmapFont.Wrap("AB  CD  EF", 40);
+            string[] expected = { "AB  CD", "EF" };
+            CollectionAssert.AreEqual(expected, lines);
+        }
+
+        [TestMethod]
+        public void WrapNeverSplitsASingleTokenEvenIfItOverflows()
+        {
+            // A single token wider than maxWidthPixels still gets its own line rather than being
+            // dropped or split mid-token.
+            string[] lines = DDD.BitmapFont.Wrap("ABCDEFGHIJ", 10);
+            string[] expected = { "ABCDEFGHIJ" };
+            CollectionAssert.AreEqual(expected, lines);
+        }
     }
 }

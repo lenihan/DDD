@@ -7,6 +7,8 @@ namespace DDD
         public bool InitialPerspective { get; init; }
         public bool InitialShowFps { get; init; }
         public bool InitialShowInstructions { get; init; }
+        public RenderMode InitialRenderMode { get; init; }
+        public bool InitialShowNormals { get; init; }
     }
 
     interface UI

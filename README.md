@@ -3,7 +3,7 @@ Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.
 
 ![alt text](DDD.png "DDD")
 
-Pipe `Point`/`Vector`/`Matrix` objects to `Out-3d` (alias `o3d`) to visualize them as an
+Pipe `Point`/`Vector`/`Matrix`/`Mesh` objects to `Out-3d` (alias `o3d`) to visualize them as an
 animated, interactive scene rendered directly in your terminal using
 [sixel graphics](https://en.wikipedia.org/wiki/Sixel) — no window, no GPU driver, same code path
 on every OS. The scene auto-rotates 360° around the X axis, then 360° around the Y axis, and
@@ -43,26 +43,31 @@ Run the unit tests with `-Test` (add `-Release` to run them against the Release 
 
 ## Controls
 
-An on-screen instructions line is shown by default (hide it with `-HideInstructions`, or toggle
-it live with `H`):
+An on-screen instructions line (bottom-left) and an FPS counter (top-right) are shown by default
+(hide them with `-HideInstructions`/`-HideFps`, or toggle either live with `H`/`F`):
 
-| Keys            | Action                            |
-|-----------------|-----------------------------------|
-| `↑`/`↓`         | Rotate X                          |
-| `←`/`→`         | Rotate Y                          |
-| `[`/`]`         | Roll Z                            |
-| `+`/`-`         | Zoom in/out                       |
-| `T`             | Resume the auto-rotate turntable  |
-| `P`             | Toggle orthographic ⟷ perspective |
-| `F`             | Toggle FPS overlay                |
-| `H`             | Toggle the instructions overlay   |
-| `Esc` or Ctrl+C | Quit                              |
+| Keys            | Action                                             |
+|-----------------|----------------------------------------------------|
+| `↑`/`↓`         | Rotate X                                           |
+| `←`/`→`         | Rotate Y                                           |
+| `[`/`]`         | Roll Z                                             |
+| `+`/`-`         | Zoom in/out                                        |
+| `T`             | Resume the auto-rotate turntable                   |
+| `P`             | Toggle orthographic ⟷ perspective                  |
+| `M`             | Cycle mesh render mode: points ⟷ wireframe ⟷ solid |
+| `N`             | Toggle face normal indicators                      |
+| `F`             | Toggle FPS overlay                                 |
+| `H`             | Toggle the instructions overlay                    |
+| `Esc` or Ctrl+C | Quit                                               |
 
 Tapping a rotation key nudges the view by a fixed step; holding it down rotates continuously via
 your OS's normal keyboard auto-repeat. The auto-rotate turntable runs until the first rotation
 keypress, then hands control to you until you press `T` to resume it. `Out-3d` also takes
-`-Perspective`, `-ShowFps`, and `-HideInstructions` switches to set the initial state
-non-interactively (e.g. for a demo script). The render surface fills the current terminal
+`-Perspective`, `-HideFps`, `-HideInstructions`, `-RenderMode <Points|Wireframe|Solid>`, and
+`-ShowNormals` switches to set the initial state non-interactively (e.g. for a demo script).
+`Mesh` render mode only affects `Mesh` objects (vertices/faces) - `Point`/`Vector`/`Matrix`
+objects always render the same way. Solid mode culls faces pointing away from the camera and
+shades the rest with a fixed camera-relative light. The render surface fills the current terminal
 window. `Out-3d` draws in the terminal's alternate screen buffer — the same full-screen mode
 `vim`/`less`/`htop` use — so exiting (`Esc` or Ctrl+C) snaps the terminal back to exactly what it
 showed before `Out-3d` ran, with no scrolling or leftover output.

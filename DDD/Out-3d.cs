@@ -33,10 +33,16 @@ namespace DDD
         public SwitchParameter Perspective { get; set; }
 
         [Parameter()]
-        public SwitchParameter ShowFps { get; set; }
+        public SwitchParameter HideFps { get; set; }
 
         [Parameter()]
         public SwitchParameter HideInstructions { get; set; }
+
+        [Parameter()]
+        public RenderMode RenderMode { get; set; } = RenderMode.Wireframe;
+
+        [Parameter()]
+        public SwitchParameter ShowNormals { get; set; }
 
         protected override void BeginProcessing()
         {
@@ -79,7 +85,15 @@ namespace DDD
             {
                 _objects.Add(input);
                 UpdateBBox(new Point(v.X, v.Y, v.Z));
-                // Console.WriteLine($"Got vector: {v}"); 
+                // Console.WriteLine($"Got vector: {v}");
+            }
+            else if (input is Mesh mesh)
+            {
+                _objects.Add(input);
+                foreach (Vertex vertex in mesh.Vertices)
+                {
+                    UpdateBBox(vertex.Position);
+                }
             }
             else
             {
@@ -126,8 +140,10 @@ namespace DDD
                 var options = new RenderOptions
                 {
                     InitialPerspective = Perspective.IsPresent,
-                    InitialShowFps = ShowFps.IsPresent,
+                    InitialShowFps = !HideFps.IsPresent,
                     InitialShowInstructions = !HideInstructions.IsPresent,
+                    InitialRenderMode = RenderMode,
+                    InitialShowNormals = ShowNormals.IsPresent,
                 };
                 new UISixel().Render(_objects, _bboxMin, _bboxMax, _title, options);
             }
