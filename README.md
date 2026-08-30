@@ -37,7 +37,9 @@ your OS's normal keyboard auto-repeat. The auto-rotate turntable runs until the 
 keypress, then hands control to you until you press `T` to resume it. `Out-3d` also takes
 `-Perspective`, `-ShowFps`, and `-HideInstructions` switches to set the initial state
 non-interactively (e.g. for a demo script). The render surface fills the current terminal
-window, and exiting (`Esc` or Ctrl+C) restores the console to how it looked before `Out-3d` ran.
+window. `Out-3d` draws in the terminal's alternate screen buffer — the same full-screen mode
+`vim`/`less`/`htop` use — so exiting (`Esc` or Ctrl+C) snaps the terminal back to exactly what it
+showed before `Out-3d` ran, with no scrolling or leftover output.
 
 ## Terminal requirements
 

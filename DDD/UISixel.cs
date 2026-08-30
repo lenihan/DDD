@@ -51,11 +51,26 @@ namespace DDD
             Console.CancelKeyPress += onCancel;
 
             bool titlePrinted = !string.IsNullOrEmpty(title);
-            bool firstFrame = true;
-            int frameLines = (framebufferHeight + 5) / 6;
+
+            // Row each frame is redrawn at. Deliberately an absolute cursor position rather than
+            // a relative "move up N lines" computed from the image's pixel height - terminals
+            // vary in how many text rows they advance the cursor after a sixel image (DEC's
+            // 6-pixels-per-sixel-row unit doesn't necessarily match the terminal's actual font
+            // cell height), so a relative move drifts frame to frame. An absolute position can't
+            // drift.
+            int frameStartRow = titlePrinted ? 2 : 1;
+
+            // Draw in the terminal's alternate screen buffer, same as vim/less/htop - the
+            // terminal snaps back to exactly what it showed before on exit (scroll position,
+            // cursor position, and all prior content), so there's nothing to manually erase.
+            bool useAlternateScreen = !Console.IsOutputRedirected;
 
             try
             {
+                if (useAlternateScreen)
+                {
+                    Console.Write("\x1b[?1049h");
+                }
                 if (titlePrinted)
                 {
                     Console.WriteLine(title);
@@ -189,11 +204,7 @@ namespace DDD
 
                     string frame = SixelEncoder.Encode(framebuffer, palette);
 
-                    if (!firstFrame)
-                    {
-                        Console.Write($"\x1b[{frameLines}A");
-                    }
-                    firstFrame = false;
+                    Console.Write($"\x1b[{frameStartRow};1H");
                     Console.Write(frame);
 
                     double sleepMs = frameIntervalMs - (stopwatch.Elapsed.TotalMilliseconds % frameIntervalMs);
@@ -205,14 +216,11 @@ namespace DDD
             }
             finally
             {
-                // Erase everything this call printed (title + the last-drawn frame) so the
-                // console looks exactly like it did before Out-3d ran, cursor included.
-                int linesToErase = (titlePrinted ? 1 : 0) + (firstFrame ? 0 : frameLines);
-                if (linesToErase > 0)
-                {
-                    Console.Write($"\x1b[{linesToErase}A\x1b[0J");
-                }
                 Console.Write("\x1b[?25h");
+                if (useAlternateScreen)
+                {
+                    Console.Write("\x1b[?1049l");
+                }
                 Console.CancelKeyPress -= onCancel;
             }
         }
