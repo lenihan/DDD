@@ -35,6 +35,12 @@ You should see a single point rendered as a sixel image, auto-rotating in the te
 `Esc` to exit. If a prior build is still loaded, pass `-KillPrev` to `make.ps1` to close it
 before opening the new window.
 
+Run the unit tests with `-Test` (add `-Release` to run them against the Release build):
+
+```powershell
+./DDD/make.ps1 -Test -Release
+```
+
 ## Controls
 
 An on-screen instructions line is shown by default (hide it with `-HideInstructions`, or toggle
