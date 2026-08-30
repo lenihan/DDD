@@ -17,6 +17,18 @@ function global:New-Matrix {
 function global:New-MatrixArray ([Parameter(Mandatory=$true)][ulong]$Size) {
     New-Object -TypeName 'DDD.Matrix[]' -ArgumentList $Size
 }
+function global:New-Color {
+    New-Object -TypeName 'DDD.Color' -ArgumentList $args
+}
+function global:New-Vertex {
+    New-Object -TypeName 'DDD.Vertex' -ArgumentList $args
+}
+function global:New-Face {
+    New-Object -TypeName 'DDD.Face' -ArgumentList $args
+}
+function global:New-Mesh {
+    New-Object -TypeName 'DDD.Mesh'
+}
 function global:New-IdentityMatrix {
     return [DDD.Matrix]::Identity()
 }

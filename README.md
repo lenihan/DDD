@@ -15,22 +15,42 @@ Import-Module DDD
 $points | Out-3d
 ```
 
+## Running from source
+
+To build and try DDD without installing from PSGallery, run `make.ps1` from the repo root
+(`-Release` builds the Release configuration; omit it for a Debug build):
+
+```powershell
+./DDD/make.ps1 -Release -KillPrev
+```
+
+This builds the module and opens a new PowerShell window with it imported. In that window, run
+a quick smoke test to confirm `Out-3d` is working:
+
+```powershell
+New-Point 1 0 0 | Out-3d
+```
+
+You should see a single point rendered as a sixel image, auto-rotating in the terminal. Press
+`Esc` to exit. If a prior build is still loaded, pass `-KillPrev` to `make.ps1` to close it
+before opening the new window.
+
 ## Controls
 
 An on-screen instructions line is shown by default (hide it with `-HideInstructions`, or toggle
 it live with `H`):
 
-| Keys | Action |
-|---|---|
-| `↑`/`↓` | Rotate X |
-| `←`/`→` | Rotate Y |
-| `[`/`]` | Roll Z |
-| `+`/`-` | Zoom in/out |
-| `T` | Resume the auto-rotate turntable |
-| `P` | Toggle orthographic ⟷ perspective |
-| `F` | Toggle FPS overlay |
-| `H` | Toggle the instructions overlay |
-| `Esc` or Ctrl+C | Quit |
+| Keys            | Action                            |
+|-----------------|-----------------------------------|
+| `↑`/`↓`         | Rotate X                          |
+| `←`/`→`         | Rotate Y                          |
+| `[`/`]`         | Roll Z                            |
+| `+`/`-`         | Zoom in/out                       |
+| `T`             | Resume the auto-rotate turntable  |
+| `P`             | Toggle orthographic ⟷ perspective |
+| `F`             | Toggle FPS overlay                |
+| `H`             | Toggle the instructions overlay   |
+| `Esc` or Ctrl+C | Quit                              |
 
 Tapping a rotation key nudges the view by a fixed step; holding it down rotates continuously via
 your OS's normal keyboard auto-repeat. The auto-rotate turntable runs until the first rotation

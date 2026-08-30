@@ -7,6 +7,10 @@
 # Point     = pt
 # Vector    = vec
 # Matrix    = mat
+# Color     = col
+# Vertex    = vert
+# Face      = face
+# Mesh      = mesh
 # Array     = arr
 # Identity  = i
 # Zero      = z
@@ -22,6 +26,11 @@ Set-Alias -Name nvecarr -Value New-VectorArray
 
 Set-Alias -Name nmat -Value New-Matrix
 Set-Alias -Name nmatarr -Value New-MatrixArray
+
+Set-Alias -Name ncol -Value New-Color
+Set-Alias -Name nvert -Value New-Vertex
+Set-Alias -Name nface -Value New-Face
+Set-Alias -Name nmesh -Value New-Mesh
 
 Set-Alias -Name nimat -Value New-IdentityMatrix
 Set-Alias -Name nzmat -Value New-ZeroMatrix
