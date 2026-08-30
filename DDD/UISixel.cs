@@ -34,7 +34,7 @@ namespace DDD
         const int TextScale = 2;
         const int OverlayMargin = 4;
         static readonly (byte R, byte G, byte B) OverlayColor = (200, 200, 200);
-        const string InstructionsText = "ARROWS:ROTATE  []:ROLL  +/-:ZOOM  T:TURNTABLE  P:PERSP  F:FPS  H:HELP  ESC:QUIT";
+        const string InstructionsText = "ARROWS:ROTATE  []:ROLL  +/-:ZOOM  T:TURNTABLE  P:PERSP  M:MODE  N:NORMALS  F:FPS  H:HELP  ESC:QUIT";
 
         public void Render(List<object> objects, Point boundingBoxMin, Point boundingBoxMax, string title, RenderOptions options)
         {
@@ -81,7 +81,7 @@ namespace DDD
                 double frameIntervalMs = 1000.0 / TargetFramesPerSecond;
                 bool canPollKeys = !Console.IsInputRedirected;
 
-                var palette = new List<(byte R, byte G, byte B)>(Rasterizer.Palette) { OverlayColor };
+                var palette = new List<(byte R, byte G, byte B)>(Rasterizer.BuildPalette(objects)) { OverlayColor };
 
                 double angleX = 0.0, angleY = 0.0, angleZ = 0.0;
                 bool manualRotation = false;
@@ -89,6 +89,8 @@ namespace DDD
                 bool perspective = options.InitialPerspective;
                 bool showFps = options.InitialShowFps;
                 bool showInstructions = options.InitialShowInstructions;
+                RenderMode renderMode = options.InitialRenderMode;
+                bool showNormals = options.InitialShowNormals;
 
                 double lastFrameStartMs = stopwatch.Elapsed.TotalMilliseconds;
                 double emaFrameMs = 0.0;
@@ -167,6 +169,14 @@ namespace DDD
                                     case 'P':
                                         perspective = !perspective;
                                         break;
+                                    case 'm':
+                                    case 'M':
+                                        renderMode = NextRenderMode(renderMode);
+                                        break;
+                                    case 'n':
+                                    case 'N':
+                                        showNormals = !showNormals;
+                                        break;
                                     case 'f':
                                     case 'F':
                                         showFps = !showFps;
@@ -181,7 +191,8 @@ namespace DDD
                     }
 
                     Framebuffer framebuffer = Rasterizer.Render(objects, boundingBoxMin, boundingBoxMax,
-                        angleX, angleY, framebufferWidth, framebufferHeight, angleZ, perspective, zoom);
+                        angleX, angleY, framebufferWidth, framebufferHeight, angleZ, perspective, zoom,
+                        renderMode, showNormals);
 
                     double nowMs = stopwatch.Elapsed.TotalMilliseconds;
                     double instantFrameMs = nowMs - lastFrameStartMs;
@@ -245,6 +256,13 @@ namespace DDD
                 return (DefaultFramebufferWidth, DefaultFramebufferHeight);
             }
         }
+
+        static RenderMode NextRenderMode(RenderMode current) => current switch
+        {
+            RenderMode.Points => RenderMode.Wireframe,
+            RenderMode.Wireframe => RenderMode.Solid,
+            _ => RenderMode.Points,
+        };
 
         static (double AngleX, double AngleY) TurntableAngles(double elapsedSeconds)
         {

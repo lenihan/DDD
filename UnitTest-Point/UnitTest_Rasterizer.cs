@@ -98,5 +98,120 @@ namespace DDD_UnitTest
                 }
             }
         }
+
+        [TestMethod]
+        public void MeshPointsModeProjectsEachVertexLikeABarePoint()
+        {
+            var mesh = new DDD.Mesh();
+            mesh.AddVertex(new DDD.Point(1, 0, 0));
+            var objects = new List<object> { mesh };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            // Same worked example as ProjectsAPointOnThePositiveXAxisToTheRightOfCenter: a
+            // vertex with no Color falls back to the same PointColor a bare Point uses.
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100,
+                renderMode: DDD.RenderMode.Points);
+
+            var pixel = framebuffer.GetPixel(72, 50);
+            Assert.AreEqual(((byte)240, (byte)240, (byte)240), pixel);
+        }
+
+        [TestMethod]
+        public void MeshWireframeModeDrawsEachFacesEdges()
+        {
+            var mesh = new DDD.Mesh();
+            int a = mesh.AddVertex(new DDD.Point(1, 0, 0));   // projects to (72, 50)
+            int b = mesh.AddVertex(new DDD.Point(0, 1, 0));   // projects to (50, 28)
+            int c = mesh.AddVertex(new DDD.Point(0, 0, 0));   // projects to (50, 50)
+            mesh.AddFace(a, b, c);
+            var objects = new List<object> { mesh };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100,
+                renderMode: DDD.RenderMode.Wireframe);
+
+            // Edge endpoints are always included by DrawLine, so checking the three projected
+            // vertices is enough to confirm all three edges were drawn.
+            var wireColor = ((byte)230, (byte)230, (byte)230);
+            Assert.AreEqual(wireColor, framebuffer.GetPixel(72, 50));
+            Assert.AreEqual(wireColor, framebuffer.GetPixel(50, 28));
+            Assert.AreEqual(wireColor, framebuffer.GetPixel(50, 50));
+        }
+
+        [TestMethod]
+        public void MeshSolidModeFillsAFrontFacingFaceAtFullIntensity()
+        {
+            var mesh = new DDD.Mesh();
+            int a = mesh.AddVertex(new DDD.Point(1, 0, 0));
+            int b = mesh.AddVertex(new DDD.Point(0, 1, 0));
+            int c = mesh.AddVertex(new DDD.Point(0, 0, 0));
+            mesh.AddFace(a, b, c); // winding gives face normal (0,0,1) - facing the camera
+
+            var objects = new List<object> { mesh };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100,
+                renderMode: DDD.RenderMode.Solid);
+
+            // Facing the camera dead-on quantizes to the top shading level (1.0), leaving the
+            // default face color (200,200,200) unchanged.
+            var faceColor = ((byte)200, (byte)200, (byte)200);
+            Assert.AreEqual(faceColor, framebuffer.GetPixel(72, 50)); // vertex a
+            Assert.AreEqual(faceColor, framebuffer.GetPixel(50, 50)); // vertex c
+            Assert.AreEqual(((byte)0, (byte)0, (byte)0), framebuffer.GetPixel(10, 10)); // outside the face
+        }
+
+        [TestMethod]
+        public void MeshSolidModeCullsABackFacingFace()
+        {
+            var mesh = new DDD.Mesh();
+            int a = mesh.AddVertex(new DDD.Point(1, 0, 0));
+            int b = mesh.AddVertex(new DDD.Point(0, 1, 0));
+            int c = mesh.AddVertex(new DDD.Point(0, 0, 0));
+            mesh.AddFace(a, c, b); // reversed winding - normal (0,0,-1), facing away from the camera
+
+            var withFace = new List<object> { mesh };
+            var empty = new List<object>();
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer withFaceBuffer = DDD.Rasterizer.Render(withFace, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+            DDD.Framebuffer emptyBuffer = DDD.Rasterizer.Render(empty, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+
+            for (int y = 0; y < 100; y++)
+            {
+                for (int x = 0; x < 100; x++)
+                {
+                    Assert.AreEqual(emptyBuffer.GetPixel(x, y), withFaceBuffer.GetPixel(x, y), $"Mismatch at ({x},{y})");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void ShowNormalsDrawsAnIndicatorLineFromTheFaceCentroid()
+        {
+            var mesh = new DDD.Mesh();
+            int a = mesh.AddVertex(new DDD.Point(1, 0, 0));
+            int b = mesh.AddVertex(new DDD.Point(0, 1, 0));
+            int c = mesh.AddVertex(new DDD.Point(0, 0, 0));
+            mesh.AddFace(a, b, c);
+            var objects = new List<object> { mesh };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            // The face normal (0,0,1) is purely along the (orthographically invisible) Z axis, so
+            // the centroid (1/3, 1/3, 0) and the normal's tip project to the same pixel:
+            // round(50 + (1/3) * 21.939322) = 57, round(50 - (1/3) * 21.939322) = 43.
+            DDD.Framebuffer withNormals = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100,
+                renderMode: DDD.RenderMode.Points, showNormals: true);
+            DDD.Framebuffer withoutNormals = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100,
+                renderMode: DDD.RenderMode.Points, showNormals: false);
+
+            Assert.AreEqual(((byte)240, (byte)100, (byte)220), withNormals.GetPixel(57, 43));
+            Assert.AreEqual(((byte)0, (byte)0, (byte)0), withoutNormals.GetPixel(57, 43));
+        }
     }
 }
