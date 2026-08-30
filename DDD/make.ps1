@@ -1,7 +1,8 @@
 Param(
     [Switch]$PowerShellGallery,
-    [Switch]$Release, 
+    [Switch]$Release,
     [Switch]$KillPrev,
+    [Switch]$Test,
     [String]$ApiKey
 )
 
@@ -40,6 +41,16 @@ Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
 if ($LASTEXITCODE -ne 0) {
     Write-Host "# Fix errors and re-run." -ForegroundColor Green
+    return
+}
+
+if ($Test) {
+    $cmd = "dotnet test '$root\..\UnitTest-Point\UnitTest.csproj' --configuration $config"
+    Write-Host "# $cmd" -ForegroundColor Green
+    Invoke-Expression $cmd
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "# Tests failed." -ForegroundColor Red
+    }
     return
 }
 
