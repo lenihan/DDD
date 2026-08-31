@@ -95,6 +95,12 @@ namespace DDD
                     UpdateBBox(vertex.Position);
                 }
             }
+            else if (input is Light)
+            {
+                // Lights don't contribute to the bounding box - a light shouldn't change how
+                // the camera frames the scene's geometry.
+                _objects.Add(input);
+            }
             else
             {
                 // Throw a terminating error for types that are not supported.

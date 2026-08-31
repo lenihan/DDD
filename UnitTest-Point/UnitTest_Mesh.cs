@@ -51,5 +51,37 @@ namespace DDD_UnitTest
 
             Assert.IsTrue(mesh.ToString() == "Mesh: 3 vertices, 1 faces\n");
         }
+        [TestMethod]
+        public void MaterialDefaultsToNullAndCanBeAssigned()
+        {
+            DDD.Mesh mesh = new DDD.Mesh();
+            Assert.IsNull(mesh.Material);
+
+            var material = new DDD.Material(new DDD.Color(1, 2, 3));
+            mesh.Material = material;
+            Assert.AreEqual(material, mesh.Material);
+        }
+        [TestMethod]
+        public void BoundingBoxCenterOfAnEmptyMeshIsTheOrigin()
+        {
+            DDD.Mesh mesh = new DDD.Mesh();
+            Assert.AreEqual(new DDD.Point(0, 0, 0), mesh.BoundingBoxCenter());
+        }
+        [TestMethod]
+        public void BoundingBoxCenterOfASingleVertexIsThatVertex()
+        {
+            DDD.Mesh mesh = new DDD.Mesh();
+            mesh.AddVertex(new DDD.Point(3, -1, 4));
+            Assert.AreEqual(new DDD.Point(3, -1, 4), mesh.BoundingBoxCenter());
+        }
+        [TestMethod]
+        public void BoundingBoxCenterIsTheMidpointOfTheExtremes()
+        {
+            DDD.Mesh mesh = new DDD.Mesh();
+            mesh.AddVertex(new DDD.Point(-2, 0, 10));
+            mesh.AddVertex(new DDD.Point(4, 6, -2));
+            mesh.AddVertex(new DDD.Point(0, 3, 4)); // interior point, doesn't move the center
+            Assert.AreEqual(new DDD.Point(1, 3, 4), mesh.BoundingBoxCenter());
+        }
     }
 }

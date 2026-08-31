@@ -149,5 +149,19 @@ namespace DDD_UnitTest
             Assert.AreEqual(128, mesh.Faces.Count);
             AssertAllFacesMatchStoredVertexNormals(mesh);
         }
+
+        [TestMethod]
+        public void CornellBoxHasTheExpectedVertexAndFaceCountsAndAllFacesCorrectlyWound()
+        {
+            // 5 walls (no front wall) * 4 vertices/2 faces + 2 blocks * 24 vertices/12 faces.
+            DDD.Mesh mesh = DDD.Primitives.CornellBox();
+
+            Assert.AreEqual(5 * 4 + 2 * 24, mesh.Vertices.Count);
+            Assert.AreEqual(5 * 2 + 2 * 12, mesh.Faces.Count);
+            // Winding is self-consistent per face even though the walls (inward normals) and
+            // blocks (outward normals) use opposite conventions - this check doesn't assume a
+            // single global "outward" direction for the whole mesh.
+            AssertAllFacesMatchStoredVertexNormals(mesh);
+        }
     }
 }

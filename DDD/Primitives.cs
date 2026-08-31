@@ -123,6 +123,35 @@ namespace DDD
             return mesh;
         }
 
+        // The classic Cornell Box lighting test scene: a room (red left wall, green right wall,
+        // white back/floor/ceiling) with no front wall so the interior is visible, plus two
+        // blocks. Room: X in [-1,1], Y in [0,2], Z in [-1,1]. Wall normals point inward, toward
+        // the room's center - the opposite convention from Box, which is why this doesn't just
+        // call Box and drop a face.
+        public static Mesh CornellBox()
+        {
+            var mesh = new Mesh();
+            var white = new Color(200, 200, 200);
+            var red = new Color(200, 50, 50);
+            var green = new Color(50, 200, 50);
+            var x = new Vector(1, 0, 0);
+            var y = new Vector(0, 1, 0);
+            var z = new Vector(0, 0, 1);
+
+            AddQuad(mesh, new Point(0, 1, -1), x, 1, y, 1, z, white);      // back:    Cross(X,Y)=Z
+            AddQuad(mesh, new Point(-1, 1, 0), y, 1, z, 1, x, red);        // left:    Cross(Y,Z)=X
+            AddQuad(mesh, new Point(1, 1, 0), z, 1, y, 1, -x, green);      // right:   Cross(Z,Y)=-X
+            AddQuad(mesh, new Point(0, 0, 0), z, 1, x, 1, y, white);       // floor:   Cross(Z,X)=Y
+            AddQuad(mesh, new Point(0, 2, 0), x, 1, z, 1, -y, white);      // ceiling: Cross(X,Z)=-Y
+
+            // Two blocks, a classic Cornell Box detail, each rotated slightly for visual
+            // interest rather than axis-aligned.
+            AppendMesh(mesh, Box(0.6, 1.2, 0.6), Matrix.RotateY(15), new Vector(-0.35, 0.6, -0.3));
+            AppendMesh(mesh, Box(0.6, 0.6, 0.6), Matrix.RotateY(-18), new Vector(0.35, 0.3, 0.3));
+
+            return mesh;
+        }
+
         static Mesh Frustum(double baseRadius, double topRadius, double height, int segments, Point center)
         {
             int steps = Math.Max(3, segments);
@@ -169,23 +198,55 @@ namespace DDD
         }
 
         // Adds a flat quad face as 2 triangles with 4 new (non-shared) vertices, all sharing
-        // `normal`. faceCenter +/- t1*h1 +/- t2*h2 traces the 4 corners; as long as
-        // Cross(t1, t2) == normal, this ordering is always correctly wound (outward) by
-        // construction - verified algebraically, not per-call.
-        static void AddQuad(Mesh mesh, Point faceCenter, Vector t1, double h1, Vector t2, double h2, Vector normal)
+        // `normal` (and `color`, if given). faceCenter +/- t1*h1 +/- t2*h2 traces the 4 corners;
+        // as long as Cross(t1, t2) == normal, this ordering is always correctly wound (outward)
+        // by construction - verified algebraically, not per-call.
+        static void AddQuad(Mesh mesh, Point faceCenter, Vector t1, double h1, Vector t2, double h2, Vector normal, Color? color = null)
         {
             Point p0 = faceCenter + t1 * -h1 + t2 * -h2;
             Point p1 = faceCenter + t1 * h1 + t2 * -h2;
             Point p2 = faceCenter + t1 * h1 + t2 * h2;
             Point p3 = faceCenter + t1 * -h1 + t2 * h2;
 
-            int i0 = mesh.AddVertex(new Vertex(p0, normal));
-            int i1 = mesh.AddVertex(new Vertex(p1, normal));
-            int i2 = mesh.AddVertex(new Vertex(p2, normal));
-            int i3 = mesh.AddVertex(new Vertex(p3, normal));
+            Vertex MakeVertex(Point p) => color is Color c ? new Vertex(p, normal, c) : new Vertex(p, normal);
+
+            int i0 = mesh.AddVertex(MakeVertex(p0));
+            int i1 = mesh.AddVertex(MakeVertex(p1));
+            int i2 = mesh.AddVertex(MakeVertex(p2));
+            int i3 = mesh.AddVertex(MakeVertex(p3));
 
             mesh.AddFace(i0, i1, i2);
             mesh.AddFace(i0, i2, i3);
+        }
+
+        // Appends a copy of source's vertices/faces into target, rotating positions and normals
+        // and then translating positions - rotation and translation are handled separately
+        // (rather than as one combined Matrix) because Matrix's Vector multiplication applies
+        // translation too, which would corrupt a rotated normal.
+        static void AppendMesh(Mesh target, Mesh source, Matrix rotation, Vector translation)
+        {
+            int indexOffset = target.Vertices.Count;
+            foreach (Vertex vertex in source.Vertices)
+            {
+                Point position = rotation * vertex.Position + translation;
+                bool hasNormal = vertex.Normal.HasValue;
+                bool hasColor = vertex.Color.HasValue;
+                Vector normal = hasNormal ? rotation * vertex.Normal.GetValueOrDefault() : default;
+                Color color = vertex.Color.GetValueOrDefault();
+
+                Vertex copy = (hasNormal, hasColor) switch
+                {
+                    (true, true) => new Vertex(position, normal, color),
+                    (true, false) => new Vertex(position, normal),
+                    (false, true) => new Vertex(position, color),
+                    _ => new Vertex(position),
+                };
+                target.AddVertex(copy);
+            }
+            foreach (Face face in source.Faces)
+            {
+                target.AddFace(face.A + indexOffset, face.B + indexOffset, face.C + indexOffset);
+            }
         }
 
         // Adds a face from 3 already-created vertices, picking whichever of (b,c)/(c,b) makes
