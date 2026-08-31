@@ -59,22 +59,38 @@ inventing a DDD-native format because it already covers exactly the 1a data
 model (vertices, triangle faces, optional per-vertex normal, optional
 per-vertex color) and is supported by essentially every other 3D tool.
 Start with ASCII `.ply` for both directions (trivial to hand-inspect and
-debug); add binary later only if load speed on large meshes is actually a
-problem. `New-Mesh`/`Import-Ply` and `Export-Ply` (or `Import-Mesh
--Format Ply` / `Export-Mesh -Format Ply` if a format-agnostic wrapper feels
-better once more formats exist — decide at implementation time).
+debug). **Done** — `Import-Ply`/`Export-Ply` read/write ASCII `.ply` today.
+Binary *read* support is still needed, though: 1d bundles the reference
+meshes as binary `.ply` assets (see below), so `PlyFormat` needs to parse
+binary alongside ASCII before that can work. *Write* can stay ASCII-only
+for now — hand-authored meshes don't need it.
 
 ### 1d. Primitives
 Built on the 1a mesh model: `New-Box`/`New-Cube` (alias), `New-Sphere`,
-`New-Cylinder`, `New-Cone`, `New-Torus`, `New-Plane`. `New-Teapot` last —
-the Utah teapot is fixed reference data (a hardcoded set of Bezier control
-points, tessellated at N segments), a fun "real 3D tool" flex but not a
-general capability like the others.
+`New-Cylinder`, `New-Cone`, `New-Torus`, `New-Plane`. Then the classic
+reference test meshes — fixed data, not a general capability like the
+parametric shapes above, but instantly recognizable to anyone who's
+touched 3D graphics and useful as demo/test content:
+`New-Teapot`, `New-Suzanne`, `New-StanfordBunny`. None of these are
+hand-encoded (not even the teapot's Bezier control points) — each is
+bundled as an embedded **binary** `.ply` resource and loaded at runtime
+through `PlyFormat`, since the canonical distributions of all three are
+commonly binary `.ply` already: smaller and more authentic than
+transcribing/re-exporting to ASCII, and a real-world exercise for the
+binary reader rather than only hand-written test fixtures. This is the
+forcing function for the binary-read support flagged in 1c.
 
-### 1e. `New-Light` / `New-Material`
+### 1e. `New-Light` / `New-Material` (+ `New-CornellBox`)
 Replaces the 1b headlamp placeholder with real shading — ambient + diffuse
 (+ specular if it's cheap) lighting driven by one or more lights, materials
-carrying at least a base color and shading coefficients.
+carrying at least a base color and shading coefficients. Also
+`New-CornellBox` — the classic Cornell Box test scene (a room with
+red/green side walls and two blocks), purpose-built for testing how
+convincing shading/lighting looks. Unlike the 1d reference meshes it's
+small and geometrically simple (a handful of rectangular faces with
+specific per-vertex colors), so worth hand-authoring directly rather than
+sourcing as an asset — and it pairs naturally with this step since
+validating `New-Light`/`New-Material` against it is exactly what it's for.
 
 ### 1f. Animation (flip-book)
 No interpolation engine inside DDD — the **caller** supplies a distinct
@@ -213,8 +229,10 @@ model and is more natural for an agent doing multi-step design work.
 2. `Out-3d` face/line/point rendering: fill rasterizer, backface culling,
    normal viz, headlamp shading placeholder (1b)
 3. `.ply` import/export (1c)
-4. Primitives: box, sphere, cylinder, cone, torus, plane, then teapot (1d)
-5. `New-Light` / `New-Material`, replacing the headlamp placeholder (1e)
+4. Primitives: box, sphere, cylinder, cone, torus, plane, then the
+   reference meshes — teapot, Suzanne, Stanford bunny (1d)
+5. `New-Light` / `New-Material`, replacing the headlamp placeholder, plus
+   the Cornell Box test scene (1e)
 6. Animation: caller-driven frame sequences → live `Out-3d` playback,
    `.ply`-per-frame export, `.png`-per-frame export (1f)
 7. Graphing: 2D line/bar/scatter, 3D surface (1g)
