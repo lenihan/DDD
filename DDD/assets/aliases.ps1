@@ -27,6 +27,9 @@
 # Teapot    = teapot
 # Suzanne   = suz
 # Bunny     = bunny
+# Light     = light
+# Material  = mtl
+# CornellBox = cbox
 
 Set-Alias -Name npt -Value New-Point
 Set-Alias -Name nptarr -Value New-PointArray
@@ -53,6 +56,10 @@ Set-Alias -Name npln -Value New-Plane
 Set-Alias -Name nteapot -Value New-Teapot
 Set-Alias -Name nsuz -Value New-Suzanne
 Set-Alias -Name nbunny -Value New-StanfordBunny
+
+Set-Alias -Name nlight -Value New-Light
+Set-Alias -Name nmtl -Value New-Material
+Set-Alias -Name ncbox -Value New-CornellBox
 
 Set-Alias -Name nimat -Value New-IdentityMatrix
 Set-Alias -Name nzmat -Value New-ZeroMatrix

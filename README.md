@@ -135,6 +135,43 @@ New-Suzanne | Out-3d -RenderMode Solid         # Blender's default test mesh
 New-StanfordBunny | Out-3d -RenderMode Solid   # Stanford Computer Graphics Laboratory, 1994
 ```
 
+### Lights and materials
+
+`-RenderMode Solid` shades faces with ambient + diffuse + (optional) specular lighting. With no
+`Light` piped in, a fixed camera-relative "headlamp" lights whichever faces point toward you,
+regardless of scene rotation. Pipe one or more `New-Light` objects alongside your mesh and they
+behave like real lights fixed in the room instead - rotating with the scene as it turns:
+
+```powershell
+New-Light -Direction (New-Vector 0 1 0)        # directional, "toward the light" convention
+New-Light -Position (New-Point 0 3 2)          # point light, at a position
+New-Light -LookAt $mesh                        # directional, aimed at $mesh's bounding-box center
+```
+
+`New-Material` controls how a `Mesh` responds to light - assign it to `$mesh.Material`:
+
+```powershell
+$mesh = New-Sphere
+$mesh.Material = New-Material -Color (New-Color 100 150 255) -Specular 0.6 -Shininess 32
+$mesh, (New-Light -Position (New-Point 2 3 2)) | Out-3d -RenderMode Solid
+```
+
+A `Mesh` with no `Material` uses a default that reproduces the old fixed headlamp look exactly.
+Lights don't carry a color, only intensity, so shading always stays a single brightness scalar
+applied to a face's own color - sixel output only exact-matches a small fixed palette, and a
+colored-light tint would need a much larger one.
+
+`New-CornellBox` builds the classic Cornell Box lighting test scene (red/green side walls, two
+blocks) - purpose-built for seeing how convincing your lights/materials look:
+
+```powershell
+(New-CornellBox), (New-Light -Position (New-Point 0 1.9 0) -Intensity 0.9) | Out-3d -RenderMode Solid
+```
+
+(Both sides need parentheses when a statement starts with a bare command name - PowerShell parses
+`Cmd, ...` at the start of a statement as arguments to `Cmd`, not an array. Starting with a
+variable, e.g. `$mesh, (New-Light ...)`, doesn't have this problem.)
+
 ## Terminal requirements
 
 `Out-3d` needs a terminal that understands sixel graphics. Known-good options:
