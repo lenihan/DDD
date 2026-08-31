@@ -92,23 +92,129 @@ specific per-vertex colors), so worth hand-authoring directly rather than
 sourcing as an asset — and it pairs naturally with this step since
 validating `New-Light`/`New-Material` against it is exactly what it's for.
 
-### 1f. Animation (flip-book)
+### 1f. Animation (flip-book) + Cameras
 No interpolation engine inside DDD — the **caller** supplies a distinct
-scene/mesh per frame (e.g. a PowerShell loop that moves/reshapes a mesh and
-emits it each tick); DDD's job is just consuming that per-frame sequence
-three ways:
+scene per frame (e.g. a PowerShell loop that moves/reshapes meshes and
+emits them each tick), optionally paired with an explicit `Camera` for that
+frame (position, look-at target, up, FOV, near/far, perspective/ortho)
+rather than `Out-3d`'s normal auto-fit interactive turntable — directed,
+repeatable shots are the point of rendering video, not just watching an
+object spin. DDD's job is just consuming that per-frame (scene, camera)
+sequence four ways:
 - **Live playback** — extend `Out-3d`'s existing render loop to step
   through caller-supplied frames instead of (or in addition to) the
   turntable
 - **Geometry export** — write each frame as a numbered `.ply` file
-  (`frame0001.ply`, `frame0002.ply`, ...)
-- **Image export** — render each frame and write it as a numbered `.png`
-  file, for stitching into a GIF/video externally or embedding in docs
+  (`frame0001.ply`, `frame0002.ply`, ...) - mesh-only, works today without
+  waiting on 1h
+- **Scene export** — once 1h's glTF writer exists, write each frame as a
+  standalone numbered `.glb` instead (`frame0001.glb`, ...), capturing the
+  mesh(es), materials, lights, and camera together rather than just
+  geometry. This is the same writer 1h needs anyway, just called once per
+  frame - the payoff is that each frame becomes an independently editable
+  file in any glTF-aware tool (Blender, etc.), not an opaque intermediate:
+  open one frame, tweak it, re-render just that frame.
+- **Image export** — render each frame (using its camera, if given) and
+  write it as a numbered `.png` file, for stitching into a video externally
+  (e.g. `ffmpeg`) or embedding in docs
 
-A shared "render one frame" core should back all three paths so playback
-and both export modes can't drift apart.
+A shared "render one frame" core should back all four paths so playback
+and every export mode can't drift apart. The `Camera` type is real DDD
+data independent of glTF, but 1h's glTF camera import targets the same
+type. Combined with 1h's "bake glTF animation on import," this closes a
+full loop: import a real animated `.gltf` (authored elsewhere, with real
+keyframes) → DDD samples it into a frame sequence → explode that into
+per-frame `.glb` files → hand-edit any single frame in an external tool →
+render each frame to `.png` → stitch into a video externally.
 
-### 1g. Graphing
+### 1g. Rendering correctness + performance: Z-buffer, multi-core
+Solid mode currently has no depth buffer or face sorting at all —
+`DrawMesh` fills faces in whatever order `Mesh.Faces` stores them, so a
+farther face drawn after a nearer one simply overwrites it on screen. This
+is invisible for convex primitives (backface culling alone hides every
+face that would need depth testing), but a real gap for non-convex or
+multi-object scenes — `New-CornellBox` (a room plus two blocks, definitely
+non-convex) is exactly the kind of scene where it can show up, and it was
+only ever unit-tested for winding/vertex counts, never actually checked
+visually for correct occlusion.
+
+Add a real per-pixel depth buffer (same dimensions as `Framebuffer`, one
+float per pixel) so `FillTriangle` compares depth before writing rather
+than trusting draw order. This doubles as the enabler for safe multi-core
+rendering: partition `Mesh.Faces` across threads, each rasterizing into
+the *same* framebuffer/depth-buffer with a depth-compare-and-write per
+pixel — correct regardless of which thread gets there first, no per-face
+ordering dependency. (A simpler alternative if a depth buffer feels
+premature: partition the *framebuffer* by row-band instead, one thread per
+band, each rasterizing every face but only writing pixels in its own rows
+— no synchronization needed, but doesn't fix the depth-ordering bug on its
+own.) Multi-core performance matters most once frame rendering is
+happening in bulk for video (1f) rather than once per interactive frame.
+
+### 1h. glTF import/export
+Treated as a first-class DDD format alongside `.ply`, not just a
+someday-maybe note — but scoped deliberately, since glTF 2.0's spec has a
+long tail and DDD's renderer is a CPU/sixel software rasterizer, not a
+GPU: some glTF features cost far more to support well than they'd ever be
+visible as, at typical sixel/terminal resolution and palette size.
+
+**In scope:**
+- JSON parsing (`System.Text.Json`, already in the BCL, no new dependency)
+  and the `.glb` binary container (a single self-contained file, same
+  instinct as bundling the 1d reference meshes as binary `.ply`) —
+  prioritized over loose `.gltf` + `.bin` + texture files
+- Buffer/BufferView/Accessor — glTF's generic typed-binary-data layer
+  (component type, vector width, stride, min/max), the plumbing everything
+  else sits on
+- Mesh import/export (`primitive.attributes` POSITION/NORMAL/COLOR_0 +
+  `indices` ↔ `Mesh`) — maps closely onto what `PlyFormat` already does;
+  non-TRIANGLES primitive modes (LINES/POINTS) map onto `RenderMode` or
+  are rejected on import
+- Materials, **scalar factors only** (`baseColorFactor`, `metallicFactor`,
+  `roughnessFactor`, `emissiveFactor`) mapped onto an extended `Material`,
+  still shaded per-face like today — `metallic`/`roughness` adjust the
+  existing ambient/diffuse/specular formula rather than a real
+  Cook-Torrance BRDF
+- Scene graph, **flattened on import**: bake each node's world transform
+  into its mesh's vertices once, rather than building a live hierarchical
+  scene graph DDD doesn't otherwise have
+- Lights (`KHR_lights_punctual`, now near-core) ↔ `Light` — needs a
+  `LightKind.Spot` added; also reopens per-light color, deliberately
+  dropped in 1e for palette-quantization reasons
+- Cameras ↔ the new `Camera` type from 1f — wanted independent of glTF
+  too, for directing precise video shots rather than only the auto-fit
+  interactive turntable
+- Animation, **baked on import**: evaluate glTF's keyframe samplers
+  (LINEAR/STEP/CUBICSPLINE) at N sampled times and produce a caller-style
+  frame sequence — feeds directly into 1f's existing playback/export
+  mechanism rather than needing DDD's renderer to understand live
+  interpolation. Paired with mesh/material/light/camera **export** above,
+  this is also what makes 1f's per-frame `.glb` export meaningful: bake an
+  animated `.gltf` down to a frame sequence, then re-export each frame as
+  its own editable `.glb`.
+
+**Explicitly out of scope (for now):**
+- Textures — waiting to see how far scalar-only materials get first. DDD
+  is mostly used to *create* content (procedural/generated meshes), where
+  materials/shading standing in for textures is often good enough; if
+  that holds up, the case for textures gets a lot weaker. Real textures
+  would also need an image decoder (PNG at minimum — .NET's built-in image
+  support is Windows-only, so this means a new cross-platform dependency
+  or a hand-rolled decoder) and a rewrite of Solid-mode shading from
+  per-face to per-pixel (barycentric-interpolated UV/normal sampled inside
+  `FillTriangle`), which would also force `SixelEncoder` from
+  exact-palette-match to nearest-color-match, since per-pixel sampled/lit
+  color won't fit a small discrete level set. By far the single biggest
+  item on this list — sized separately if/when it's actually needed.
+- Skinning/skeletal animation — a large, separate subsystem (bind poses,
+  joint hierarchies, per-vertex weight blending) with no fit for any
+  current DDD use case.
+- Morph targets — moderate cost, lower priority than the above; revisit
+  later.
+- Any extension beyond `KHR_lights_punctual` (Draco compression, vendor
+  extensions, etc.).
+
+### 1i. Graphing
 A new use case, built on top of everything above (points/lines/faces
 rendering, primitives-as-building-blocks, the mesh model) rather than
 before it: `New-LineGraph` / `New-BarChart` / `New-ScatterPlot` (2D,
@@ -178,10 +284,10 @@ don't block primitives/animation/graphing on it.
 
 ### Scene format for multi-object work
 `.ply` (from 1c) covers a single mesh well but has no concept of multiple
-positioned objects, materials, or lights. Once that's needed (multi-object
-scenes, post-Part-1), lean on **glTF/GLB** — an existing, well-supported
-standard for exactly that — rather than inventing a DDD-native scene
-format.
+positioned objects, materials, lights, or cameras. See 1h for the scoped
+glTF/GLB import/export plan that covers this, now pulled into Part 1
+rather than deferred — the trigger condition (multi-object scenes with
+lights/materials) already exists as of 1e.
 
 ### Session/state model
 Decide early: does the server hold mesh state across calls (a "scene graph"
@@ -233,15 +339,22 @@ model and is more natural for an agent doing multi-step design work.
    reference meshes — teapot, Suzanne, Stanford bunny (1d)
 5. `New-Light` / `New-Material`, replacing the headlamp placeholder, plus
    the Cornell Box test scene (1e)
-6. Animation: caller-driven frame sequences → live `Out-3d` playback,
-   `.ply`-per-frame export, `.png`-per-frame export (1f)
-7. Graphing: 2D line/bar/scatter, 3D surface (1g)
-8. MCP server wrapping primitives/transforms/export (Part 2) — small
-   surface, but already lets an agent build and export simple shapes
-   end to end
-9. Boolean ops + arrays (Part 2) — unblocks real mechanical/parametric
-   parts; scope CSG (library vs. hand-rolled) separately when this starts
-10. Claude Skill + reference doc + demo pieces (Part 3) — discoverability
+6. Animation + Cameras: caller-driven (scene, camera) frame sequences →
+   live `Out-3d` playback, `.ply`-per-frame export, `.png`-per-frame
+   export for video (1f) — **in progress**
+7. Rendering correctness + performance: Z-buffer (fixes a real
+   depth-ordering gap for non-convex/multi-object scenes), multi-core
+   rendering (1g)
+8. glTF import/export: mesh/materials(scalar)/scene(flattened)/lights/
+   cameras/animation(baked); textures and skinning explicitly deferred
+   (1h)
+9. Graphing: 2D line/bar/scatter, 3D surface (1i)
+10. MCP server wrapping primitives/transforms/export (Part 2) — small
+    surface, but already lets an agent build and export simple shapes
+    end to end
+11. Boolean ops + arrays (Part 2) — unblocks real mechanical/parametric
+    parts; scope CSG (library vs. hand-rolled) separately when this starts
+12. Claude Skill + reference doc + demo pieces (Part 3) — discoverability
     layer, can start in parallel with step 1 since it doesn't block on new
     code
 
