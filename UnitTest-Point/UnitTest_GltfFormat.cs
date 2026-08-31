@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -38,7 +39,7 @@ namespace DDD_UnitTest
             DDD.Mesh mesh = Triangle();
 
             byte[] glb = DDD.GltfFormat.Serialize(mesh);
-            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb);
+            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Mesh>().Single();
 
             Assert.AreEqual(3, roundTripped.Vertices.Count);
             for (int i = 0; i < mesh.Vertices.Count; i++)
@@ -61,7 +62,7 @@ namespace DDD_UnitTest
             mesh.AddFace(a, b, c);
 
             byte[] glb = DDD.GltfFormat.Serialize(mesh);
-            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb);
+            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Mesh>().Single();
 
             Assert.AreEqual(3, roundTripped.Vertices.Count);
             Assert.IsNull(roundTripped.Vertices[0].Normal);
@@ -78,7 +79,7 @@ namespace DDD_UnitTest
             DDD.Mesh mesh = DDD.Primitives.Box(2, 2, 2);
 
             byte[] glb = DDD.GltfFormat.Serialize(mesh);
-            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb);
+            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Mesh>().Single();
 
             Assert.AreEqual(mesh.Vertices.Count, roundTripped.Vertices.Count);
             Assert.AreEqual(mesh.Faces.Count, roundTripped.Faces.Count);
@@ -195,7 +196,7 @@ namespace DDD_UnitTest
             mesh.Material = original;
 
             byte[] glb = DDD.GltfFormat.Serialize(mesh);
-            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb);
+            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Mesh>().Single();
 
             Assert.IsTrue(roundTripped.Material.HasValue);
             DDD.Material rt = roundTripped.Material!.Value;
@@ -219,13 +220,123 @@ namespace DDD_UnitTest
             mesh.Material = original;
 
             byte[] glb = DDD.GltfFormat.Serialize(mesh);
-            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb);
+            DDD.Mesh roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Mesh>().Single();
 
             Assert.IsTrue(roundTripped.Material.HasValue);
             DDD.Material rt = roundTripped.Material!.Value;
             Assert.AreEqual(original.Diffuse, rt.Diffuse, 1e-6);
             Assert.AreEqual(original.Specular, rt.Specular, 1e-6);
             Assert.AreEqual(original.Shininess, rt.Shininess, 1e-6);
+        }
+
+        static void AssertVectorsEqual(DDD.Vector expected, DDD.Vector actual, double tolerance)
+        {
+            Assert.AreEqual(expected.X, actual.X, tolerance, "X");
+            Assert.AreEqual(expected.Y, actual.Y, tolerance, "Y");
+            Assert.AreEqual(expected.Z, actual.Z, tolerance, "Z");
+        }
+
+        [TestMethod]
+        public void RoundTripsAPointLight()
+        {
+            var light = new DDD.Light(new DDD.Point(1, 2, 3), 1.5);
+            var objects = new List<object> { light };
+
+            byte[] glb = DDD.GltfFormat.Serialize(objects);
+            DDD.Light roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Light>().Single();
+
+            Assert.AreEqual(DDD.LightKind.Point, roundTripped.Kind);
+            Assert.AreEqual(new DDD.Point(1, 2, 3), roundTripped.Position);
+            Assert.AreEqual(1.5, roundTripped.Intensity, 1e-9);
+        }
+
+        [TestMethod]
+        public void RoundTripsADirectionalLightAlreadyAlignedWithLocalMinusZ()
+        {
+            // direction = (0,0,-1) exactly matches glTF's local -Z convention, so
+            // QuaternionFromDirection takes the identity shortcut - no floating-point rotation
+            // math involved, so this should round-trip exactly, not just within tolerance.
+            var light = new DDD.Light(new DDD.Vector(0, 0, -1), 0.75);
+            var objects = new List<object> { light };
+
+            byte[] glb = DDD.GltfFormat.Serialize(objects);
+            DDD.Light roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Light>().Single();
+
+            Assert.AreEqual(DDD.LightKind.Directional, roundTripped.Kind);
+            Assert.AreEqual(new DDD.Vector(0, 0, -1), roundTripped.Direction);
+            Assert.AreEqual(0.75, roundTripped.Intensity, 1e-9);
+        }
+
+        [TestMethod]
+        public void RoundTripsADirectionalLightAtAGenericAngle()
+        {
+            // A direction with no special relationship to -Z - exercises the general shortest-
+            // arc quaternion path in both QuaternionFromDirection and RotateByQuaternion.
+            var light = new DDD.Light(new DDD.Vector(1, 2, 3), 1.0);
+            var objects = new List<object> { light };
+
+            byte[] glb = DDD.GltfFormat.Serialize(objects);
+            DDD.Light roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Light>().Single();
+
+            AssertVectorsEqual(DDD.Vector.Normalize(new DDD.Vector(1, 2, 3)), roundTripped.Direction, 1e-9);
+        }
+
+        [TestMethod]
+        public void RoundTripsADirectionalLightExactlyOppositeLocalMinusZ()
+        {
+            // direction = (0,0,1) is the 180-degree edge case QuaternionFromDirection special-
+            // cases (dot < -0.999999), since the general shortest-arc formula is singular there.
+            var light = new DDD.Light(new DDD.Vector(0, 0, 1), 1.0);
+            var objects = new List<object> { light };
+
+            byte[] glb = DDD.GltfFormat.Serialize(objects);
+            DDD.Light roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Light>().Single();
+
+            AssertVectorsEqual(new DDD.Vector(0, 0, 1), roundTripped.Direction, 1e-9);
+        }
+
+        [TestMethod]
+        public void RoundTripsASpotLight()
+        {
+            var light = new DDD.Light(new DDD.Point(1, 0, 0), new DDD.Vector(0, -1, 0),
+                outerConeAngleDegrees: 45, innerConeAngleDegrees: 10, intensity: 2.0);
+            var objects = new List<object> { light };
+
+            byte[] glb = DDD.GltfFormat.Serialize(objects);
+            DDD.Light roundTripped = DDD.GltfFormat.Parse(glb).OfType<DDD.Light>().Single();
+
+            Assert.AreEqual(DDD.LightKind.Spot, roundTripped.Kind);
+            Assert.AreEqual(new DDD.Point(1, 0, 0), roundTripped.Position);
+            AssertVectorsEqual(new DDD.Vector(0, -1, 0), roundTripped.Direction, 1e-9);
+            Assert.AreEqual(45.0, roundTripped.OuterConeAngleDegrees, 1e-6);
+            Assert.AreEqual(10.0, roundTripped.InnerConeAngleDegrees, 1e-6);
+            Assert.AreEqual(2.0, roundTripped.Intensity, 1e-9);
+        }
+
+        [TestMethod]
+        public void RoundTripsAMeshAndALightTogether()
+        {
+            var objects = new List<object> { Triangle(), new DDD.Light(new DDD.Point(0, 5, 0)) };
+
+            byte[] glb = DDD.GltfFormat.Serialize(objects);
+            List<object> roundTripped = DDD.GltfFormat.Parse(glb);
+
+            Assert.AreEqual(1, roundTripped.OfType<DDD.Mesh>().Count());
+            Assert.AreEqual(1, roundTripped.OfType<DDD.Light>().Count());
+        }
+
+        [TestMethod]
+        public void SerializeWritesTheExtensionsUsedDeclarationOnlyWhenThereAreLights()
+        {
+            byte[] withLight = DDD.GltfFormat.Serialize(new List<object> { new DDD.Light(new DDD.Vector(0, 1, 0)) });
+            using JsonDocument withLightDoc = JsonDocument.Parse(ExtractJsonChunk(withLight));
+            string[] extensionsUsed = withLightDoc.RootElement.GetProperty("extensionsUsed").EnumerateArray().Select(e => e.GetString()!).ToArray();
+            string[] expected = { "KHR_lights_punctual" };
+            CollectionAssert.AreEqual(expected, extensionsUsed);
+
+            byte[] meshOnly = DDD.GltfFormat.Serialize(Triangle());
+            using JsonDocument meshOnlyDoc = JsonDocument.Parse(ExtractJsonChunk(meshOnly));
+            Assert.IsFalse(meshOnlyDoc.RootElement.TryGetProperty("extensionsUsed", out _));
         }
     }
 }

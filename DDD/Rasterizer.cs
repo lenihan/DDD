@@ -45,8 +45,11 @@ namespace DDD
             .ToArray();
 
         // A Light rotated into the current frame's view space (or the synthetic default
-        // headlamp, left unrotated since it's already camera-relative by definition).
-        readonly record struct EffectiveLight(bool IsPoint, Vector Direction, Point Position, double Intensity);
+        // headlamp, left unrotated since it's already camera-relative by definition). For a
+        // Spot, Direction is the aim axis (same sense as Light.Direction for Spot - the
+        // direction it shines toward), not "toward the light" like Directional's Direction.
+        readonly record struct EffectiveLight(LightKind Kind, Vector Direction, Point Position, double Intensity,
+            double InnerConeAngleDegrees, double OuterConeAngleDegrees);
 
         public static IReadOnlyList<(byte R, byte G, byte B)> Palette { get; } = new[]
         {
@@ -150,11 +153,15 @@ namespace DDD
             // has none - then fall back to the fixed camera-relative headlamp (see ViewDirection).
             List<Light> userLights = objects.OfType<Light>().ToList();
             List<EffectiveLight> lights = userLights.Count > 0
-                ? userLights.Select(l => l.Kind == LightKind.Point
-                    ? new EffectiveLight(true, default, RotateLocal(l.Position), l.Intensity)
-                    : new EffectiveLight(false, Vector.Normalize(rotation * l.Direction), default, l.Intensity))
+                ? userLights.Select(l => l.Kind switch
+                    {
+                        LightKind.Point => new EffectiveLight(LightKind.Point, default, RotateLocal(l.Position), l.Intensity, 0, 0),
+                        LightKind.Spot => new EffectiveLight(LightKind.Spot, Vector.Normalize(rotation * l.Direction), RotateLocal(l.Position),
+                            l.Intensity, l.InnerConeAngleDegrees, l.OuterConeAngleDegrees),
+                        _ => new EffectiveLight(LightKind.Directional, Vector.Normalize(rotation * l.Direction), default, l.Intensity, 0, 0),
+                    })
                   .ToList()
-                : new List<EffectiveLight> { new EffectiveLight(false, ViewDirection, default, 1.0) };
+                : new List<EffectiveLight> { new EffectiveLight(LightKind.Directional, ViewDirection, default, 1.0, 0, 0) };
 
             double axisLength = radius * 1.15;
             DrawSegment(framebuffer, Project, center, center + new Vector(1, 0, 0) * axisLength, AxisX);
@@ -226,21 +233,43 @@ namespace DDD
             double total = material.Ambient + emissiveLuminance;
             foreach (EffectiveLight light in lights)
             {
-                Vector lightDir = light.IsPoint
-                    ? Vector.Normalize(light.Position - rotatedCentroid)
-                    : light.Direction;
+                Vector lightDir = light.Kind == LightKind.Directional
+                    ? light.Direction
+                    : Vector.Normalize(light.Position - rotatedCentroid); // Point and Spot both have a Position
+
+                double spotAttenuation = light.Kind == LightKind.Spot
+                    ? SpotAttenuation(light, lightDir)
+                    : 1.0;
+                if (spotAttenuation <= 0) continue;
 
                 double diffuseFactor = Math.Max(0, Vector.Dot(unitNormal, lightDir));
-                total += diffuseFactor * material.Diffuse * light.Intensity;
+                total += diffuseFactor * material.Diffuse * light.Intensity * spotAttenuation;
 
                 if (material.Specular > 0 && diffuseFactor > 0)
                 {
                     Vector reflectDir = unitNormal * (2 * Vector.Dot(unitNormal, lightDir)) - lightDir;
                     double specularFactor = Math.Pow(Math.Max(0, Vector.Dot(reflectDir, ViewDirection)), material.Shininess);
-                    total += specularFactor * material.Specular * light.Intensity;
+                    total += specularFactor * material.Specular * light.Intensity * spotAttenuation;
                 }
             }
             return QuantizeIntensity(Math.Clamp(total, 0.0, 1.0));
+        }
+
+        // Linear falloff by angle from the spot's aim axis - simpler to reason about (and to
+        // hand-verify in tests) than glTF's own cosine-based smoothstep formula, at the cost of
+        // not matching it exactly pixel-for-pixel. lightDir points FROM the surface TOWARD the
+        // light, so -lightDir is the direction the light travels to reach the surface, which is
+        // what's compared against the spot's own aim direction.
+        static double SpotAttenuation(EffectiveLight light, Vector lightDir)
+        {
+            double cos = Math.Clamp(Vector.Dot(light.Direction, -lightDir), -1.0, 1.0);
+            double angleDegrees = Math.Acos(cos) * 180.0 / Math.PI;
+
+            if (angleDegrees >= light.OuterConeAngleDegrees) return 0.0;
+            if (angleDegrees <= light.InnerConeAngleDegrees) return 1.0;
+
+            double coneSpan = light.OuterConeAngleDegrees - light.InnerConeAngleDegrees;
+            return coneSpan > 1e-9 ? 1.0 - (angleDegrees - light.InnerConeAngleDegrees) / coneSpan : 0.0;
         }
 
         static (byte R, byte G, byte B) ShadedColor(Color baseColor, double intensity) =>

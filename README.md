@@ -125,8 +125,11 @@ Import-Ply -Path ./tetrahedron.ply | Out-3d -RenderMode Solid
 
 `Import-Gltf -Path <file>` and `Export-Gltf -Path <file>` read/write binary `.glb` (glTF 2.0) -
 DDD's scene interchange format for multi-object work `.ply` doesn't cover (materials, lights,
-cameras). Covers mesh geometry (positions, normals, per-vertex color, triangle indices) and
-materials; lights/cameras/scene-graph/animation support is planned (see `PLAN.md`). Only `.glb`
+cameras). Covers mesh geometry (positions, normals, per-vertex color, triangle indices),
+materials, and lights (`KHR_lights_punctual` - directional/point/spot); cameras and general
+multi-mesh scene-graph/animation support are still planned (see `PLAN.md`). `Export-Gltf` takes
+any mix of one `Mesh` plus any number of `Light` objects on the pipeline (multiple meshes aren't
+supported yet); `Import-Gltf` writes back out whatever combination the file contains. Only `.glb`
 (single self-contained file) is supported, not loose `.gltf` + `.bin` + textures.
 
 A `Mesh`'s `Material`, if set, round-trips as glTF's PBR `metallicFactor`/`roughnessFactor` -
@@ -135,11 +138,16 @@ DDD still shades per-face with the same ambient/diffuse/specular model either wa
 BRDF: metals get near-zero diffuse response and a strong, tight highlight; non-metals stay
 diffuse-dominant with a subtle one. `Ambient` has no glTF equivalent (real PBR ambient comes from
 image-based lighting, which DDD doesn't do), so round-tripping a `Material` through glTF is lossy
-for anything not already expressed purely as metallic/roughness.
+for anything not already expressed purely as metallic/roughness. `Light` doesn't carry a color
+(see above), so an imported light's `color` field is discarded, and export always omits it.
 
 ```powershell
 $mesh | Export-Gltf -Path ./tetrahedron.glb
 Import-Gltf -Path ./tetrahedron.glb | Out-3d -RenderMode Solid
+
+# a mesh plus a light, round-tripped together
+$mesh, (New-Light -Position (New-Point 3 3 3)) | Export-Gltf -Path ./scene.glb
+Import-Gltf -Path ./scene.glb | Out-3d -RenderMode Solid
 ```
 
 ### Reference meshes

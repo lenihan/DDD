@@ -14,13 +14,16 @@ namespace DDD
     // is not supported; a .glb is a single self-contained file, matching the instinct that
     // bundled the 1d reference meshes as binary .ply rather than several loose files.
     //
-    // This first slice covers mesh geometry only (POSITION/NORMAL/COLOR_0 + indices, TRIANGLES
-    // mode) - materials, lights, cameras, scene-graph flattening, and animation baking are
-    // follow-up work (PLAN.md 1h lists the full scope and what's deliberately excluded, e.g.
-    // textures and skinning).
+    // Covers mesh geometry (POSITION/NORMAL/COLOR_0 + indices, TRIANGLES mode), scalar-only PBR
+    // materials, and KHR_lights_punctual lights (no per-light color - see the note on Light).
+    // Cameras, general scene-graph flattening for multiple meshes, and animation baking are
+    // still follow-up work (PLAN.md 1h lists the full scope and what's deliberately excluded,
+    // e.g. textures and skinning).
     //
-    // Known scope limits for this slice: only the first mesh's first primitive is read on
-    // import; only TRIANGLES mode is supported (others are rejected, not converted).
+    // Known scope limits: only the first mesh's first primitive is read on import (multiple
+    // meshes need the scene-graph-flattening work above); only TRIANGLES mode is supported
+    // (others are rejected, not converted); export writes at most one Mesh (the first found)
+    // alongside any number of Lights.
     //
     // Nested DTO type names are prefixed "Gltf" (GltfMesh, GltfNode, ...) purely to avoid
     // colliding with DDD's own Mesh/etc. types in this namespace - a nested type would otherwise
@@ -64,6 +67,8 @@ namespace DDD
             public List<GltfBufferView>? BufferViews { get; set; }
             public List<GltfBuffer>? Buffers { get; set; }
             public List<GltfMaterial>? Materials { get; set; }
+            public List<string>? ExtensionsUsed { get; set; }
+            public GltfExtensions? Extensions { get; set; }
         }
         sealed class GltfAsset
         {
@@ -76,6 +81,33 @@ namespace DDD
         sealed class GltfNode
         {
             public int? Mesh { get; set; }
+            public double[]? Translation { get; set; }
+            public double[]? Rotation { get; set; } // quaternion [x, y, z, w]
+            public GltfExtensions? Extensions { get; set; }
+        }
+        // Reused at both document root (Lights: the palette of lights in the file) and node
+        // level (Light: which one this node carries) - glTF only ever populates one or the
+        // other depending on where the extension object appears.
+        sealed class GltfExtensions
+        {
+            [JsonPropertyName("KHR_lights_punctual")]
+            public GltfLightsPunctualExtension? KhrLightsPunctual { get; set; }
+        }
+        sealed class GltfLightsPunctualExtension
+        {
+            public List<GltfLight>? Lights { get; set; }
+            public int? Light { get; set; }
+        }
+        sealed class GltfLight
+        {
+            public string Type { get; set; } = "directional"; // "directional" | "point" | "spot"
+            public double Intensity { get; set; } = 1.0;
+            public GltfSpot? Spot { get; set; }
+        }
+        sealed class GltfSpot
+        {
+            public double InnerConeAngle { get; set; }
+            public double OuterConeAngle { get; set; } = Math.PI / 4;
         }
         sealed class GltfMesh
         {
@@ -124,19 +156,46 @@ namespace DDD
 
         // --- Public API ---
 
-        public static Mesh Read(string path) => Parse(System.IO.File.ReadAllBytes(path));
+        // Reads every object PLAN.md 1h currently supports out of the file: the first mesh's
+        // first primitive (if present) plus any KHR_lights_punctual lights (if present). At
+        // least one of the two must be present, or this throws.
+        public static List<object> Read(string path) => Parse(System.IO.File.ReadAllBytes(path));
 
-        public static void Write(Mesh mesh, string path) => System.IO.File.WriteAllBytes(path, Serialize(mesh));
+        public static void Write(Mesh mesh, string path) => Write(new List<object> { mesh }, path);
+        public static void Write(List<object> objects, string path) => System.IO.File.WriteAllBytes(path, Serialize(objects));
 
-        public static Mesh Parse(byte[] glb)
+        public static List<object> Parse(byte[] glb)
         {
             (GltfDocument document, byte[] binaryChunk) = ReadGlbContainer(glb);
+            var results = new List<object>();
 
-            if (document.Meshes is null || document.Meshes.Count == 0)
+            if (document.Meshes != null && document.Meshes.Count > 0)
             {
-                throw new FormatException("glTF document has no meshes.");
+                results.Add(ParseMesh(document, binaryChunk, document.Meshes[0]));
             }
-            GltfPrimitive primitive = document.Meshes[0].Primitives.FirstOrDefault()
+
+            List<GltfLight>? gltfLights = document.Extensions?.KhrLightsPunctual?.Lights;
+            if (document.Nodes != null && gltfLights != null)
+            {
+                foreach (GltfNode node in document.Nodes)
+                {
+                    if (node.Extensions?.KhrLightsPunctual?.Light is int lightIndex && lightIndex < gltfLights.Count)
+                    {
+                        results.Add(LightFromGltf(gltfLights[lightIndex], node));
+                    }
+                }
+            }
+
+            if (results.Count == 0)
+            {
+                throw new FormatException("glTF document has no meshes or lights to import.");
+            }
+            return results;
+        }
+
+        static Mesh ParseMesh(GltfDocument document, byte[] binaryChunk, GltfMesh gltfMesh)
+        {
+            GltfPrimitive primitive = gltfMesh.Primitives.FirstOrDefault()
                 ?? throw new FormatException("glTF mesh has no primitives.");
             if (primitive.Mode != ModeTriangles)
             {
@@ -193,69 +252,97 @@ namespace DDD
             return mesh;
         }
 
-        public static byte[] Serialize(Mesh mesh)
+        public static byte[] Serialize(Mesh mesh) => Serialize(new List<object> { mesh });
+
+        // Writes at most one Mesh (the first found, if any - "flattened scene graph" for
+        // multiple meshes is separate future work per PLAN.md 1h) plus any number of Lights.
+        public static byte[] Serialize(List<object> objects)
         {
-            bool hasNormal = mesh.Vertices.Any(v => v.Normal.HasValue);
-            bool hasColor = mesh.Vertices.Any(v => v.Color.HasValue);
+            Mesh? mesh = objects.OfType<Mesh>().FirstOrDefault();
+            List<Light> lightObjects = objects.OfType<Light>().ToList();
 
             using var binary = new System.IO.MemoryStream();
             var bufferViews = new List<GltfBufferView>();
             var accessors = new List<GltfAccessor>();
-            var attributes = new Dictionary<string, int>();
-
-            var positions = mesh.Vertices.Select(v => new[] { v.Position.X, v.Position.Y, v.Position.Z }).ToArray();
-            attributes["POSITION"] = WriteVec3FloatAccessor(binary, bufferViews, accessors, positions, TargetArrayBuffer, includeBounds: true);
-
-            if (hasNormal)
-            {
-                var normals = mesh.Vertices.Select(v =>
-                {
-                    Vector n = v.Normal ?? default;
-                    return new[] { n.X, n.Y, n.Z };
-                }).ToArray();
-                attributes["NORMAL"] = WriteVec3FloatAccessor(binary, bufferViews, accessors, normals, TargetArrayBuffer, includeBounds: false);
-            }
-            if (hasColor)
-            {
-                var colors = mesh.Vertices.Select(v =>
-                {
-                    Color c = v.Color ?? default;
-                    return new[] { c.R, c.G, c.B };
-                }).ToArray();
-                attributes["COLOR_0"] = WriteVec3UnsignedByteAccessor(binary, bufferViews, accessors, colors);
-            }
-
-            int[] indices = mesh.Faces.SelectMany(f => new[] { f.A, f.B, f.C }).ToArray();
-            int indicesAccessorIndex = WriteScalarUnsignedIntAccessor(binary, bufferViews, accessors, indices, TargetElementArrayBuffer);
-
+            var meshes = new List<GltfMesh>();
+            var nodes = new List<GltfNode>();
+            var sceneNodeIndices = new List<int>();
             List<GltfMaterial>? materials = null;
-            int? materialIndex = null;
-            if (mesh.Material is Material material)
+
+            if (mesh != null)
             {
-                materials = new List<GltfMaterial> { MaterialToGltf(material) };
-                materialIndex = 0;
+                bool hasNormal = mesh.Vertices.Any(v => v.Normal.HasValue);
+                bool hasColor = mesh.Vertices.Any(v => v.Color.HasValue);
+                var attributes = new Dictionary<string, int>();
+
+                var positions = mesh.Vertices.Select(v => new[] { v.Position.X, v.Position.Y, v.Position.Z }).ToArray();
+                attributes["POSITION"] = WriteVec3FloatAccessor(binary, bufferViews, accessors, positions, TargetArrayBuffer, includeBounds: true);
+
+                if (hasNormal)
+                {
+                    var normals = mesh.Vertices.Select(v =>
+                    {
+                        Vector n = v.Normal ?? default;
+                        return new[] { n.X, n.Y, n.Z };
+                    }).ToArray();
+                    attributes["NORMAL"] = WriteVec3FloatAccessor(binary, bufferViews, accessors, normals, TargetArrayBuffer, includeBounds: false);
+                }
+                if (hasColor)
+                {
+                    var colors = mesh.Vertices.Select(v =>
+                    {
+                        Color c = v.Color ?? default;
+                        return new[] { c.R, c.G, c.B };
+                    }).ToArray();
+                    attributes["COLOR_0"] = WriteVec3UnsignedByteAccessor(binary, bufferViews, accessors, colors);
+                }
+
+                int[] indices = mesh.Faces.SelectMany(f => new[] { f.A, f.B, f.C }).ToArray();
+                int indicesAccessorIndex = WriteScalarUnsignedIntAccessor(binary, bufferViews, accessors, indices, TargetElementArrayBuffer);
+
+                int? materialIndex = null;
+                if (mesh.Material is Material material)
+                {
+                    materials = new List<GltfMaterial> { MaterialToGltf(material) };
+                    materialIndex = 0;
+                }
+
+                meshes.Add(new GltfMesh
+                {
+                    Primitives = new List<GltfPrimitive>
+                    {
+                        new GltfPrimitive { Attributes = attributes, Indices = indicesAccessorIndex, Material = materialIndex, Mode = ModeTriangles },
+                    },
+                });
+                nodes.Add(new GltfNode { Mesh = 0 });
+                sceneNodeIndices.Add(nodes.Count - 1);
             }
 
-            int[] sceneNodeIndices = { 0 };
+            List<GltfLight>? gltfLights = null;
+            if (lightObjects.Count > 0)
+            {
+                gltfLights = new List<GltfLight>();
+                foreach (Light light in lightObjects)
+                {
+                    (GltfLight gltfLight, GltfNode node) = LightToGltf(light, gltfLights.Count);
+                    gltfLights.Add(gltfLight);
+                    nodes.Add(node);
+                    sceneNodeIndices.Add(nodes.Count - 1);
+                }
+            }
+
             var document = new GltfDocument
             {
                 Scene = 0,
-                Scenes = new List<GltfScene> { new GltfScene { Nodes = sceneNodeIndices } },
-                Nodes = new List<GltfNode> { new GltfNode { Mesh = 0 } },
-                Meshes = new List<GltfMesh>
-                {
-                    new GltfMesh
-                    {
-                        Primitives = new List<GltfPrimitive>
-                        {
-                            new GltfPrimitive { Attributes = attributes, Indices = indicesAccessorIndex, Material = materialIndex, Mode = ModeTriangles },
-                        },
-                    },
-                },
-                Accessors = accessors,
-                BufferViews = bufferViews,
-                Buffers = new List<GltfBuffer> { new GltfBuffer { ByteLength = (int)binary.Length } },
+                Scenes = new List<GltfScene> { new GltfScene { Nodes = sceneNodeIndices.ToArray() } },
+                Nodes = nodes.Count > 0 ? nodes : null,
+                Meshes = meshes.Count > 0 ? meshes : null,
+                Accessors = accessors.Count > 0 ? accessors : null,
+                BufferViews = bufferViews.Count > 0 ? bufferViews : null,
+                Buffers = binary.Length > 0 ? new List<GltfBuffer> { new GltfBuffer { ByteLength = (int)binary.Length } } : null,
                 Materials = materials,
+                ExtensionsUsed = gltfLights != null ? new List<string> { "KHR_lights_punctual" } : null,
+                Extensions = gltfLights != null ? new GltfExtensions { KhrLightsPunctual = new GltfLightsPunctualExtension { Lights = gltfLights } } : null,
             };
 
             return WriteGlbContainer(document, binary.ToArray());
@@ -311,6 +398,114 @@ namespace DDD
                     ? new[] { material.Emissive.R / 255.0, material.Emissive.G / 255.0, material.Emissive.B / 255.0 }
                     : null,
             };
+        }
+
+        // --- Light conversion ---
+
+        // A glTF light has no position/direction of its own - it inherits both from whatever
+        // node carries it, via that node's translation and rotation. Directional/Spot lights
+        // point along their node's local -Z axis by convention, so placing or reading one
+        // requires encoding/decoding a rotation quaternion; RotateByQuaternion/
+        // QuaternionFromDirection below are exactly that, with no other use in this file.
+        // No per-light color: KHR_lights_punctual's "color" field is read but discarded, and
+        // export always writes white - see the "No per-light color" note on Light.
+
+        static Light LightFromGltf(GltfLight gltfLight, GltfNode node)
+        {
+            double[] translation = node.Translation ?? new[] { 0.0, 0.0, 0.0 };
+            Point position = new Point(translation[0], translation[1], translation[2]);
+
+            double[] rotation = node.Rotation ?? new[] { 0.0, 0.0, 0.0, 1.0 };
+            Vector direction = RotateByQuaternion(rotation, new Vector(0, 0, -1));
+
+            const double RadiansToDegrees = 180.0 / Math.PI;
+            return gltfLight.Type switch
+            {
+                "point" => new Light(position, gltfLight.Intensity),
+                "spot" => new Light(position, direction,
+                    outerConeAngleDegrees: (gltfLight.Spot?.OuterConeAngle ?? Math.PI / 4) * RadiansToDegrees,
+                    innerConeAngleDegrees: (gltfLight.Spot?.InnerConeAngle ?? 0.0) * RadiansToDegrees,
+                    intensity: gltfLight.Intensity),
+                _ => new Light(direction, gltfLight.Intensity), // "directional"
+            };
+        }
+
+        static (GltfLight Light, GltfNode Node) LightToGltf(Light light, int lightIndex)
+        {
+            const double DegreesToRadians = Math.PI / 180.0;
+            GltfLight gltfLight = light.Kind switch
+            {
+                LightKind.Point => new GltfLight { Type = "point", Intensity = light.Intensity },
+                LightKind.Spot => new GltfLight
+                {
+                    Type = "spot",
+                    Intensity = light.Intensity,
+                    Spot = new GltfSpot
+                    {
+                        InnerConeAngle = light.InnerConeAngleDegrees * DegreesToRadians,
+                        OuterConeAngle = light.OuterConeAngleDegrees * DegreesToRadians,
+                    },
+                },
+                _ => new GltfLight { Type = "directional", Intensity = light.Intensity },
+            };
+
+            var node = new GltfNode
+            {
+                Extensions = new GltfExtensions { KhrLightsPunctual = new GltfLightsPunctualExtension { Light = lightIndex } },
+            };
+            if (light.Kind != LightKind.Directional)
+            {
+                node.Translation = new[] { light.Position.X, light.Position.Y, light.Position.Z };
+            }
+            if (light.Kind != LightKind.Point)
+            {
+                node.Rotation = QuaternionFromDirection(light.Direction);
+            }
+
+            return (gltfLight, node);
+        }
+
+        // Shortest-arc rotation quaternion [x, y, z, w] that takes local -Z to `direction`.
+        static double[] QuaternionFromDirection(Vector direction)
+        {
+            Vector from = new Vector(0, 0, -1);
+            Vector to = Vector.Normalize(direction);
+            double dot = Vector.Dot(from, to);
+
+            if (dot > 0.999999)
+            {
+                return new[] { 0.0, 0.0, 0.0, 1.0 }; // already aligned
+            }
+            if (dot < -0.999999)
+            {
+                // 180-degree rotation: any axis perpendicular to `from` works.
+                Vector axis = Vector.Cross(new Vector(1, 0, 0), from);
+                if (axis.Length() < 1e-6)
+                {
+                    axis = Vector.Cross(new Vector(0, 1, 0), from);
+                }
+                axis = Vector.Normalize(axis);
+                return new[] { axis.X, axis.Y, axis.Z, 0.0 };
+            }
+
+            Vector axisV = Vector.Cross(from, to);
+            double w = 1.0 + dot;
+            double len = Math.Sqrt(axisV.X * axisV.X + axisV.Y * axisV.Y + axisV.Z * axisV.Z + w * w);
+            return new[] { axisV.X / len, axisV.Y / len, axisV.Z / len, w / len };
+        }
+
+        static Vector RotateByQuaternion(double[] q, Vector v)
+        {
+            double qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+            double x = v.X, y = v.Y, z = v.Z;
+            double ix = qw * x + qy * z - qz * y;
+            double iy = qw * y + qz * x - qx * z;
+            double iz = qw * z + qx * y - qy * x;
+            double iw = -qx * x - qy * y - qz * z;
+            double rx = ix * qw + iw * -qx + iy * -qz - iz * -qy;
+            double ry = iy * qw + iw * -qy + iz * -qx - ix * -qz;
+            double rz = iz * qw + iw * -qz + ix * -qy - iy * -qx;
+            return new Vector(rx, ry, rz);
         }
 
         // --- .glb container framing ---

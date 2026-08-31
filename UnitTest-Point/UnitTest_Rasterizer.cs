@@ -344,5 +344,82 @@ namespace DDD_UnitTest
 
             Assert.AreEqual(((byte)40, (byte)40, (byte)40), framebuffer.GetPixel(50, 50));
         }
+
+        [TestMethod]
+        public void SpotLightAimedDirectlyAtTheFaceGivesFullAttenuation()
+        {
+            DDD.Mesh mesh = FrontFacingTriangle();
+            mesh.Material = new DDD.Material(new DDD.Color(200, 200, 200), ambient: 0.0, diffuse: 1.0, specular: 0.0);
+            // Positioned above the centroid along +Z (same as the point-light tests), aimed
+            // straight back down -Z: the light-to-surface direction and the aim axis coincide
+            // exactly (angle 0), well inside any cone.
+            var light = new DDD.Light(new DDD.Point(1.0 / 3.0, 1.0 / 3.0, 10), new DDD.Vector(0, 0, -1),
+                outerConeAngleDegrees: 30, innerConeAngleDegrees: 10);
+            var objects = new List<object> { mesh, light };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+
+            Assert.AreEqual(((byte)200, (byte)200, (byte)200), framebuffer.GetPixel(50, 50));
+        }
+
+        [TestMethod]
+        public void SpotLightAtExactlyTheOuterConeAngleGivesOnlyTheAmbientTerm()
+        {
+            DDD.Mesh mesh = FrontFacingTriangle();
+            mesh.Material = new DDD.Material(new DDD.Color(200, 200, 200), ambient: 0.2, diffuse: 1.0, specular: 0.0);
+            // Aim tilted 45 degrees off the light-to-surface direction: Vector(1,0,-1) normalizes
+            // to (1/sqrt2, 0, -1/sqrt2), and dot((1/sqrt2,0,-1/sqrt2), (0,0,-1)) = 1/sqrt2 =
+            // cos(45deg) exactly. OuterConeAngle=45 makes this land exactly on (>=) the outer
+            // boundary, which the implementation treats as fully outside the cone.
+            var light = new DDD.Light(new DDD.Point(1.0 / 3.0, 1.0 / 3.0, 10), new DDD.Vector(1, 0, -1),
+                outerConeAngleDegrees: 45, innerConeAngleDegrees: 0);
+            var objects = new List<object> { mesh, light };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+
+            Assert.AreEqual(((byte)40, (byte)40, (byte)40), framebuffer.GetPixel(50, 50));
+        }
+
+        [TestMethod]
+        public void SpotLightAtExactlyTheInnerConeAngleGivesFullAttenuation()
+        {
+            DDD.Mesh mesh = FrontFacingTriangle();
+            mesh.Material = new DDD.Material(new DDD.Color(200, 200, 200), ambient: 0.0, diffuse: 1.0, specular: 0.0);
+            // Same 45-degree-off aim as above, but InnerConeAngle=45 now - the implementation
+            // treats "at or inside" the inner angle (<=) as full intensity.
+            var light = new DDD.Light(new DDD.Point(1.0 / 3.0, 1.0 / 3.0, 10), new DDD.Vector(1, 0, -1),
+                outerConeAngleDegrees: 60, innerConeAngleDegrees: 45);
+            var objects = new List<object> { mesh, light };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+
+            Assert.AreEqual(((byte)200, (byte)200, (byte)200), framebuffer.GetPixel(50, 50));
+        }
+
+        [TestMethod]
+        public void SpotLightHalfwayThroughTheConeLinearlyFallsOffToHalfIntensity()
+        {
+            DDD.Mesh mesh = FrontFacingTriangle();
+            mesh.Material = new DDD.Material(new DDD.Color(200, 200, 200), ambient: 0.0, diffuse: 1.0, specular: 0.0);
+            // Same 45-degree-off aim; InnerConeAngle=30, OuterConeAngle=60 puts 45 degrees exactly
+            // halfway through the falloff span, so attenuation = 0.5. total = 1*1.0*1.0*0.5 = 0.5,
+            // which quantizes to 0.4 (tied with 0.6, and the first-encountered level wins ties -
+            // the same tie-break already exercised by the specular test above).
+            var light = new DDD.Light(new DDD.Point(1.0 / 3.0, 1.0 / 3.0, 10), new DDD.Vector(1, 0, -1),
+                outerConeAngleDegrees: 60, innerConeAngleDegrees: 30);
+            var objects = new List<object> { mesh, light };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+
+            Assert.AreEqual(((byte)80, (byte)80, (byte)80), framebuffer.GetPixel(50, 50));
+        }
     }
 }
