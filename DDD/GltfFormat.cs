@@ -63,6 +63,7 @@ namespace DDD
             public List<GltfAccessor>? Accessors { get; set; }
             public List<GltfBufferView>? BufferViews { get; set; }
             public List<GltfBuffer>? Buffers { get; set; }
+            public List<GltfMaterial>? Materials { get; set; }
         }
         sealed class GltfAsset
         {
@@ -108,6 +109,17 @@ namespace DDD
         sealed class GltfBuffer
         {
             public int ByteLength { get; set; }
+        }
+        sealed class GltfMaterial
+        {
+            public GltfPbrMetallicRoughness? PbrMetallicRoughness { get; set; }
+            public double[]? EmissiveFactor { get; set; }
+        }
+        sealed class GltfPbrMetallicRoughness
+        {
+            public double[]? BaseColorFactor { get; set; }
+            public double? MetallicFactor { get; set; }
+            public double? RoughnessFactor { get; set; }
         }
 
         // --- Public API ---
@@ -173,6 +185,11 @@ namespace DDD
                 }
             }
 
+            if (primitive.Material is int materialIndex && document.Materials != null && materialIndex < document.Materials.Count)
+            {
+                mesh.Material = MaterialFromGltf(document.Materials[materialIndex]);
+            }
+
             return mesh;
         }
 
@@ -211,6 +228,14 @@ namespace DDD
             int[] indices = mesh.Faces.SelectMany(f => new[] { f.A, f.B, f.C }).ToArray();
             int indicesAccessorIndex = WriteScalarUnsignedIntAccessor(binary, bufferViews, accessors, indices, TargetElementArrayBuffer);
 
+            List<GltfMaterial>? materials = null;
+            int? materialIndex = null;
+            if (mesh.Material is Material material)
+            {
+                materials = new List<GltfMaterial> { MaterialToGltf(material) };
+                materialIndex = 0;
+            }
+
             int[] sceneNodeIndices = { 0 };
             var document = new GltfDocument
             {
@@ -223,16 +248,69 @@ namespace DDD
                     {
                         Primitives = new List<GltfPrimitive>
                         {
-                            new GltfPrimitive { Attributes = attributes, Indices = indicesAccessorIndex, Mode = ModeTriangles },
+                            new GltfPrimitive { Attributes = attributes, Indices = indicesAccessorIndex, Material = materialIndex, Mode = ModeTriangles },
                         },
                     },
                 },
                 Accessors = accessors,
                 BufferViews = bufferViews,
                 Buffers = new List<GltfBuffer> { new GltfBuffer { ByteLength = (int)binary.Length } },
+                Materials = materials,
             };
 
             return WriteGlbContainer(document, binary.ToArray());
+        }
+
+        // --- Material conversion ---
+
+        // metallic/roughness -> ambient/diffuse/specular/shininess is a per-face flat-shading
+        // approximation, not a real Cook-Torrance BRDF (see PLAN.md 1h). Metals have near-zero
+        // diffuse response and a strong, tight specular highlight; dielectrics (metallic=0) are
+        // diffuse-dominant with only a subtle specular highlight. Roughness controls how tight
+        // (smooth) or broad (rough) that highlight is, via Shininess.
+        const double MaxShininess = 128.0;
+
+        static Material MaterialFromGltf(GltfMaterial gltfMaterial)
+        {
+            GltfPbrMetallicRoughness? pbr = gltfMaterial.PbrMetallicRoughness;
+            double[] baseColor = pbr?.BaseColorFactor ?? new[] { 1.0, 1.0, 1.0, 1.0 };
+            double metallic = pbr?.MetallicFactor ?? 1.0;
+            double roughness = pbr?.RoughnessFactor ?? 1.0;
+            double[] emissiveFactor = gltfMaterial.EmissiveFactor ?? new[] { 0.0, 0.0, 0.0 };
+
+            Color color = new Color(ToByte(baseColor[0]), ToByte(baseColor[1]), ToByte(baseColor[2]));
+            Color emissive = new Color(ToByte(emissiveFactor[0]), ToByte(emissiveFactor[1]), ToByte(emissiveFactor[2]));
+
+            double diffuse = 0.8 * (1.0 - metallic);
+            double specular = 0.2 + metallic * 0.6;
+            double shininess = 1.0 + (1.0 - roughness) * (MaxShininess - 1.0);
+
+            return new Material(color, ambient: 0.2, diffuse, specular, shininess, emissive);
+        }
+
+        static GltfMaterial MaterialToGltf(Material material)
+        {
+            // Best-effort reverse of MaterialFromGltf - lossy for a Material that wasn't
+            // originally derived from metallic/roughness (e.g. hand-authored via New-Material
+            // with arbitrary Ambient/Diffuse/Specular), and Ambient has no glTF equivalent at
+            // all (real-time PBR ambient normally comes from image-based lighting, which DDD
+            // doesn't do), so it's simply dropped on export.
+            double metallic = Math.Clamp((material.Specular - 0.2) / 0.6, 0.0, 1.0);
+            double roughness = Math.Clamp(1.0 - (material.Shininess - 1.0) / (MaxShininess - 1.0), 0.0, 1.0);
+            bool hasEmissive = material.Emissive != default;
+
+            return new GltfMaterial
+            {
+                PbrMetallicRoughness = new GltfPbrMetallicRoughness
+                {
+                    BaseColorFactor = new[] { material.Color.R / 255.0, material.Color.G / 255.0, material.Color.B / 255.0, 1.0 },
+                    MetallicFactor = metallic,
+                    RoughnessFactor = roughness,
+                },
+                EmissiveFactor = hasEmissive
+                    ? new[] { material.Emissive.R / 255.0, material.Emissive.G / 255.0, material.Emissive.B / 255.0 }
+                    : null,
+            };
         }
 
         // --- .glb container framing ---

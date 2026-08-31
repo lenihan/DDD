@@ -125,10 +125,17 @@ Import-Ply -Path ./tetrahedron.ply | Out-3d -RenderMode Solid
 
 `Import-Gltf -Path <file>` and `Export-Gltf -Path <file>` read/write binary `.glb` (glTF 2.0) -
 DDD's scene interchange format for multi-object work `.ply` doesn't cover (materials, lights,
-cameras). This first pass covers mesh geometry only (positions, normals, per-vertex color,
-triangle indices); materials/lights/cameras/scene-graph/animation support is planned (see
-`PLAN.md`). Only `.glb` (single self-contained file) is supported, not loose `.gltf` + `.bin` +
-textures.
+cameras). Covers mesh geometry (positions, normals, per-vertex color, triangle indices) and
+materials; lights/cameras/scene-graph/animation support is planned (see `PLAN.md`). Only `.glb`
+(single self-contained file) is supported, not loose `.gltf` + `.bin` + textures.
+
+A `Mesh`'s `Material`, if set, round-trips as glTF's PBR `metallicFactor`/`roughnessFactor` -
+DDD still shades per-face with the same ambient/diffuse/specular model either way (see
+[Lights and materials](#lights-and-materials) above), so this is an approximation, not a real
+BRDF: metals get near-zero diffuse response and a strong, tight highlight; non-metals stay
+diffuse-dominant with a subtle one. `Ambient` has no glTF equivalent (real PBR ambient comes from
+image-based lighting, which DDD doesn't do), so round-tripping a `Material` through glTF is lossy
+for anything not already expressed purely as metallic/roughness.
 
 ```powershell
 $mesh | Export-Gltf -Path ./tetrahedron.glb

@@ -213,13 +213,17 @@ namespace DDD
             return closest;
         }
 
-        // Ambient + Lambertian diffuse + (optional) Phong specular, summed over every active
-        // light, clamped to [0,1] and quantized. unitNormal and rotatedCentroid are already in
-        // view space (post-rotation), matching how EffectiveLight positions/directions were
-        // prepared in Render.
+        // Ambient + emissive + Lambertian diffuse + (optional) Phong specular, summed over every
+        // active light, clamped to [0,1] and quantized. unitNormal and rotatedCentroid are
+        // already in view space (post-rotation), matching how EffectiveLight positions/
+        // directions were prepared in Render. Emissive contributes only its luminance (average
+        // of R/G/B) - a genuine colored glow would need its own base color in the shading
+        // formula, on top of the face's own color, which the palette-quantization scheme (see
+        // BuildPalette) isn't built to combine.
         static double ComputeIntensity(Vector unitNormal, Point rotatedCentroid, Material material, IReadOnlyList<EffectiveLight> lights)
         {
-            double total = material.Ambient;
+            double emissiveLuminance = (material.Emissive.R + material.Emissive.G + material.Emissive.B) / (3.0 * 255.0);
+            double total = material.Ambient + emissiveLuminance;
             foreach (EffectiveLight light in lights)
             {
                 Vector lightDir = light.IsPoint
