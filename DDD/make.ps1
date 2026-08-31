@@ -108,7 +108,7 @@ if ($PowerShellGallery) {
     Invoke-Expression $cmd   
 }
 else {
-    $cmd = "Start-Process -FilePath 'pwsh' -ArgumentList '-NoExit -Command Import-Module -Force -Verbose $root\publish\DDD' -PassThru"
+    $cmd = "Start-Process -FilePath 'pwsh' -ArgumentList '-NoExit -NoProfile -Command Import-Module -Force -Verbose $root\publish\DDD' -PassThru"
     Write-Host "# $cmd" -ForegroundColor Green
     $process = Invoke-Expression $cmd
     $global:pwshId = $process.Id
