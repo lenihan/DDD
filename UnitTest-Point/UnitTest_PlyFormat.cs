@@ -1,4 +1,7 @@
 using System;
+using System.Buffers.Binary;
+using System.Collections.Generic;
+using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DDD_UnitTest
@@ -6,6 +9,135 @@ namespace DDD_UnitTest
     [TestClass]
     public class PlyFormat
     {
+        // Hand-builds a binary .ply byte buffer (header text + tightly-packed binary body) so the
+        // binary reader can be verified against a known-correct byte layout, the same way the
+        // ASCII tests use hand-written text. Vertices are (float x,y,z [,uchar red,green,blue]);
+        // faces are (uchar count, int32 indices...).
+        static byte[] BuildBinaryPly(bool bigEndian, (float X, float Y, float Z, byte R, byte G, byte B)[] vertices,
+            bool includeColor, int[][] faces)
+        {
+            string endian = bigEndian ? "binary_big_endian" : "binary_little_endian";
+            var header = new StringBuilder();
+            header.Append("ply\n");
+            header.Append("format ").Append(endian).Append(" 1.0\n");
+            header.Append("element vertex ").Append(vertices.Length).Append('\n');
+            header.Append("property float x\n");
+            header.Append("property float y\n");
+            header.Append("property float z\n");
+            if (includeColor)
+            {
+                header.Append("property uchar red\n");
+                header.Append("property uchar green\n");
+                header.Append("property uchar blue\n");
+            }
+            header.Append("element face ").Append(faces.Length).Append('\n');
+            header.Append("property list uchar int vertex_indices\n");
+            header.Append("end_header\n");
+
+            var bytes = new List<byte>(Encoding.ASCII.GetBytes(header.ToString()));
+
+            byte[] FloatBytes(float f)
+            {
+                var buf = new byte[4];
+                if (bigEndian) BinaryPrimitives.WriteSingleBigEndian(buf, f);
+                else BinaryPrimitives.WriteSingleLittleEndian(buf, f);
+                return buf;
+            }
+            byte[] Int32Bytes(int i)
+            {
+                var buf = new byte[4];
+                if (bigEndian) BinaryPrimitives.WriteInt32BigEndian(buf, i);
+                else BinaryPrimitives.WriteInt32LittleEndian(buf, i);
+                return buf;
+            }
+
+            foreach (var v in vertices)
+            {
+                bytes.AddRange(FloatBytes(v.X));
+                bytes.AddRange(FloatBytes(v.Y));
+                bytes.AddRange(FloatBytes(v.Z));
+                if (includeColor)
+                {
+                    bytes.Add(v.R);
+                    bytes.Add(v.G);
+                    bytes.Add(v.B);
+                }
+            }
+
+            foreach (int[] face in faces)
+            {
+                bytes.Add((byte)face.Length);
+                foreach (int index in face)
+                {
+                    bytes.AddRange(Int32Bytes(index));
+                }
+            }
+
+            return bytes.ToArray();
+        }
+
+        [TestMethod]
+        public void ParsesABinaryLittleEndianTriangle()
+        {
+            var vertices = new[]
+            {
+                (1f, 0f, 0f, (byte)0, (byte)0, (byte)0),
+                (0f, 1f, 0f, (byte)0, (byte)0, (byte)0),
+                (0f, 0f, 0f, (byte)0, (byte)0, (byte)0),
+            };
+            int[][] faces = { new[] { 0, 1, 2 } };
+            byte[] bytes = BuildBinaryPly(bigEndian: false, vertices, includeColor: false, faces);
+
+            DDD.Mesh mesh = DDD.PlyFormat.Parse(bytes);
+
+            Assert.AreEqual(3, mesh.Vertices.Count);
+            Assert.AreEqual(new DDD.Point(1, 0, 0), mesh.Vertices[0].Position);
+            Assert.AreEqual(new DDD.Point(0, 1, 0), mesh.Vertices[1].Position);
+            Assert.AreEqual(new DDD.Point(0, 0, 0), mesh.Vertices[2].Position);
+            Assert.AreEqual(1, mesh.Faces.Count);
+            Assert.AreEqual(new DDD.Face(0, 1, 2), mesh.Faces[0]);
+        }
+
+        [TestMethod]
+        public void ParsesABinaryBigEndianTriangleWithColor()
+        {
+            var vertices = new[]
+            {
+                (1f, 0f, 0f, (byte)255, (byte)0, (byte)0),
+                (0f, 1f, 0f, (byte)0, (byte)255, (byte)0),
+                (0f, 0f, 0f, (byte)0, (byte)0, (byte)255),
+            };
+            int[][] faces = { new[] { 0, 1, 2 } };
+            byte[] bytes = BuildBinaryPly(bigEndian: true, vertices, includeColor: true, faces);
+
+            DDD.Mesh mesh = DDD.PlyFormat.Parse(bytes);
+
+            Assert.AreEqual(new DDD.Point(1, 0, 0), mesh.Vertices[0].Position);
+            Assert.AreEqual(new DDD.Color(255, 0, 0), mesh.Vertices[0].Color);
+            Assert.AreEqual(new DDD.Color(0, 255, 0), mesh.Vertices[1].Color);
+            Assert.AreEqual(new DDD.Color(0, 0, 255), mesh.Vertices[2].Color);
+        }
+
+        [TestMethod]
+        public void FanTriangulatesABinaryQuadFace()
+        {
+            var vertices = new[]
+            {
+                (0f, 0f, 0f, (byte)0, (byte)0, (byte)0),
+                (1f, 0f, 0f, (byte)0, (byte)0, (byte)0),
+                (1f, 1f, 0f, (byte)0, (byte)0, (byte)0),
+                (0f, 1f, 0f, (byte)0, (byte)0, (byte)0),
+            };
+            int[][] faces = { new[] { 0, 1, 2, 3 } };
+            byte[] bytes = BuildBinaryPly(bigEndian: false, vertices, includeColor: false, faces);
+
+            DDD.Mesh mesh = DDD.PlyFormat.Parse(bytes);
+
+            Assert.AreEqual(2, mesh.Faces.Count);
+            Assert.AreEqual(new DDD.Face(0, 1, 2), mesh.Faces[0]);
+            Assert.AreEqual(new DDD.Face(0, 2, 3), mesh.Faces[1]);
+        }
+
         [TestMethod]
         public void ParsesAMinimalTriangleWithNoOptionalProperties()
         {
@@ -194,6 +326,37 @@ namespace DDD_UnitTest
 
             Assert.AreEqual("0 0 0 10 20 30", lines[endHeaderIndex + 1]);
             Assert.AreEqual("1 1 1 255 255 255", lines[endHeaderIndex + 2]);
+        }
+
+        [TestMethod]
+        public void ReadsTheBundledTeapotResource()
+        {
+            DDD.Mesh mesh = DDD.PlyFormat.ReadEmbeddedResource("DDD.Assets.teapot.ply");
+            Assert.AreEqual(1177, mesh.Vertices.Count);
+            Assert.AreEqual(2256, mesh.Faces.Count);
+        }
+
+        [TestMethod]
+        public void ReadsTheBundledSuzanneResource()
+        {
+            DDD.Mesh mesh = DDD.PlyFormat.ReadEmbeddedResource("DDD.Assets.suzanne.ply");
+            Assert.AreEqual(507, mesh.Vertices.Count);
+            Assert.AreEqual(968, mesh.Faces.Count);
+        }
+
+        [TestMethod]
+        public void ReadsTheBundledBunnyResource()
+        {
+            DDD.Mesh mesh = DDD.PlyFormat.ReadEmbeddedResource("DDD.Assets.bunny.ply");
+            Assert.AreEqual(453, mesh.Vertices.Count);
+            Assert.AreEqual(948, mesh.Faces.Count);
+        }
+
+        [TestMethod]
+        public void ReadEmbeddedResourceThrowsForAnUnknownResourceName()
+        {
+            Assert.ThrowsExactly<System.IO.FileNotFoundException>(
+                () => DDD.PlyFormat.ReadEmbeddedResource("DDD.Assets.does-not-exist.ply"));
         }
     }
 }

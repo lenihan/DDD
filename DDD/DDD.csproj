@@ -8,4 +8,11 @@
     <InternalsVisibleTo Include="UnitTest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Reference test meshes (PLAN.md 1d), bundled as binary .ply rather than hand-encoded. -->
+    <EmbeddedResource Include="assets\teapot.ply" LogicalName="DDD.Assets.teapot.ply" />
+    <EmbeddedResource Include="assets\suzanne.ply" LogicalName="DDD.Assets.suzanne.ply" />
+    <EmbeddedResource Include="assets\bunny.ply" LogicalName="DDD.Assets.bunny.ply" />
+  </ItemGroup>
+
 </Project>

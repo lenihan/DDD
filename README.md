@@ -87,16 +87,52 @@ $mesh.AddFace($a, $b, $c)
 $mesh | Out-3d -RenderMode Solid
 ```
 
-`Import-Ply -Path <file>` reads an ASCII `.ply` file (Stanford Polygon File Format) into a
-`Mesh` - DDD's native mesh file format, chosen over inventing a new one since `.ply` already
-covers vertices, triangular faces, and optional per-vertex normals/colors, and is supported by
-most other 3D tools. `Export-Ply -Path <file>` writes a `Mesh` back out the same way (pipeline
-or `-Mesh`). A face with more than 3 vertices in an imported file is fan-triangulated. Binary
-`.ply` is not supported - only the ASCII variant.
+### Primitives
+
+Parametric shapes, all built on the `Mesh` model above. Every parameter has a default (unit-sized
+lengths/radii, a true cone via `-TopRadius 0`), so every cmdlet below also works with no
+arguments at all - e.g. `New-Box` alone gives a 1x1x1 box at the origin:
+
+| Cmdlet         | Parameters                                         |
+|----------------|----------------------------------------------------|
+| `New-Box`      | `-Width -Height -Depth -Center`                    |
+| `New-Cube`     | `-Size -Center`                                    |
+| `New-Sphere`   | `-Radius -Segments -Center`                        |
+| `New-Cylinder` | `-Radius -Height -Segments -Center`                |
+| `New-Cone`     | `-BaseRadius -TopRadius -Height -Segments -Center` |
+| `New-Torus`    | `-MajorRadius -MinorRadius -Segments -Center`      |
+| `New-Plane`    | `-Width -Depth -Center`                            |
+
+`New-Cone -TopRadius 0` gives a true cone; equal `-BaseRadius`/`-TopRadius` gives a frustum.
+`New-Cylinder` is a `New-Cone` with equal radii under the hood. All faces wind outward, so
+backface culling and shading behave correctly in `-RenderMode Solid`:
+
+```powershell
+New-Torus -MajorRadius 3 -MinorRadius 1 -Segments 32 | Out-3d -RenderMode Solid
+```
+
+`Import-Ply -Path <file>` reads a `.ply` file (Stanford Polygon File Format, ASCII or binary,
+either endianness) into a `Mesh` - DDD's native mesh file format, chosen over inventing a new one
+since `.ply` already covers vertices, triangular faces, and optional per-vertex normals/colors,
+and is supported by most other 3D tools. `Export-Ply -Path <file>` writes a `Mesh` back out the
+same way (pipeline or `-Mesh`), always as ASCII. A face with more than 3 vertices in an imported
+file is fan-triangulated.
 
 ```powershell
 $mesh | Export-Ply -Path ./tetrahedron.ply
 Import-Ply -Path ./tetrahedron.ply | Out-3d -RenderMode Solid
+```
+
+### Reference meshes
+
+Classic, instantly-recognizable test meshes from computer graphics history, bundled as embedded
+binary `.ply` assets and loaded through the same reader as `Import-Ply` - no arguments, no
+network access:
+
+```powershell
+New-Teapot | Out-3d -RenderMode Solid          # the Utah teapot (Martin Newell, 1975)
+New-Suzanne | Out-3d -RenderMode Solid         # Blender's default test mesh
+New-StanfordBunny | Out-3d -RenderMode Solid   # Stanford Computer Graphics Laboratory, 1994
 ```
 
 ## Terminal requirements
