@@ -72,6 +72,33 @@ window. `Out-3d` draws in the terminal's alternate screen buffer — the same fu
 `vim`/`less`/`htop` use — so exiting (`Esc` or Ctrl+C) snaps the terminal back to exactly what it
 showed before `Out-3d` ran, with no scrolling or leftover output.
 
+## Meshes
+
+Build a `Mesh` with `New-Mesh`, add vertices (each an optional `Color` and/or `Normal` beyond
+its `Point` position) with `.AddVertex(...)`, and add triangular faces by vertex index with
+`.AddFace(...)`:
+
+```powershell
+$mesh = New-Mesh
+$a = $mesh.AddVertex((New-Vertex (New-Point 1 0 0) (New-Color 255 0 0)))
+$b = $mesh.AddVertex((New-Point 0 1 0))
+$c = $mesh.AddVertex((New-Point 0 0 0))
+$mesh.AddFace($a, $b, $c)
+$mesh | Out-3d -RenderMode Solid
+```
+
+`Import-Ply -Path <file>` reads an ASCII `.ply` file (Stanford Polygon File Format) into a
+`Mesh` - DDD's native mesh file format, chosen over inventing a new one since `.ply` already
+covers vertices, triangular faces, and optional per-vertex normals/colors, and is supported by
+most other 3D tools. `Export-Ply -Path <file>` writes a `Mesh` back out the same way (pipeline
+or `-Mesh`). A face with more than 3 vertices in an imported file is fan-triangulated. Binary
+`.ply` is not supported - only the ASCII variant.
+
+```powershell
+$mesh | Export-Ply -Path ./tetrahedron.ply
+Import-Ply -Path ./tetrahedron.ply | Out-3d -RenderMode Solid
+```
+
 ## Terminal requirements
 
 `Out-3d` needs a terminal that understands sixel graphics. Known-good options:
