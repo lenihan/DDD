@@ -20,7 +20,7 @@ $description    = "Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.
 $reqAssemblies  = @('DDD.dll')
 $tags           = @('3D', 'ply', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
-$cmdlets        = @('Out-3d', 'Import-Ply', 'Export-Ply')
+$cmdlets        = @('Out-3d', 'Import-Ply', 'Export-Ply', 'New-Box', 'New-Sphere', 'New-Cylinder', 'New-Cone', 'New-Torus', 'New-Plane')
 $aliases        = @('o3d')
 $config         = $Release ? "Release" : "Debug"
 

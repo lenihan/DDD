@@ -29,6 +29,10 @@ function global:New-Face {
 function global:New-Mesh {
     New-Object -TypeName 'DDD.Mesh'
 }
+function global:New-Cube ([double]$Size = 1.0,
+                          [DDD.Point]$Center = (New-Object 'DDD.Point')) {
+    New-Box -Width $Size -Height $Size -Depth $Size -Center $Center
+}
 function global:New-IdentityMatrix {
     return [DDD.Matrix]::Identity()
 }

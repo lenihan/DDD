@@ -87,6 +87,29 @@ $mesh.AddFace($a, $b, $c)
 $mesh | Out-3d -RenderMode Solid
 ```
 
+### Primitives
+
+Parametric shapes, all built on the `Mesh` model above (each takes an optional `-Center`,
+default the origin):
+
+| Cmdlet         | Required parameters              | Optional            |
+|----------------|----------------------------------|---------------------|
+| `New-Box`      | `-Width -Height -Depth`          | `-Center`           |
+| `New-Cube`     | `-Size`                          | `-Center`           |
+| `New-Sphere`   | `-Radius`                        | `-Segments -Center` |
+| `New-Cylinder` | `-Radius -Height`                | `-Segments -Center` |
+| `New-Cone`     | `-BaseRadius -TopRadius -Height` | `-Segments -Center` |
+| `New-Torus`    | `-MajorRadius -MinorRadius`      | `-Segments -Center` |
+| `New-Plane`    | `-Width -Depth`                  | `-Center`           |
+
+`New-Cone -TopRadius 0` gives a true cone; equal `-BaseRadius`/`-TopRadius` gives a frustum.
+`New-Cylinder` is a `New-Cone` with equal radii under the hood. All faces wind outward, so
+backface culling and shading behave correctly in `-RenderMode Solid`:
+
+```powershell
+New-Torus -MajorRadius 3 -MinorRadius 1 -Segments 32 | Out-3d -RenderMode Solid
+```
+
 `Import-Ply -Path <file>` reads an ASCII `.ply` file (Stanford Polygon File Format) into a
 `Mesh` - DDD's native mesh file format, chosen over inventing a new one since `.ply` already
 covers vertices, triangular faces, and optional per-vertex normals/colors, and is supported by
