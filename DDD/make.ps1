@@ -18,9 +18,9 @@ $name           = 'David Lenihan'
 $moduleName     = 'DDD'
 $description    = "Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.`nhttp://www.davidlenihan.com/category/ddd/"
 $reqAssemblies  = @('DDD.dll')
-$tags           = @('3D', 'ply', 'obj', 'Point', 'Matrix', 'Vector')
+$tags           = @('3D', 'ply', 'gltf', 'glb', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
-$cmdlets        = @('Out-3d', 'Import-Ply', 'Export-Ply', 'New-Box', 'New-Sphere', 'New-Cylinder', 'New-Cone', 'New-Torus', 'New-Plane', 'New-Teapot', 'New-Suzanne', 'New-StanfordBunny', 'New-Light', 'New-Material', 'New-CornellBox')
+$cmdlets        = @('Out-3d', 'Import-Ply', 'Export-Ply', 'Import-Gltf', 'Export-Gltf', 'New-Box', 'New-Sphere', 'New-Cylinder', 'New-Cone', 'New-Torus', 'New-Plane', 'New-Teapot', 'New-Suzanne', 'New-StanfordBunny', 'New-Light', 'New-Material', 'New-CornellBox')
 $aliases        = @('o3d')
 $config         = $Release ? "Release" : "Debug"
 

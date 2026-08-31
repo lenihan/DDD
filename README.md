@@ -123,6 +123,18 @@ $mesh | Export-Ply -Path ./tetrahedron.ply
 Import-Ply -Path ./tetrahedron.ply | Out-3d -RenderMode Solid
 ```
 
+`Import-Gltf -Path <file>` and `Export-Gltf -Path <file>` read/write binary `.glb` (glTF 2.0) -
+DDD's scene interchange format for multi-object work `.ply` doesn't cover (materials, lights,
+cameras). This first pass covers mesh geometry only (positions, normals, per-vertex color,
+triangle indices); materials/lights/cameras/scene-graph/animation support is planned (see
+`PLAN.md`). Only `.glb` (single self-contained file) is supported, not loose `.gltf` + `.bin` +
+textures.
+
+```powershell
+$mesh | Export-Gltf -Path ./tetrahedron.glb
+Import-Gltf -Path ./tetrahedron.glb | Out-3d -RenderMode Solid
+```
+
 ### Reference meshes
 
 Classic, instantly-recognizable test meshes from computer graphics history, bundled as embedded
