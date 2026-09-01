@@ -127,29 +127,33 @@ keyframes) → DDD samples it into a frame sequence → explode that into
 per-frame `.glb` files → hand-edit any single frame in an external tool →
 render each frame to `.png` → stitch into a video externally.
 
-### 1g. Rendering correctness + performance: Z-buffer, multi-core
-Solid mode currently has no depth buffer or face sorting at all —
-`DrawMesh` fills faces in whatever order `Mesh.Faces` stores them, so a
-farther face drawn after a nearer one simply overwrites it on screen. This
-is invisible for convex primitives (backface culling alone hides every
-face that would need depth testing), but a real gap for non-convex or
-multi-object scenes — `New-CornellBox` (a room plus two blocks, definitely
-non-convex) is exactly the kind of scene where it can show up, and it was
-only ever unit-tested for winding/vertex counts, never actually checked
-visually for correct occlusion.
+### 1g. Rendering correctness + performance: Z-buffer (done), multi-core
 
-Add a real per-pixel depth buffer (same dimensions as `Framebuffer`, one
-float per pixel) so `FillTriangle` compares depth before writing rather
-than trusting draw order. This doubles as the enabler for safe multi-core
-rendering: partition `Mesh.Faces` across threads, each rasterizing into
+~~Solid mode had no depth buffer or face sorting at all~~ - fixed:
+`Framebuffer` now carries a real per-pixel depth buffer (same dimensions,
+one float per pixel, reset to +Infinity on `Clear`) and `FillTriangle`
+compares interpolated depth before writing instead of trusting draw
+order. Was invisible for convex primitives (backface culling alone hid
+every face that would've needed depth testing) but a real gap for
+non-convex or multi-object scenes — `New-CornellBox` (a room plus two
+blocks) was exactly the kind of scene where it could show up, and it had
+only ever been unit-tested for winding/vertex counts, never actually
+checked for correct occlusion. Verified via direct `Framebuffer`
+depth-ordering tests plus a `Rasterizer` test rendering two
+same-screen-footprint, different-depth meshes both insertion orders and
+confirming the nearer one always wins.
+
+Still open: multi-core rendering, which the depth buffer now enables
+safely - partition `Mesh.Faces` across threads, each rasterizing into
 the *same* framebuffer/depth-buffer with a depth-compare-and-write per
 pixel — correct regardless of which thread gets there first, no per-face
-ordering dependency. (A simpler alternative if a depth buffer feels
-premature: partition the *framebuffer* by row-band instead, one thread per
-band, each rasterizing every face but only writing pixels in its own rows
-— no synchronization needed, but doesn't fix the depth-ordering bug on its
-own.) Multi-core performance matters most once frame rendering is
-happening in bulk for video (1f) rather than once per interactive frame.
+ordering dependency. (A simpler alternative if that feels premature:
+partition the *framebuffer* by row-band instead, one thread per band,
+each rasterizing every face but only writing pixels in its own rows — no
+synchronization needed, but doesn't do anything the depth buffer above
+doesn't already cover on its own.) Multi-core performance matters most
+once frame rendering is happening in bulk for video (1f) rather than
+once per interactive frame.
 
 ### 1h. glTF import/export
 Treated as a first-class DDD format alongside `.ply`, not just a
@@ -218,10 +222,21 @@ visible as, at typical sixel/terminal resolution and palette size.
 A new use case, built on top of everything above (points/lines/faces
 rendering, primitives-as-building-blocks, the mesh model) rather than
 before it: `New-LineGraph` / `New-BarChart` / `New-ScatterPlot` (2D,
-PowerShell data → points/lines, camera locked to an orthographic front
-view) and `New-Surface` (3D — e.g. a height-field grid turned into a mesh).
-Axis/tick/label text reuses the existing `BitmapFont`. Goal: turn PowerShell
-data into a readable graph with one cmdlet, no manual geometry.
+PowerShell data → points/lines) and `New-Surface` (3D — e.g. a height-field
+grid turned into a mesh). Goal: turn PowerShell data into a readable graph
+with one cmdlet, no manual geometry.
+
+**Done**: `New-ScatterPlot` (`-Y`/optional `-X`, returns `Point`s) and
+`New-BarChart` (same input, returns one thin `Mesh` box per value, via
+`Primitives.Box`) - both land data on the Z=0 plane and lean on `Out-3d`
+already drawing X/Y axis lines through every scene for free, rather than
+needing a locked/dedicated camera view (no `Camera`-rendering integration
+exists yet - see 1f). **Not done**: `New-LineGraph` (needs either a new
+line-segment primitive or ribbon-mesh geometry, deferred to keep this
+first pass small), `New-Surface`, and numeric tick/axis labels (need real
+screen-space text tied to *projected* data coordinates - `BitmapFont`
+today only draws `Out-3d`'s own fixed-position FPS/instructions overlay,
+not arbitrary 3D-anchored text, so this needs new `Rasterizer` support).
 
 ---
 

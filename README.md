@@ -124,13 +124,24 @@ Import-Ply -Path ./tetrahedron.ply | Out-3d -RenderMode Solid
 ```
 
 `Import-Gltf -Path <file>` and `Export-Gltf -Path <file>` read/write binary `.glb` (glTF 2.0) -
-DDD's scene interchange format for multi-object work `.ply` doesn't cover (materials, lights,
-cameras). Covers mesh geometry (positions, normals, per-vertex color, triangle indices),
-materials, and lights (`KHR_lights_punctual` - directional/point/spot); cameras and general
-multi-mesh scene-graph/animation support are still planned (see `PLAN.md`). `Export-Gltf` takes
-any mix of one `Mesh` plus any number of `Light` objects on the pipeline (multiple meshes aren't
-supported yet); `Import-Gltf` writes back out whatever combination the file contains. Only `.glb`
-(single self-contained file) is supported, not loose `.gltf` + `.bin` + textures.
+DDD's scene interchange format for multi-object work `.ply` doesn't cover (multiple meshes,
+materials, lights, cameras). Covers mesh geometry (positions, normals, per-vertex color, triangle
+indices) with each mesh's own materials, lights (`KHR_lights_punctual` -
+directional/point/spot), and a camera (`New-Camera`); baked animation import is still planned
+(see `PLAN.md`). `Export-Gltf` takes any mix of `Mesh`, `Light`, and (at most one) `Camera`
+objects on the pipeline; `Import-Gltf` writes back out whatever combination the file contains.
+Importing a file authored elsewhere bakes each mesh-carrying node's translation/rotation/scale
+into that mesh's own vertices - DDD has no live scene-graph, so a `Mesh` piped out of
+`Import-Gltf` is always already in its final position. Only `.glb` (single self-contained file)
+is supported, not loose `.gltf` + `.bin` + textures.
+
+`New-Camera -Position <point> -LookAt <point>` describes a directed shot - position, aim point,
+up, field of view, near/far planes, perspective vs. orthographic - independent of glTF; `Camera`
+isn't wired into `Out-3d`'s rendering yet (still the auto-fit interactive turntable either way),
+so today it's purely a value that round-trips through `Export-Gltf`/`Import-Gltf` for hand-editing
+a shot in an external glTF-aware tool. glTF only encodes a camera's *orientation* (via its node's
+rotation), not "look at this point," so `LookAt` is lossy across a round trip - re-imported as a
+point synthesized one unit along the decoded direction, not the original target.
 
 A `Mesh`'s `Material`, if set, round-trips as glTF's PBR `metallicFactor`/`roughnessFactor` -
 DDD still shades per-face with the same ambient/diffuse/specular model either way (see
@@ -145,8 +156,11 @@ for anything not already expressed purely as metallic/roughness. `Light` doesn't
 $mesh | Export-Gltf -Path ./tetrahedron.glb
 Import-Gltf -Path ./tetrahedron.glb | Out-3d -RenderMode Solid
 
-# a mesh plus a light, round-tripped together
-$mesh, (New-Light -Position (New-Point 3 3 3)) | Export-Gltf -Path ./scene.glb
+# multiple meshes, a light, and a camera, round-tripped together
+$box = New-Box -Center (New-Point -2 0 0)
+$sphere = New-Sphere -Center (New-Point 2 0 0)
+$camera = New-Camera -Position (New-Point 0 2 6) -LookAt (New-Point 0 0 0)
+$box, $sphere, (New-Light -Position (New-Point 3 3 3)), $camera | Export-Gltf -Path ./scene.glb
 Import-Gltf -Path ./scene.glb | Out-3d -RenderMode Solid
 ```
 
@@ -198,6 +212,22 @@ blocks) - purpose-built for seeing how convincing your lights/materials look:
 (Both sides need parentheses when a statement starts with a bare command name - PowerShell parses
 `Cmd, ...` at the start of a statement as arguments to `Cmd`, not an array. Starting with a
 variable, e.g. `$mesh, (New-Light ...)`, doesn't have this problem.)
+
+## Graphing
+
+Turn plain PowerShell numbers into a chart, no manual geometry:
+
+```powershell
+New-ScatterPlot -Y 3,7,2,9,5 | Out-3d
+New-BarChart -Y 3,-2,5 | Out-3d -RenderMode Solid
+```
+
+`-Y` is the only required parameter - `-X` defaults to the data's index (0, 1, 2, ...) when
+omitted, or takes an explicit array the same length as `-Y`. Data always lands on the Z=0 plane;
+`Out-3d` already draws X/Y axis lines through the scene automatically, which double as a chart's
+axes for free. `New-BarChart` also takes `-BarWidth` (default `0.6`). Numeric tick labels aren't
+implemented yet, and line graphs/3D surfaces (`New-LineGraph`, `New-Surface`) don't exist yet
+either - see `PLAN.md`.
 
 ## Terminal requirements
 

@@ -190,6 +190,44 @@ namespace DDD_UnitTest
             }
         }
 
+        static DDD.Mesh OverlappingTriangle(double zOffset, DDD.Color color)
+        {
+            // Same X/Y as FrontFacingTriangle, only Z differs - orthographic projection ignores
+            // Z, so this lands on exactly the same screen pixels regardless of zOffset.
+            var mesh = new DDD.Mesh();
+            int a = mesh.AddVertex(new DDD.Vertex(new DDD.Point(1, 0, zOffset), color));
+            int b = mesh.AddVertex(new DDD.Vertex(new DDD.Point(0, 1, zOffset), color));
+            int c = mesh.AddVertex(new DDD.Vertex(new DDD.Point(0, 0, zOffset), color));
+            mesh.AddFace(a, b, c);
+            return mesh;
+        }
+
+        [TestMethod]
+        public void SolidModeKeepsTheNearerMeshRegardlessOfObjectOrder()
+        {
+            // This is exactly the PLAN.md 1g gap: before Framebuffer had a depth buffer, Solid
+            // mode simply drew faces in Mesh/object order, so whichever mesh came last in the
+            // list would always win a screen-space overlap - correct only by accident (backface
+            // culling alone hid it for every convex primitive tested so far). Two meshes with the
+            // same screen footprint but different depth, rendered both orders, must agree.
+            DDD.Mesh near = OverlappingTriangle(zOffset: 0.5, new DDD.Color(255, 0, 0));
+            DDD.Mesh far = OverlappingTriangle(zOffset: -0.5, new DDD.Color(0, 0, 255));
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            var farThenNear = new List<object> { far, near };
+            var nearThenFar = new List<object> { near, far };
+
+            DDD.Framebuffer bufferA = DDD.Rasterizer.Render(farThenNear, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+            DDD.Framebuffer bufferB = DDD.Rasterizer.Render(nearThenFar, min, max, 0.0, 0.0, 100, 100, renderMode: DDD.RenderMode.Solid);
+
+            var nearColor = ((byte)255, (byte)0, (byte)0);
+            Assert.AreEqual(nearColor, bufferA.GetPixel(72, 50), "far-then-near, vertex a");
+            Assert.AreEqual(nearColor, bufferA.GetPixel(50, 50), "far-then-near, vertex c");
+            Assert.AreEqual(nearColor, bufferB.GetPixel(72, 50), "near-then-far, vertex a");
+            Assert.AreEqual(nearColor, bufferB.GetPixel(50, 50), "near-then-far, vertex c");
+        }
+
         [TestMethod]
         public void ShowNormalsDrawsAnIndicatorLineFromTheFaceCentroid()
         {

@@ -8,6 +8,7 @@ namespace DDD
     [Cmdlet(VerbsData.Import, "Gltf")]
     [OutputType(typeof(Mesh))]
     [OutputType(typeof(Light))]
+    [OutputType(typeof(Camera))]
     public class ImportGltfCommand : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]

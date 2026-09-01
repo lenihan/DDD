@@ -14,16 +14,20 @@ namespace DDD
     // is not supported; a .glb is a single self-contained file, matching the instinct that
     // bundled the 1d reference meshes as binary .ply rather than several loose files.
     //
-    // Covers mesh geometry (POSITION/NORMAL/COLOR_0 + indices, TRIANGLES mode), scalar-only PBR
-    // materials, and KHR_lights_punctual lights (no per-light color - see the note on Light).
-    // Cameras, general scene-graph flattening for multiple meshes, and animation baking are
-    // still follow-up work (PLAN.md 1h lists the full scope and what's deliberately excluded,
-    // e.g. textures and skinning).
+    // Covers mesh geometry (POSITION/NORMAL/COLOR_0 + indices, TRIANGLES mode) with scene-graph
+    // flattening (every mesh-carrying node's translation/rotation/scale is baked into that
+    // mesh's own vertices on import, so DDD - which has no live scene-graph concept - gets back
+    // a flat list of already-placed Mesh objects), scalar-only PBR materials, KHR_lights_punctual
+    // lights (no per-light color - see the note on Light), and cameras (DDD's own Camera type,
+    // from PLAN.md 1f). Animation baking is still follow-up work (PLAN.md 1h lists the full
+    // scope and what's deliberately excluded, e.g. textures and skinning).
     //
-    // Known scope limits: only the first mesh's first primitive is read on import (multiple
-    // meshes need the scene-graph-flattening work above); only TRIANGLES mode is supported
-    // (others are rejected, not converted); export writes at most one Mesh (the first found)
-    // alongside any number of Lights.
+    // Known scope limits: only each mesh's first primitive is read (a multi-primitive mesh isn't
+    // split into separate DDD Meshes); only TRIANGLES mode is supported (others are rejected, not
+    // converted); a glTF mesh not reachable from any node is skipped, matching what an actual
+    // glTF viewer would show; export writes at most one Camera (the first found) alongside any
+    // number of Meshes and Lights; import reads only the first camera-carrying node found, for
+    // the same reason.
     //
     // Nested DTO type names are prefixed "Gltf" (GltfMesh, GltfNode, ...) purely to avoid
     // colliding with DDD's own Mesh/etc. types in this namespace - a nested type would otherwise
@@ -67,6 +71,7 @@ namespace DDD
             public List<GltfBufferView>? BufferViews { get; set; }
             public List<GltfBuffer>? Buffers { get; set; }
             public List<GltfMaterial>? Materials { get; set; }
+            public List<GltfCamera>? Cameras { get; set; }
             public List<string>? ExtensionsUsed { get; set; }
             public GltfExtensions? Extensions { get; set; }
         }
@@ -81,8 +86,10 @@ namespace DDD
         sealed class GltfNode
         {
             public int? Mesh { get; set; }
+            public int? Camera { get; set; }
             public double[]? Translation { get; set; }
             public double[]? Rotation { get; set; } // quaternion [x, y, z, w]
+            public double[]? Scale { get; set; }
             public GltfExtensions? Extensions { get; set; }
         }
         // Reused at both document root (Lights: the palette of lights in the file) and node
@@ -153,12 +160,31 @@ namespace DDD
             public double? MetallicFactor { get; set; }
             public double? RoughnessFactor { get; set; }
         }
+        sealed class GltfCamera
+        {
+            public string Type { get; set; } = "perspective"; // "perspective" | "orthographic"
+            public GltfPerspectiveCamera? Perspective { get; set; }
+            public GltfOrthographicCamera? Orthographic { get; set; }
+        }
+        sealed class GltfPerspectiveCamera
+        {
+            public double Yfov { get; set; }
+            public double Znear { get; set; }
+            public double? Zfar { get; set; }
+        }
+        sealed class GltfOrthographicCamera
+        {
+            public double Xmag { get; set; }
+            public double Ymag { get; set; }
+            public double Znear { get; set; }
+            public double Zfar { get; set; }
+        }
 
         // --- Public API ---
 
-        // Reads every object PLAN.md 1h currently supports out of the file: the first mesh's
-        // first primitive (if present) plus any KHR_lights_punctual lights (if present). At
-        // least one of the two must be present, or this throws.
+        // Reads every object PLAN.md 1h currently supports out of the file: every mesh-carrying
+        // node's mesh (transform baked in) plus any KHR_lights_punctual lights plus the first
+        // camera-carrying node's camera (if present). At least one must be present, or this throws.
         public static List<object> Read(string path) => Parse(System.IO.File.ReadAllBytes(path));
 
         public static void Write(Mesh mesh, string path) => Write(new List<object> { mesh }, path);
@@ -169,9 +195,15 @@ namespace DDD
             (GltfDocument document, byte[] binaryChunk) = ReadGlbContainer(glb);
             var results = new List<object>();
 
-            if (document.Meshes != null && document.Meshes.Count > 0)
+            if (document.Meshes != null && document.Nodes != null)
             {
-                results.Add(ParseMesh(document, binaryChunk, document.Meshes[0]));
+                foreach (GltfNode node in document.Nodes)
+                {
+                    if (node.Mesh is int meshIndex && meshIndex < document.Meshes.Count)
+                    {
+                        results.Add(ParseMesh(document, binaryChunk, document.Meshes[meshIndex], node));
+                    }
+                }
             }
 
             List<GltfLight>? gltfLights = document.Extensions?.KhrLightsPunctual?.Lights;
@@ -186,14 +218,26 @@ namespace DDD
                 }
             }
 
+            if (document.Nodes != null && document.Cameras != null)
+            {
+                foreach (GltfNode node in document.Nodes)
+                {
+                    if (node.Camera is int cameraIndex && cameraIndex < document.Cameras.Count)
+                    {
+                        results.Add(CameraFromGltf(document.Cameras[cameraIndex], node));
+                        break; // at most one Camera is read - see the scope note at the top of this file
+                    }
+                }
+            }
+
             if (results.Count == 0)
             {
-                throw new FormatException("glTF document has no meshes or lights to import.");
+                throw new FormatException("glTF document has no meshes, lights, or cameras to import.");
             }
             return results;
         }
 
-        static Mesh ParseMesh(GltfDocument document, byte[] binaryChunk, GltfMesh gltfMesh)
+        static Mesh ParseMesh(GltfDocument document, byte[] binaryChunk, GltfMesh gltfMesh, GltfNode node)
         {
             GltfPrimitive primitive = gltfMesh.Primitives.FirstOrDefault()
                 ?? throw new FormatException("glTF mesh has no primitives.");
@@ -217,10 +261,13 @@ namespace DDD
             var mesh = new Mesh();
             for (int i = 0; i < positions.Length; i++)
             {
-                Point position = new Point(positions[i][0], positions[i][1], positions[i][2]);
+                Point localPosition = new Point(positions[i][0], positions[i][1], positions[i][2]);
+                Point position = TransformPosition(node, localPosition);
                 bool hasNormal = normals != null;
                 bool hasColor = colors != null;
-                Vector normal = hasNormal ? new Vector(normals![i][0], normals[i][1], normals[i][2]) : default;
+                Vector normal = hasNormal
+                    ? TransformNormal(node, new Vector(normals![i][0], normals[i][1], normals[i][2]))
+                    : default;
                 Color color = hasColor
                     ? new Color(ToByte(colors![i][0]), ToByte(colors[i][1]), ToByte(colors[i][2]))
                     : default;
@@ -258,8 +305,9 @@ namespace DDD
         // multiple meshes is separate future work per PLAN.md 1h) plus any number of Lights.
         public static byte[] Serialize(List<object> objects)
         {
-            Mesh? mesh = objects.OfType<Mesh>().FirstOrDefault();
+            List<Mesh> meshObjects = objects.OfType<Mesh>().ToList();
             List<Light> lightObjects = objects.OfType<Light>().ToList();
+            Camera? camera = objects.OfType<Camera>().Cast<Camera?>().FirstOrDefault();
 
             using var binary = new System.IO.MemoryStream();
             var bufferViews = new List<GltfBufferView>();
@@ -269,7 +317,7 @@ namespace DDD
             var sceneNodeIndices = new List<int>();
             List<GltfMaterial>? materials = null;
 
-            if (mesh != null)
+            foreach (Mesh mesh in meshObjects)
             {
                 bool hasNormal = mesh.Vertices.Any(v => v.Normal.HasValue);
                 bool hasColor = mesh.Vertices.Any(v => v.Color.HasValue);
@@ -303,8 +351,9 @@ namespace DDD
                 int? materialIndex = null;
                 if (mesh.Material is Material material)
                 {
-                    materials = new List<GltfMaterial> { MaterialToGltf(material) };
-                    materialIndex = 0;
+                    materials ??= new List<GltfMaterial>();
+                    materials.Add(MaterialToGltf(material));
+                    materialIndex = materials.Count - 1;
                 }
 
                 meshes.Add(new GltfMesh
@@ -314,7 +363,10 @@ namespace DDD
                         new GltfPrimitive { Attributes = attributes, Indices = indicesAccessorIndex, Material = materialIndex, Mode = ModeTriangles },
                     },
                 });
-                nodes.Add(new GltfNode { Mesh = 0 });
+                // DDD meshes already carry their final world-space vertex positions - no
+                // per-node transform to write, unlike the nodes ParseMesh reads back (which bake
+                // whatever transform an external tool's node carries into the vertices instead).
+                nodes.Add(new GltfNode { Mesh = meshes.Count - 1 });
                 sceneNodeIndices.Add(nodes.Count - 1);
             }
 
@@ -331,6 +383,16 @@ namespace DDD
                 }
             }
 
+            List<GltfCamera>? cameras = null;
+            if (camera is Camera cam)
+            {
+                (GltfCamera gltfCamera, GltfNode node) = CameraToGltf(cam);
+                cameras = new List<GltfCamera> { gltfCamera };
+                node.Camera = 0;
+                nodes.Add(node);
+                sceneNodeIndices.Add(nodes.Count - 1);
+            }
+
             var document = new GltfDocument
             {
                 Scene = 0,
@@ -341,6 +403,7 @@ namespace DDD
                 BufferViews = bufferViews.Count > 0 ? bufferViews : null,
                 Buffers = binary.Length > 0 ? new List<GltfBuffer> { new GltfBuffer { ByteLength = (int)binary.Length } } : null,
                 Materials = materials,
+                Cameras = cameras,
                 ExtensionsUsed = gltfLights != null ? new List<string> { "KHR_lights_punctual" } : null,
                 Extensions = gltfLights != null ? new GltfExtensions { KhrLightsPunctual = new GltfLightsPunctualExtension { Lights = gltfLights } } : null,
             };
@@ -506,6 +569,177 @@ namespace DDD
             double ry = iy * qw + iw * -qy + iz * -qx - ix * -qz;
             double rz = iz * qw + iw * -qz + ix * -qy - iy * -qx;
             return new Vector(rx, ry, rz);
+        }
+
+        // --- Node transform baking (scene-graph flattening) ---
+
+        // DDD has no live scene-graph concept - a Mesh's vertices are always already in their
+        // final world position. Importing a glTF mesh means baking whatever TRS transform its
+        // node carries into the vertices once, here, rather than keeping node/mesh as separate
+        // concepts the way glTF (and DDD's own Serialize, which always writes identity nodes for
+        // meshes - see the comment where meshes are written) doesn't need to.
+        static readonly double[] IdentityQuaternion = { 0.0, 0.0, 0.0, 1.0 };
+        static readonly double[] ZeroTranslation = { 0.0, 0.0, 0.0 };
+        static readonly double[] UnitScale = { 1.0, 1.0, 1.0 };
+
+        static Point TransformPosition(GltfNode node, Point local)
+        {
+            double[] scale = NodeScale(node);
+            Vector scaled = new Vector(local.X * scale[0], local.Y * scale[1], local.Z * scale[2]);
+            double[] rotation = node.Rotation ?? IdentityQuaternion;
+            Vector rotated = RotateByQuaternion(rotation, scaled);
+            double[] translation = node.Translation ?? ZeroTranslation;
+            return new Point(rotated.X + translation[0], rotated.Y + translation[1], rotated.Z + translation[2]);
+        }
+
+        // A normal needs the inverse-transpose of the position transform, not the position
+        // transform itself, or a non-uniform scale skews it off the surface it's meant to be
+        // perpendicular to. For a diagonal scale matrix (the only kind a glTF TRS node can
+        // express), the inverse-transpose is exactly the reciprocal scale - not an approximation.
+        static Vector TransformNormal(GltfNode node, Vector local)
+        {
+            double[] scale = NodeScale(node);
+            Vector rescaled = new Vector(
+                scale[0] != 0 ? local.X / scale[0] : local.X,
+                scale[1] != 0 ? local.Y / scale[1] : local.Y,
+                scale[2] != 0 ? local.Z / scale[2] : local.Z);
+            double[] rotation = node.Rotation ?? IdentityQuaternion;
+            return Vector.Normalize(RotateByQuaternion(rotation, rescaled));
+        }
+
+        static double[] NodeScale(GltfNode node) => node.Scale ?? UnitScale;
+
+        // --- Camera conversion ---
+
+        // A glTF camera, like a light, has no position/orientation of its own - both come from
+        // whatever node carries it, looking down its local -Z axis with local +Y as up (same
+        // convention as lights). Unlike a light, a camera's "up" is meaningful (roll changes the
+        // image), so placing/reading one needs a full look-rotation quaternion built from a
+        // forward+up basis (QuaternionFromBasis/QuaternionFromMatrix below), not just the
+        // shortest-arc rotation QuaternionFromDirection used for lights.
+        //
+        // glTF has no "look at this point" concept, only orientation - Camera.LookAt is
+        // synthesized on import by walking a fixed, arbitrary distance along the decoded forward
+        // direction. Lossy for anything not originally exported by DDD itself, same category as
+        // Ambient/Light color being dropped elsewhere in this file.
+        const double DefaultLookAtDistance = 1.0;
+
+        static Camera CameraFromGltf(GltfCamera gltfCamera, GltfNode node)
+        {
+            double[] translation = node.Translation ?? new[] { 0.0, 0.0, 0.0 };
+            Point position = new Point(translation[0], translation[1], translation[2]);
+
+            double[] rotation = node.Rotation ?? new[] { 0.0, 0.0, 0.0, 1.0 };
+            Vector forward = RotateByQuaternion(rotation, new Vector(0, 0, -1));
+            Vector up = RotateByQuaternion(rotation, new Vector(0, 1, 0));
+            Point lookAt = position + forward * DefaultLookAtDistance;
+
+            bool perspective = gltfCamera.Type != "orthographic";
+            const double RadiansToDegrees = 180.0 / Math.PI;
+            const double DefaultYfovRadians = 40.0 * Math.PI / 180.0;
+
+            double fovYDegrees = (gltfCamera.Perspective?.Yfov ?? DefaultYfovRadians) * RadiansToDegrees;
+            double orthographicHeight = gltfCamera.Orthographic?.Ymag ?? 1.0;
+            double nearPlane = perspective ? (gltfCamera.Perspective?.Znear ?? 0.01) : (gltfCamera.Orthographic?.Znear ?? 0.01);
+            double farPlane = perspective ? (gltfCamera.Perspective?.Zfar ?? 1000.0) : (gltfCamera.Orthographic?.Zfar ?? 1000.0);
+
+            return new Camera(position, lookAt, perspective, fovYDegrees, orthographicHeight, up, nearPlane, farPlane);
+        }
+
+        static (GltfCamera Camera, GltfNode Node) CameraToGltf(Camera camera)
+        {
+            const double DegreesToRadians = Math.PI / 180.0;
+            GltfCamera gltfCamera = camera.Perspective
+                ? new GltfCamera
+                {
+                    Type = "perspective",
+                    Perspective = new GltfPerspectiveCamera
+                    {
+                        Yfov = camera.FovYDegrees * DegreesToRadians,
+                        Znear = camera.NearPlane,
+                        Zfar = camera.FarPlane,
+                    },
+                }
+                : new GltfCamera
+                {
+                    // DDD tracks only a single OrthographicHeight (no separate width/aspect), so
+                    // xmag and ymag are written equal - a square view volume regardless of the
+                    // aspect ratio it's actually rendered at.
+                    Type = "orthographic",
+                    Orthographic = new GltfOrthographicCamera
+                    {
+                        Xmag = camera.OrthographicHeight,
+                        Ymag = camera.OrthographicHeight,
+                        Znear = camera.NearPlane,
+                        Zfar = camera.FarPlane,
+                    },
+                };
+
+            Vector toLookAt = camera.LookAt - camera.Position;
+            Vector forward = toLookAt.Length() > 1e-9 ? Vector.Normalize(toLookAt) : new Vector(0, 0, -1);
+            Vector up = camera.Up.Length() > 1e-9 ? camera.Up : new Vector(0, 1, 0);
+
+            var node = new GltfNode
+            {
+                Translation = new[] { camera.Position.X, camera.Position.Y, camera.Position.Z },
+                Rotation = QuaternionFromBasis(forward, up),
+            };
+            return (gltfCamera, node);
+        }
+
+        // Look-rotation quaternion [x, y, z, w] that takes local -Z to `forward` and local +Y as
+        // close to `up` as an orthogonal basis allows (Gram-Schmidt: up is projected perpendicular
+        // to forward, not used as-is). Falls back to an arbitrary reference axis when forward is
+        // (near-)parallel to up - e.g. a camera looking straight up or down - where roll is
+        // undefined anyway.
+        static double[] QuaternionFromBasis(Vector forward, Vector up)
+        {
+            Vector f = Vector.Normalize(forward);
+            Vector right = Vector.Cross(f, up);
+            if (right.Length() < 1e-6)
+            {
+                Vector fallbackUp = Math.Abs(f.Y) > 0.999 ? new Vector(0, 0, 1) : new Vector(0, 1, 0);
+                right = Vector.Cross(f, fallbackUp);
+            }
+            right = Vector.Normalize(right);
+            Vector trueUp = Vector.Cross(right, f);
+
+            // Rotation matrix columns are where each local axis maps to in world space:
+            // local +X -> right, local +Y -> trueUp, local -Z -> f (so local +Z -> -f).
+            return QuaternionFromMatrix(
+                right.X, trueUp.X, -f.X,
+                right.Y, trueUp.Y, -f.Y,
+                right.Z, trueUp.Z, -f.Z);
+        }
+
+        // Standard trace-based rotation-matrix-to-quaternion conversion (Shepperd's method),
+        // taking a row-major 3x3 rotation matrix and returning [x, y, z, w].
+        static double[] QuaternionFromMatrix(
+            double m00, double m01, double m02,
+            double m10, double m11, double m12,
+            double m20, double m21, double m22)
+        {
+            double trace = m00 + m11 + m22;
+            if (trace > 0)
+            {
+                double s = 0.5 / Math.Sqrt(trace + 1.0);
+                return new[] { (m21 - m12) * s, (m02 - m20) * s, (m10 - m01) * s, 0.25 / s };
+            }
+            if (m00 > m11 && m00 > m22)
+            {
+                double s = 2.0 * Math.Sqrt(1.0 + m00 - m11 - m22);
+                return new[] { 0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s };
+            }
+            if (m11 > m22)
+            {
+                double s = 2.0 * Math.Sqrt(1.0 + m11 - m00 - m22);
+                return new[] { (m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s };
+            }
+            else
+            {
+                double s = 2.0 * Math.Sqrt(1.0 + m22 - m00 - m11);
+                return new[] { (m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s };
+            }
         }
 
         // --- .glb container framing ---

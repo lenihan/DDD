@@ -340,7 +340,10 @@ namespace DDD
                     var sc = project(c);
                     if (!sa.Visible || !sb.Visible || !sc.Visible) continue;
 
-                    framebuffer.FillTriangle(sa.X, sa.Y, sb.X, sb.Y, sc.X, sc.Y, color.R, color.G, color.B);
+                    // -rotated.Z: same camera-relative convention as ViewDirection/backface
+                    // culling above, just negated so smaller means closer (see Framebuffer's
+                    // depth-buffer comment).
+                    framebuffer.FillTriangle(sa.X, sa.Y, -ra.Z, sb.X, sb.Y, -rb.Z, sc.X, sc.Y, -rc.Z, color.R, color.G, color.B);
                 }
             }
 
