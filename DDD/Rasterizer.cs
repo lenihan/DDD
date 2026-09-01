@@ -94,10 +94,15 @@ namespace DDD
             return palette;
         }
 
+        // camera, when given, fully replaces angleXDegrees/angleYDegrees/angleZDegrees/
+        // perspective/zoom for both rotation and projection - a directed shot (PLAN.md 1f)
+        // rather than the auto-fit orbit those parameters otherwise drive. It does not yet
+        // affect Out-3d's interactive turntable loop (UISixel) - this is the "render one frame
+        // with an explicit camera" core 1f calls for, not yet wired into live playback.
         public static Framebuffer Render(List<object> objects, Point boundingBoxMin, Point boundingBoxMax,
             double angleXDegrees, double angleYDegrees, int width, int height,
             double angleZDegrees = 0.0, bool perspective = false, double zoom = 1.0,
-            RenderMode renderMode = RenderMode.Wireframe, bool showNormals = false)
+            RenderMode renderMode = RenderMode.Wireframe, bool showNormals = false, Camera? camera = null)
         {
             var framebuffer = new Framebuffer(width, height);
             framebuffer.Clear(Background.R, Background.G, Background.B);
@@ -107,7 +112,8 @@ namespace DDD
                                       (boundingBoxMin.Z + boundingBoxMax.Z) / 2.0);
 
             // Fold the world origin into the fit too, so a scene offset far from (0,0,0)
-            // doesn't clip the reference axes drawn through it.
+            // doesn't clip the reference axes drawn through it. Still used for axis-line length
+            // even when camera is given - it's a property of the scene, not the view of it.
             double radius = Math.Max(Distance(center, boundingBoxMax), Distance(center, new Point(0.0, 0.0, 0.0)));
             radius = Math.Max(radius, 1e-6);
 
@@ -122,29 +128,70 @@ namespace DDD
             double cameraDistance = Math.Max(radius / (FitFraction * halfFovTan) / zoom, radius * 1.05);
             double focalLengthPixels = (height / 2.0) / halfFovTan;
 
+            // A real look-at basis (right/trueUp/forward), independent of the auto-fit orbit
+            // above - same construction as GltfFormat's QuaternionFromBasis (Gram-Schmidt against
+            // the requested Up, with the same looking-straight-up/down fallback), just expressed
+            // directly as Vectors here instead of a quaternion.
+            Vector camRight = default, camTrueUp = default, camForward = default;
+            double camFocalLengthPixels = 0.0, camOrthoScale = 0.0;
+            if (camera is Camera cam)
+            {
+                Vector toLookAt = cam.LookAt - cam.Position;
+                camForward = toLookAt.Length() > 1e-9 ? Vector.Normalize(toLookAt) : new Vector(0, 0, -1);
+                Vector up = cam.Up.Length() > 1e-9 ? cam.Up : new Vector(0, 1, 0);
+                camRight = Vector.Cross(camForward, up);
+                if (camRight.Length() < 1e-6)
+                {
+                    Vector fallbackUp = Math.Abs(camForward.Y) > 0.999 ? new Vector(0, 0, 1) : new Vector(0, 1, 0);
+                    camRight = Vector.Cross(camForward, fallbackUp);
+                }
+                camRight = Vector.Normalize(camRight);
+                camTrueUp = Vector.Cross(camRight, camForward);
+
+                double camFovYRadians = cam.FovYDegrees * Math.PI / 180.0;
+                camFocalLengthPixels = (height / 2.0) / Math.Tan(camFovYRadians / 2.0);
+                camOrthoScale = (height / 2.0) / Math.Max(cam.OrthographicHeight, 1e-9);
+            }
+
+            // Camera's local axes map onto the same view-space convention the auto-fit orbit
+            // above already uses (+Z toward the camera - see ViewDirection below), so everything
+            // downstream (backface culling, shading, the depth buffer) works unchanged either way.
             Point RotateLocal(Point p)
             {
+                if (camera is Camera cam)
+                {
+                    Vector rel = p - cam.Position;
+                    return new Point(Vector.Dot(rel, camRight), Vector.Dot(rel, camTrueUp), -Vector.Dot(rel, camForward));
+                }
                 Point local = new Point(p.X - center.X, p.Y - center.Y, p.Z - center.Z);
                 return rotation * local;
             }
 
+            // Same view-space change of basis as RotateLocal, but for a free vector (a light's
+            // Direction) - no translation, just the rotational part.
+            Vector RotateDirection(Vector v) => camera is Camera
+                ? new Vector(Vector.Dot(v, camRight), Vector.Dot(v, camTrueUp), -Vector.Dot(v, camForward))
+                : rotation * v;
+
             (int X, int Y, bool Visible) Project(Point p)
             {
                 Point rotated = RotateLocal(p);
+                bool usePerspective = camera?.Perspective ?? perspective;
 
-                if (perspective)
+                if (usePerspective)
                 {
-                    double viewZ = cameraDistance - rotated.Z;
+                    double viewZ = camera is Camera ? -rotated.Z : cameraDistance - rotated.Z;
                     if (viewZ <= 1e-6) return (0, 0, false);
-                    double s = focalLengthPixels / viewZ;
+                    double s = (camera is Camera ? camFocalLengthPixels : focalLengthPixels) / viewZ;
                     int px = (int)Math.Round(width / 2.0 + rotated.X * s);
                     int py = (int)Math.Round(height / 2.0 - rotated.Y * s);
                     return (px, py, true);
                 }
                 else
                 {
-                    int sx = (int)Math.Round(width / 2.0 + rotated.X * orthoScale);
-                    int sy = (int)Math.Round(height / 2.0 - rotated.Y * orthoScale);
+                    double s = camera is Camera ? camOrthoScale : orthoScale;
+                    int sx = (int)Math.Round(width / 2.0 + rotated.X * s);
+                    int sy = (int)Math.Round(height / 2.0 - rotated.Y * s);
                     return (sx, sy, true);
                 }
             }
@@ -156,9 +203,9 @@ namespace DDD
                 ? userLights.Select(l => l.Kind switch
                     {
                         LightKind.Point => new EffectiveLight(LightKind.Point, default, RotateLocal(l.Position), l.Intensity, 0, 0),
-                        LightKind.Spot => new EffectiveLight(LightKind.Spot, Vector.Normalize(rotation * l.Direction), RotateLocal(l.Position),
+                        LightKind.Spot => new EffectiveLight(LightKind.Spot, Vector.Normalize(RotateDirection(l.Direction)), RotateLocal(l.Position),
                             l.Intensity, l.InnerConeAngleDegrees, l.OuterConeAngleDegrees),
-                        _ => new EffectiveLight(LightKind.Directional, Vector.Normalize(rotation * l.Direction), default, l.Intensity, 0, 0),
+                        _ => new EffectiveLight(LightKind.Directional, Vector.Normalize(RotateDirection(l.Direction)), default, l.Intensity, 0, 0),
                     })
                   .ToList()
                 : new List<EffectiveLight> { new EffectiveLight(LightKind.Directional, ViewDirection, default, 1.0, 0, 0) };

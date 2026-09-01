@@ -127,6 +127,24 @@ keyframes) → DDD samples it into a frame sequence → explode that into
 per-frame `.glb` files → hand-edit any single frame in an external tool →
 render each frame to `.png` → stitch into a video externally.
 
+**Partial progress**: `Rasterizer.Render` now takes an optional `Camera`
+that, when given, fully replaces the auto-fit orbit (a real look-at
+basis/projection built from `Camera`'s own Position/LookAt/Up/FOV/
+Perspective, not the angle/zoom parameters) - the "render one frame with
+an explicit camera" half of the shared core above. Verified via
+hand-computed projection tests (perspective, orthographic, a degenerate
+looking-straight-up case) and a lighting test that specifically catches
+a real bug this surfaced: light *directions* (not just positions) were
+still being rotated through the old turntable rotation matrix instead of
+the camera's own basis, silently wrong for any non-default-facing camera.
+
+**Still not done**: no cmdlet exposes `Camera` to `Out-3d` yet - live
+playback in particular raises a real interactive-UX question (what do
+the rotate/zoom keys do, if anything, once a fixed `Camera` is driving
+the view?) worth deciding deliberately rather than guessing. Geometry/
+scene/image per-frame export cmdlets, and the caller-driven frame-
+sequence consumption itself, don't exist yet either.
+
 ### 1g. Rendering correctness + performance: Z-buffer (done), multi-core
 
 ~~Solid mode had no depth buffer or face sorting at all~~ - fixed:

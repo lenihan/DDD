@@ -100,6 +100,124 @@ namespace DDD_UnitTest
         }
 
         [TestMethod]
+        public void CameraPerspectiveProjectionMatchesAHandComputedExample()
+        {
+            var objects = new List<object> { new DDD.Point(1, 0, 0) };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+            var camera = new DDD.Camera(new DDD.Point(0, 0, 5), new DDD.Point(0, 0, 0), perspective: true, fovYDegrees: 40.0);
+
+            // The camera sits on the same axis it's aimed down, so its basis exactly matches the
+            // world axes: camForward=(0,0,-1), camRight=(1,0,0), camTrueUp=(0,1,0).
+            // rel = (1,0,0)-(0,0,5) = (1,0,-5) -> viewX=1, viewY=0, distance-in-front=5.
+            // focalLengthPixels = (100/2)/tan(20deg) ~= 137.379 (same FOV/height as the auto-fit
+            // PerspectiveProjectionMatchesTheWorkedExample test above - only the distance differs
+            // here, since it comes directly from Camera.Position instead of a bbox fit).
+            // s = 137.379/5 ~= 27.4758. projected x = round(50 + 1*27.4758) = 77, y stays 50.
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, camera: camera);
+
+            var pixel = framebuffer.GetPixel(77, 50);
+            Assert.AreEqual(((byte)240, (byte)240, (byte)240), pixel);
+        }
+
+        [TestMethod]
+        public void CameraOrthographicProjectionUsesOrthographicHeightNotTheAutoFitScale()
+        {
+            var objects = new List<object> { new DDD.Point(1, 0, 0) };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+            var camera = new DDD.Camera(new DDD.Point(0, 0, 5), new DDD.Point(0, 0, 0), perspective: false, orthographicHeight: 2.0);
+
+            // camOrthoScale = (height/2)/OrthographicHeight = 50/2 = 25.
+            // projected x = round(50 + 1*25) = 75, y stays 50.
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, camera: camera);
+
+            var pixel = framebuffer.GetPixel(75, 50);
+            Assert.AreEqual(((byte)240, (byte)240, (byte)240), pixel);
+        }
+
+        [TestMethod]
+        public void CameraTakesFullPrecedenceOverTheLegacyAngleAndZoomParameters()
+        {
+            var objects = new List<object> { new DDD.Point(1, 0, 0) };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+            var camera = new DDD.Camera(new DDD.Point(0, 0, 5), new DDD.Point(0, 0, 0), perspective: true, fovYDegrees: 40.0);
+
+            // Wildly different angle/zoom/perspective arguments - all must be ignored once a
+            // Camera is given, so both calls land on the exact same pixel as the worked example.
+            DDD.Framebuffer a = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, camera: camera);
+            DDD.Framebuffer b = DDD.Rasterizer.Render(objects, min, max, 123.0, -45.0, 100, 100,
+                angleZDegrees: 77.0, perspective: false, zoom: 5.0, camera: camera);
+
+            for (int y = 0; y < 100; y++)
+            {
+                for (int x = 0; x < 100; x++)
+                {
+                    Assert.AreEqual(a.GetPixel(x, y), b.GetPixel(x, y), $"Mismatch at ({x},{y})");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CameraLookingStraightUpFallsBackToAnArbitraryRightAxisWithoutThrowing()
+        {
+            // LookAt directly above Position, parallel to the default Up (0,1,0) - the same
+            // degenerate case QuaternionFromBasis falls back for in GltfFormat. The point sits
+            // off to the side AND above the camera (not just to the side), so it's actually in
+            // front of this camera's forward direction (0,1,0) rather than exactly level with it.
+            var objects = new List<object> { new DDD.Point(1, 5, 0) };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+            var camera = new DDD.Camera(new DDD.Point(0, 0, 0), new DDD.Point(0, 5, 0));
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100, camera: camera);
+
+            // No crash, and the point actually lands somewhere on screen (not the (0,0) default
+            // returned for an invisible/clipped point).
+            bool foundNonBackground = false;
+            for (int y = 0; y < 100 && !foundNonBackground; y++)
+            {
+                for (int x = 0; x < 100; x++)
+                {
+                    if (framebuffer.GetPixel(x, y) != ((byte)0, (byte)0, (byte)0)) { foundNonBackground = true; break; }
+                }
+            }
+            Assert.IsTrue(foundNonBackground);
+        }
+
+        [TestMethod]
+        public void CameraCorrectlyRotatesADirectionalLightsDirectionNotJustPositions()
+        {
+            // A face at X=0 (world normal (1,0,0)) viewed by a camera sitting on the +X axis -
+            // dead-on to the camera once transformed, the same canonical case
+            // FrontFacingTriangle represents, just built with a Camera instead of angle
+            // parameters. angleXDegrees/angleYDegrees are both 0 here, so the legacy `rotation`
+            // matrix used when no Camera is given would be the IDENTITY - if the Light's
+            // Direction below were (incorrectly) transformed through that instead of the
+            // camera's own basis, it would land perpendicular to the face (ambient-only) rather
+            // than dead-on. This is exactly the bug RotateDirection fixes.
+            var mesh = new DDD.Mesh();
+            int a = mesh.AddVertex(new DDD.Point(0, 1, 0));
+            int b = mesh.AddVertex(new DDD.Point(0, 0, 1));
+            int c = mesh.AddVertex(new DDD.Point(0, 0, 0));
+            mesh.AddFace(a, b, c); // normal (1,0,0), facing +X
+
+            var light = new DDD.Light(new DDD.Vector(1, 0, 0)); // "toward the light": +X, same side as the camera
+            var camera = new DDD.Camera(new DDD.Point(5, 0, 0), new DDD.Point(0, 0, 0), perspective: false);
+            var objects = new List<object> { mesh, light };
+            DDD.Point min = new DDD.Point(-1, -1, -1);
+            DDD.Point max = new DDD.Point(1, 1, 1);
+
+            DDD.Framebuffer framebuffer = DDD.Rasterizer.Render(objects, min, max, 0.0, 0.0, 100, 100,
+                renderMode: DDD.RenderMode.Solid, camera: camera);
+
+            // Full intensity (200,200,200) - would be ambient-only (40,40,40) if Direction had
+            // been transformed through the identity `rotation` instead of the camera's basis.
+            Assert.AreEqual(((byte)200, (byte)200, (byte)200), framebuffer.GetPixel(50, 50));
+        }
+
+        [TestMethod]
         public void MeshPointsModeProjectsEachVertexLikeABarePoint()
         {
             var mesh = new DDD.Mesh();
