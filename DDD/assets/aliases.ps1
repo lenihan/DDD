@@ -17,6 +17,19 @@
 # Rotation  = rot
 # Scale     = sc
 # Translate = tr
+# Box       = box
+# Cube      = cube
+# Sphere    = sph
+# Cylinder  = cyl
+# Cone      = cone
+# Torus     = tor
+# Plane     = pln
+# Teapot    = teapot
+# Suzanne   = suz
+# Bunny     = bunny
+# Light     = light
+# Material  = mtl
+# CornellBox = cbox
 
 Set-Alias -Name npt -Value New-Point
 Set-Alias -Name nptarr -Value New-PointArray
@@ -31,6 +44,22 @@ Set-Alias -Name ncol -Value New-Color
 Set-Alias -Name nvert -Value New-Vertex
 Set-Alias -Name nface -Value New-Face
 Set-Alias -Name nmesh -Value New-Mesh
+
+Set-Alias -Name nbox -Value New-Box
+Set-Alias -Name ncube -Value New-Cube
+Set-Alias -Name nsph -Value New-Sphere
+Set-Alias -Name ncyl -Value New-Cylinder
+Set-Alias -Name ncone -Value New-Cone
+Set-Alias -Name ntor -Value New-Torus
+Set-Alias -Name npln -Value New-Plane
+
+Set-Alias -Name nteapot -Value New-Teapot
+Set-Alias -Name nsuz -Value New-Suzanne
+Set-Alias -Name nbunny -Value New-StanfordBunny
+
+Set-Alias -Name nlight -Value New-Light
+Set-Alias -Name nmtl -Value New-Material
+Set-Alias -Name ncbox -Value New-CornellBox
 
 Set-Alias -Name nimat -Value New-IdentityMatrix
 Set-Alias -Name nzmat -Value New-ZeroMatrix

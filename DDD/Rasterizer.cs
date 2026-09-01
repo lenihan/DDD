@@ -20,22 +20,36 @@ namespace DDD
         static readonly (byte R, byte G, byte B) NormalColor = (240, 100, 220);
         static readonly Color DefaultFaceColor = new Color(200, 200, 200);
 
-        // Camera-relative "headlamp" light used as a placeholder until New-Light/New-Material
-        // exist (see PLAN.md). A constant view direction in rotated/local space is an
-        // approximation for perspective mode (the true per-face view vector varies slightly with
-        // position), but it's cheap and visually indistinguishable at the FOV/zoom ranges this
-        // renderer supports.
+        // Used for a mesh with no Material assigned. Ambient + Diffuse sum to 1.0 so a face
+        // lit dead-on still hits exactly full brightness, matching the old fixed headlamp look.
+        static readonly Material DefaultMaterial = new Material(DefaultFaceColor, ambient: 0.2, diffuse: 0.8, specular: 0.0, shininess: 16.0);
+
+        // Fixed camera direction, used two ways: (1) always for backface culling - a face
+        // pointing away from the camera is skipped regardless of how it's lit; (2) as the
+        // direction of the default "headlamp" light used when a scene has no explicit Light
+        // object - fixed relative to the viewer regardless of scene rotation, unlike a real
+        // Light (see EffectiveLight below). An approximation for perspective mode (the true
+        // per-face view vector varies slightly with position), but cheap and visually
+        // indistinguishable at the FOV/zoom ranges this renderer supports.
         static readonly Vector ViewDirection = new Vector(0, 0, 1);
-        const double AmbientFloor = 0.2;
         const int ShadingLevelCount = 6;
         const double NormalLengthFraction = 0.15;
 
         // Sixel output only exact-matches a fixed palette (see SixelEncoder) - continuous
         // shading has to be quantized to a small, known set of brightness levels so every pixel
-        // this renders lands on an exact palette entry that BuildPalette also produced.
+        // this renders lands on an exact palette entry that BuildPalette also produced. Spans
+        // the full [0,1] range uniformly - final intensity is always clamped to [0,1] before
+        // quantizing, regardless of how many lights or what Material produced it.
         static readonly double[] ShadingLevels = Enumerable.Range(0, ShadingLevelCount)
-            .Select(i => AmbientFloor + i * (1.0 - AmbientFloor) / (ShadingLevelCount - 1))
+            .Select(i => i / (double)(ShadingLevelCount - 1))
             .ToArray();
+
+        // A Light rotated into the current frame's view space (or the synthetic default
+        // headlamp, left unrotated since it's already camera-relative by definition). For a
+        // Spot, Direction is the aim axis (same sense as Light.Direction for Spot - the
+        // direction it shines toward), not "toward the light" like Directional's Direction.
+        readonly record struct EffectiveLight(LightKind Kind, Vector Direction, Point Position, double Intensity,
+            double InnerConeAngleDegrees, double OuterConeAngleDegrees);
 
         public static IReadOnlyList<(byte R, byte G, byte B)> Palette { get; } = new[]
         {
@@ -58,6 +72,7 @@ namespace DDD
             foreach (object obj in objects)
             {
                 if (obj is not Mesh mesh) continue;
+                Material material = mesh.Material ?? DefaultMaterial;
 
                 foreach (Vertex vertex in mesh.Vertices)
                 {
@@ -68,7 +83,7 @@ namespace DDD
                 }
                 foreach (Face face in mesh.Faces)
                 {
-                    Color baseColor = ResolveFaceBaseColor(mesh, face);
+                    Color baseColor = ResolveFaceBaseColor(mesh, face, material);
                     foreach (double level in ShadingLevels)
                     {
                         AddColor(ShadedColor(baseColor, level));
@@ -134,6 +149,20 @@ namespace DDD
                 }
             }
 
+            // Lights rotate with the scene, like a fixture fixed in the room, unless the scene
+            // has none - then fall back to the fixed camera-relative headlamp (see ViewDirection).
+            List<Light> userLights = objects.OfType<Light>().ToList();
+            List<EffectiveLight> lights = userLights.Count > 0
+                ? userLights.Select(l => l.Kind switch
+                    {
+                        LightKind.Point => new EffectiveLight(LightKind.Point, default, RotateLocal(l.Position), l.Intensity, 0, 0),
+                        LightKind.Spot => new EffectiveLight(LightKind.Spot, Vector.Normalize(rotation * l.Direction), RotateLocal(l.Position),
+                            l.Intensity, l.InnerConeAngleDegrees, l.OuterConeAngleDegrees),
+                        _ => new EffectiveLight(LightKind.Directional, Vector.Normalize(rotation * l.Direction), default, l.Intensity, 0, 0),
+                    })
+                  .ToList()
+                : new List<EffectiveLight> { new EffectiveLight(LightKind.Directional, ViewDirection, default, 1.0, 0, 0) };
+
             double axisLength = radius * 1.15;
             DrawSegment(framebuffer, Project, center, center + new Vector(1, 0, 0) * axisLength, AxisX);
             DrawSegment(framebuffer, Project, center, center + new Vector(0, 1, 0) * axisLength, AxisY);
@@ -160,19 +189,19 @@ namespace DDD
                 }
                 else if (obj is Mesh mesh)
                 {
-                    DrawMesh(framebuffer, Project, RotateLocal, mesh, renderMode, showNormals, radius);
+                    DrawMesh(framebuffer, Project, RotateLocal, mesh, renderMode, showNormals, radius, lights);
                 }
             }
 
             return framebuffer;
         }
 
-        static Color ResolveFaceBaseColor(Mesh mesh, Face face)
+        static Color ResolveFaceBaseColor(Mesh mesh, Face face, Material material)
         {
             return mesh.Vertices[face.A].Color
                 ?? mesh.Vertices[face.B].Color
                 ?? mesh.Vertices[face.C].Color
-                ?? DefaultFaceColor;
+                ?? material.Color;
         }
 
         static double QuantizeIntensity(double intensity)
@@ -191,6 +220,58 @@ namespace DDD
             return closest;
         }
 
+        // Ambient + emissive + Lambertian diffuse + (optional) Phong specular, summed over every
+        // active light, clamped to [0,1] and quantized. unitNormal and rotatedCentroid are
+        // already in view space (post-rotation), matching how EffectiveLight positions/
+        // directions were prepared in Render. Emissive contributes only its luminance (average
+        // of R/G/B) - a genuine colored glow would need its own base color in the shading
+        // formula, on top of the face's own color, which the palette-quantization scheme (see
+        // BuildPalette) isn't built to combine.
+        static double ComputeIntensity(Vector unitNormal, Point rotatedCentroid, Material material, IReadOnlyList<EffectiveLight> lights)
+        {
+            double emissiveLuminance = (material.Emissive.R + material.Emissive.G + material.Emissive.B) / (3.0 * 255.0);
+            double total = material.Ambient + emissiveLuminance;
+            foreach (EffectiveLight light in lights)
+            {
+                Vector lightDir = light.Kind == LightKind.Directional
+                    ? light.Direction
+                    : Vector.Normalize(light.Position - rotatedCentroid); // Point and Spot both have a Position
+
+                double spotAttenuation = light.Kind == LightKind.Spot
+                    ? SpotAttenuation(light, lightDir)
+                    : 1.0;
+                if (spotAttenuation <= 0) continue;
+
+                double diffuseFactor = Math.Max(0, Vector.Dot(unitNormal, lightDir));
+                total += diffuseFactor * material.Diffuse * light.Intensity * spotAttenuation;
+
+                if (material.Specular > 0 && diffuseFactor > 0)
+                {
+                    Vector reflectDir = unitNormal * (2 * Vector.Dot(unitNormal, lightDir)) - lightDir;
+                    double specularFactor = Math.Pow(Math.Max(0, Vector.Dot(reflectDir, ViewDirection)), material.Shininess);
+                    total += specularFactor * material.Specular * light.Intensity * spotAttenuation;
+                }
+            }
+            return QuantizeIntensity(Math.Clamp(total, 0.0, 1.0));
+        }
+
+        // Linear falloff by angle from the spot's aim axis - simpler to reason about (and to
+        // hand-verify in tests) than glTF's own cosine-based smoothstep formula, at the cost of
+        // not matching it exactly pixel-for-pixel. lightDir points FROM the surface TOWARD the
+        // light, so -lightDir is the direction the light travels to reach the surface, which is
+        // what's compared against the spot's own aim direction.
+        static double SpotAttenuation(EffectiveLight light, Vector lightDir)
+        {
+            double cos = Math.Clamp(Vector.Dot(light.Direction, -lightDir), -1.0, 1.0);
+            double angleDegrees = Math.Acos(cos) * 180.0 / Math.PI;
+
+            if (angleDegrees >= light.OuterConeAngleDegrees) return 0.0;
+            if (angleDegrees <= light.InnerConeAngleDegrees) return 1.0;
+
+            double coneSpan = light.OuterConeAngleDegrees - light.InnerConeAngleDegrees;
+            return coneSpan > 1e-9 ? 1.0 - (angleDegrees - light.InnerConeAngleDegrees) / coneSpan : 0.0;
+        }
+
         static (byte R, byte G, byte B) ShadedColor(Color baseColor, double intensity) =>
         (
             (byte)Math.Round(baseColor.R * intensity),
@@ -199,7 +280,8 @@ namespace DDD
         );
 
         static void DrawMesh(Framebuffer framebuffer, Func<Point, (int X, int Y, bool Visible)> project,
-            Func<Point, Point> rotateLocal, Mesh mesh, RenderMode renderMode, bool showNormals, double radius)
+            Func<Point, Point> rotateLocal, Mesh mesh, RenderMode renderMode, bool showNormals, double radius,
+            IReadOnlyList<EffectiveLight> lights)
         {
             if (renderMode == RenderMode.Points)
             {
@@ -225,6 +307,8 @@ namespace DDD
             }
             else // Solid
             {
+                Material material = mesh.Material ?? DefaultMaterial;
+
                 foreach (Face face in mesh.Faces)
                 {
                     Point a = mesh.Vertices[face.A].Position;
@@ -239,11 +323,16 @@ namespace DDD
                     double normalLength = normal.Length();
                     if (normalLength < 1e-12) continue; // degenerate face
 
-                    double rawIntensity = Vector.Dot(normal, ViewDirection) / normalLength;
-                    if (rawIntensity <= 0) continue; // backface cull
+                    // Backface culling is always camera-relative, regardless of how the face is
+                    // lit - a face pointing away from the viewer is skipped either way.
+                    double cullTest = Vector.Dot(normal, ViewDirection) / normalLength;
+                    if (cullTest <= 0) continue;
 
-                    double intensity = QuantizeIntensity(AmbientFloor + (1 - AmbientFloor) * rawIntensity);
-                    Color baseColor = ResolveFaceBaseColor(mesh, face);
+                    Vector unitNormal = normal / normalLength;
+                    Point rotatedCentroid = new Point((ra.X + rb.X + rc.X) / 3.0, (ra.Y + rb.Y + rc.Y) / 3.0, (ra.Z + rb.Z + rc.Z) / 3.0);
+                    double intensity = ComputeIntensity(unitNormal, rotatedCentroid, material, lights);
+
+                    Color baseColor = ResolveFaceBaseColor(mesh, face, material);
                     (byte R, byte G, byte B) color = ShadedColor(baseColor, intensity);
 
                     var sa = project(a);
@@ -251,7 +340,10 @@ namespace DDD
                     var sc = project(c);
                     if (!sa.Visible || !sb.Visible || !sc.Visible) continue;
 
-                    framebuffer.FillTriangle(sa.X, sa.Y, sb.X, sb.Y, sc.X, sc.Y, color.R, color.G, color.B);
+                    // -rotated.Z: same camera-relative convention as ViewDirection/backface
+                    // culling above, just negated so smaller means closer (see Framebuffer's
+                    // depth-buffer comment).
+                    framebuffer.FillTriangle(sa.X, sa.Y, -ra.Z, sb.X, sb.Y, -rb.Z, sc.X, sc.Y, -rc.Z, color.R, color.G, color.B);
                 }
             }
 
