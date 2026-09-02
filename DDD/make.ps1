@@ -6,13 +6,8 @@ Param(
     [String]$ApiKey
 )
 
-if ($KillPrev -and $pwshId) {
-    Stop-Process $pwshId -ErrorAction SilentlyContinue
-}
-# How to write a PowerShell module manifest
-# https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
-
 $root           = $PSScriptRoot
+$pidFile        = "$root\.ddd-pwsh-pid"
 $version        = '0.0.7'
 $name           = 'David Lenihan'
 $moduleName     = 'DDD'
@@ -20,9 +15,24 @@ $description    = "Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.
 $reqAssemblies  = @('DDD.dll')
 $tags           = @('3D', 'ply', 'gltf', 'glb', 'obj', 'Point', 'Matrix', 'Vector')
 $scripts        = @('functions.ps1', 'aliases.ps1')
-$cmdlets        = @('Out-3d', 'Import-Ply', 'Export-Ply', 'Import-Gltf', 'Export-Gltf', 'New-Box', 'New-Sphere', 'New-Cylinder', 'New-Cone', 'New-Torus', 'New-Plane', 'New-Teapot', 'New-Suzanne', 'New-StanfordBunny', 'New-Light', 'New-Material', 'New-Camera', 'New-CornellBox', 'New-ScatterPlot', 'New-BarChart')
+$cmdlets        = @('Out-3d', 'Import-Ply', 'Export-Ply', 'Import-Gltf', 'Export-Gltf', 'New-Box', 'New-Sphere', 'New-Cylinder', 'New-Cone', 'New-Torus', 'New-Plane', 'New-Teapot', 'New-Suzanne', 'New-StanfordBunny', 'New-Light', 'New-Material', 'New-Camera', 'New-CornellBox', 'New-ScatterPlot', 'New-BarChart', 'New-Surface')
 $aliases        = @('o3d')
 $config         = $Release ? "Release" : "Debug"
+
+
+if ($KillPrev) {
+    if (Test-Path $pidFile) {
+        $oldId = Get-Content $pidFile
+        $proc = Get-Process -Id $oldId -ErrorAction SilentlyContinue
+        if ($proc -and $proc.ProcessName -eq 'pwsh') {
+            Stop-Process -Id $oldId -Force
+        }
+        Remove-Item $pidFile -ErrorAction SilentlyContinue
+    }
+}
+# How to write a PowerShell module manifest
+# https://docs.microsoft.com/en-us/powershell/scripting/developer/module/how-to-write-a-powershell-module-manifest?view=powershell-7
+
 
 # Clean
 $cmd = "dotnet clean '$root\DDD.csproj' --configuration $config"
@@ -108,10 +118,17 @@ if ($PowerShellGallery) {
     Invoke-Expression $cmd   
 }
 else {
-    $cmd = "Start-Process -FilePath 'pwsh' -ArgumentList '-NoExit -NoProfile -Command Import-Module -Force -Verbose $root\publish\DDD' -PassThru"
-    Write-Host "# $cmd" -ForegroundColor Green
-    $process = Invoke-Expression $cmd
-    $global:pwshId = $process.Id
+    $process = Start-Process -FilePath 'pwsh' -ArgumentList @(
+        '-NoExit',
+        '-NoProfile',
+        '-Command',
+        "Import-Module -Force -Verbose '$root\publish\DDD'"
+    ) -PassThru
+
+    $process.Id | Out-File $pidFile
+    $global:pwshId = $process.Id   # still handy for same-session use
+    Write-Host "# Launched pwsh (PID $($process.Id)) running DDD" -ForegroundColor Green
     Write-Host "# To run again..." -ForegroundColor Green
     Write-Host "# $($MyInvocation.InvocationName) -KillPrev" -ForegroundColor Green
+
 }
