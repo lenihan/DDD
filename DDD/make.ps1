@@ -8,7 +8,7 @@ Param(
 
 $root           = $PSScriptRoot
 $pidFile        = "$root\.ddd-pwsh-pid"
-$version        = '0.0.7'
+$version        = '0.1.0'
 $name           = 'David Lenihan'
 $moduleName     = 'DDD'
 $description    = "Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.`nhttp://www.davidlenihan.com/category/ddd/"
