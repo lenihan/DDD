@@ -1,6 +1,17 @@
 # DDD
 Cross-platform (Windows, Linux, Mac) 3D tools for PowerShell.
 
+- [DDD](#ddd)
+  - [Running from source](#running-from-source)
+  - [Controls](#controls)
+  - [Meshes](#meshes)
+    - [Primitives](#primitives)
+    - [Reference meshes](#reference-meshes)
+    - [Lights and materials](#lights-and-materials)
+  - [Graphing](#graphing)
+  - [Terminal requirements](#terminal-requirements)
+
+
 ![alt text](DDD.png "DDD")
 
 Pipe `Point`/`Vector`/`Matrix`/`Mesh` objects to `Out-3d` (alias `o3d`) to visualize them as an
