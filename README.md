@@ -225,9 +225,26 @@ New-BarChart -Y 3,-2,5 | Out-3d -RenderMode Solid
 `-Y` is the only required parameter - `-X` defaults to the data's index (0, 1, 2, ...) when
 omitted, or takes an explicit array the same length as `-Y`. Data always lands on the Z=0 plane;
 `Out-3d` already draws X/Y axis lines through the scene automatically, which double as a chart's
-axes for free. `New-BarChart` also takes `-BarWidth` (default `0.6`). Numeric tick labels aren't
-implemented yet, and line graphs/3D surfaces (`New-LineGraph`, `New-Surface`) don't exist yet
-either - see `PLAN.md`.
+axes for free. `New-BarChart` also takes `-BarWidth` (default `0.6`).
+
+`New-Surface` turns a grid of height values into a 3D mesh - a jagged array of rows
+(`@(@(0,0),@(0,1))`, not a true 2D array, since that's what PowerShell actually builds naturally):
+
+```powershell
+$heights = @(
+    @(0, 0, 0, 0, 0),
+    @(0, 1, 2, 1, 0),
+    @(0, 2, 4, 2, 0),
+    @(0, 1, 2, 1, 0),
+    @(0, 0, 0, 0, 0)
+)
+New-Surface -Heights $heights | Out-3d -RenderMode Solid
+```
+
+X is a row's position, Z is which row, Y is the height value - the grid spacing between points is
+`-XSpacing`/`-ZSpacing` (both default `1.0`). Every row must have the same number of values.
+
+Numeric tick labels and line graphs (`New-LineGraph`) don't exist yet - see `PLAN.md`.
 
 ## Terminal requirements
 

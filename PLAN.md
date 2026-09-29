@@ -116,7 +116,10 @@ sequence four ways:
   open one frame, tweak it, re-render just that frame.
 - **Image export** — render each frame (using its camera, if given) and
   write it as a numbered `.png` file, for stitching into a video externally
-  (e.g. `ffmpeg`) or embedding in docs
+  (e.g. `ffmpeg`) or embedding in docs - fleshed out in full in 1j, which
+  also covers *how* you get a `Camera` worth exporting in the first place
+  (aim it live, in `Out-3d`'s existing interactive loop) and picking a
+  render style once you're not limited by sixel's palette anymore
 
 A shared "render one frame" core should back all four paths so playback
 and every export mode can't drift apart. The `Camera` type is real DDD
@@ -138,12 +141,13 @@ a real bug this surfaced: light *directions* (not just positions) were
 still being rotated through the old turntable rotation matrix instead of
 the camera's own basis, silently wrong for any non-default-facing camera.
 
-**Still not done**: no cmdlet exposes `Camera` to `Out-3d` yet - live
-playback in particular raises a real interactive-UX question (what do
-the rotate/zoom keys do, if anything, once a fixed `Camera` is driving
-the view?) worth deciding deliberately rather than guessing. Geometry/
-scene/image per-frame export cmdlets, and the caller-driven frame-
-sequence consumption itself, don't exist yet either.
+**Still not done**: no cmdlet exposes `Camera` to `Out-3d` yet. The
+interactive-UX question this used to raise (what do the rotate/zoom keys
+do once a fixed `Camera` is driving the view?) has a resolution now, in
+1j: don't redesign what the keys do at all, just add a "capture the
+current view as a real `Camera`" action on top of the existing loop.
+Geometry/scene per-frame export cmdlets and the caller-driven
+frame-sequence consumption itself still don't exist; image export is 1j.
 
 ### 1g. Rendering correctness + performance: Z-buffer (done), multi-core
 
@@ -249,12 +253,109 @@ with one cmdlet, no manual geometry.
 `Primitives.Box`) - both land data on the Z=0 plane and lean on `Out-3d`
 already drawing X/Y axis lines through every scene for free, rather than
 needing a locked/dedicated camera view (no `Camera`-rendering integration
-exists yet - see 1f). **Not done**: `New-LineGraph` (needs either a new
-line-segment primitive or ribbon-mesh geometry, deferred to keep this
-first pass small), `New-Surface`, and numeric tick/axis labels (need real
-screen-space text tied to *projected* data coordinates - `BitmapFont`
-today only draws `Out-3d`'s own fixed-position FPS/instructions overlay,
-not arbitrary 3D-anchored text, so this needs new `Rasterizer` support).
+exists yet - see 1f). `New-Surface` (a jagged `-Heights` array of rows,
+`-XSpacing`/`-ZSpacing`) builds a height-field grid mesh directly (its
+own vertex/face-grid construction, not built on any existing primitive) -
+per-vertex normals come from the local slope via central difference (a
+heightmap normal-map technique), one-sided at the grid's edges, verified
+against a hand-computed 45-degree-ramp case and a winding-vs-stored-
+normal consistency check across a genuinely uneven grid (same style
+`UnitTest_Primitives` uses for every other primitive).
+
+**Not done**: `New-LineGraph` (needs either a new line-segment primitive
+or ribbon-mesh geometry, deferred to keep each pass small) and numeric
+tick/axis labels (need real screen-space text tied to *projected* data
+coordinates - `BitmapFont` today only draws `Out-3d`'s own fixed-position
+FPS/instructions overlay, not arbitrary 3D-anchored text, so this needs
+new `Rasterizer` support).
+
+### 1j. Render tool: camera-driven PNG export + render styles
+
+Not a new visualization paradigm bolted onto `Out-3d` - a **capture step**
+on top of the interactive loop that's already there, aimed at a different
+job than `Out-3d` does today. `Out-3d` is a live terminal *viewer*:
+sixel, a small fixed exact-match palette, redrawn 12x/second. This is a
+*deliberate-shot* tool: aim once, then render that one shot at full
+quality to a file, no palette, no frame-rate budget - closer to a
+raytracer's single "render" button than a game's live viewport, even
+though it reuses the live viewport to aim.
+
+**Why this unlocks render styles sixel couldn't**: sixel's small
+exact-match palette (see 1e) is the actual reason shading is quantized to
+a handful of levels today and lights can't carry color - `SixelEncoder`
+maps anything not already in the palette straight to background, so
+continuous per-pixel color was never really an option. None of that
+applies once output is raw PNG bytes instead of a sixel escape sequence.
+That's a bigger deal than "one more export format": it's the thing that
+actually makes several of the fancier render styles below tractable
+without a from-scratch rendering rewrite.
+
+**The UX**: navigate the existing sixel-preview turntable/manual-rotate
+view exactly as today (an *approximation* of the shot, in both palette
+and frame rate) - a new key (e.g. `X`) converts the *current* view state
+(`UISixel` already tracks angleX/Y/Z/zoom/perspective every frame) into a
+real `Camera` by inverting the existing orbit-fit math (the same
+center/radius/cameraDistance `Rasterizer.Render` already computes give a
+`Camera.Position`/`LookAt` directly), then renders and writes it to
+`.png` at full resolution and the chosen style. This is also the answer
+to the interactive-UX question 1f raised: the rotate/zoom/perspective
+keys don't change meaning or get disabled - "capture" is a new action
+layered on top, not a redesign of what's there. Scripted/batch use (a
+whole frame sequence for video - see 1f) skips the interactive step
+entirely and supplies `Camera` objects directly, non-interactively.
+
+**Roadmap, roughly effort-ordered (S/M/L/XL relative sizing, not a time
+estimate) - (1) blocks everything else, (2)-(4) are the minimum useful
+tool, (5) is a menu to pick from afterward, independently, in any order:**
+
+1. **(S/M) PNG encoder.** A minimal writer, not a general-purpose image
+   library: `Framebuffer` already holds exactly the RGB bytes needed.
+   `System.IO.Compression.ZLibStream` (BCL, cross-platform - no new
+   dependency, unlike the texture-decoding case 1h flagged) handles the
+   zlib-wrapped DEFLATE an `IDAT` chunk needs; start with the "None"
+   scanline filter (simplest correct option - "Sub"/"Paeth" are a
+   compression-ratio follow-up, not a correctness requirement) plus
+   `IHDR`/`IEND` and a small hand-rolled CRC32.
+2. **(M) An un-quantized shading path.** `ShadingLevels`/
+   `QuantizeIntensity`/`BuildPalette` exist purely because sixel needs an
+   exact-match palette - a PNG-bound render doesn't need any of that.
+   Also the natural place to finally allow per-light color (dropped in
+   1e specifically "for palette-quantization reasons," which no longer
+   applies to this output path).
+3. **(S) Camera capture from the interactive loop**, per the UX above.
+4. **(S) The tool itself** - `Export-Render` (name TBD): takes a scene, a
+   `Camera`, `-Path`, `-Width`/`-Height`, and `-Style`, writes one `.png`.
+   Also the thing 1f's per-frame video loop calls once per frame,
+   non-interactively.
+5. **Render styles**, each independent and separately sized:
+   - **(S) Wireframe-on-solid** - `DrawMesh` already has both passes;
+     just stop returning after one. (Also works fine back on the sixel
+     side - doesn't need PNG at all.)
+   - **(S) X-ray** - skip backface culling and/or the depth test, tint
+     back-facing/occluded geometry differently. A true translucent X-ray
+     (alpha blending through solid geometry) would need real alpha
+     compositing, which `Framebuffer` doesn't have - this is a
+     hidden-line-style approximation of it, not the real thing.
+   - **(L) Ambient occlusion.** More tractable now than it would've been
+     before the 1g depth buffer existed: a screen-space AO pass sampling
+     neighboring pixels' depth (and ideally normals - `Framebuffer` would
+     need a normal buffer alongside the depth one). Still a real,
+     separately-sized piece of work, not a small addition.
+   - **(XL, uncertain) Global illumination.** A fundamentally different
+     rendering paradigm from today's direct-lighting rasterizer (path
+     tracing or radiosity, not a toggle on the existing one) - a new
+     renderer, not a render style. Revisit only if there's real demand
+     for it; not committed to.
+   - **(XL, uncertain) FlowRep-style curvature-flow NPR**
+     ([Peng et al. 2017](https://www.cs.ubc.ca/labs/imager/tr/2017/FlowRep/)
+     and similar line-art techniques) - needs principal-curvature
+     analysis across the mesh and streamline generation, a substantial,
+     specialized algorithm in its own right. Same "revisit if wanted" flag
+     as GI above, listed to capture the idea, not to promise it.
+
+**Explicitly out of scope**: video encoding itself. DDD's job stays "hand
+off a numbered `.png` sequence"; stitching it into an actual video is an
+external tool's job (`ffmpeg`), per 1f - not something to fold in here.
 
 ---
 
