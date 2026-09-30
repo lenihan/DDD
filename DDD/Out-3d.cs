@@ -101,6 +101,12 @@ namespace DDD
                 // the camera frames the scene's geometry.
                 _objects.Add(input);
             }
+            else if (input is Camera)
+            {
+                // Not wired into the interactive view yet (see PLAN.md 1f/1j) - skipped rather
+                // than rejected, so a scene straight from Import-Gltf (which returns any camera
+                // the file holds) can still be piped to Out-3d as-is.
+            }
             else
             {
                 // Throw a terminating error for types that are not supported.

@@ -150,8 +150,9 @@ is supported, not loose `.gltf` + `.bin` + textures.
 
 `New-Camera -Position <point> -LookAt <point>` describes a directed shot - position, aim point,
 up, field of view, near/far planes, perspective vs. orthographic - independent of glTF; `Camera`
-isn't wired into `Out-3d`'s rendering yet (still the auto-fit interactive turntable either way),
-so today it's purely a value that round-trips through `Export-Gltf`/`Import-Gltf` for hand-editing
+isn't wired into `Out-3d`'s rendering yet (still the auto-fit interactive turntable either way -
+`Out-3d` skips any `Camera` piped to it, so `Import-Gltf` output can be piped straight in), so
+today it's purely a value that round-trips through `Export-Gltf`/`Import-Gltf` for hand-editing
 a shot in an external glTF-aware tool. glTF only encodes a camera's *orientation* (via its node's
 rotation), not "look at this point," so `LookAt` is lossy across a round trip - re-imported as a
 point synthesized one unit along the decoded direction, not the original target.
