@@ -294,7 +294,8 @@ namespace DDD
             {
                 throw new InvalidOperationException(
                     "Out-3d needs a terminal that supports sixel graphics, and this one " +
-                    $"(TERM={term}) does not. Known-good terminals: Windows Terminal, WezTerm, iTerm2, mlterm, xterm -ti vt340.");
+                    $"(TERM={term}) does not. Known-good terminals: Windows Terminal, WezTerm, iTerm2, mlterm, " +
+                    "VS Code (terminal.integrated.enableImages = true), xterm -ti vt340.");
             }
         }
     }

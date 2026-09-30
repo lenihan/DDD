@@ -147,5 +147,6 @@ if (-not $SkipBuildCheck) {
 
 Write-Host ""
 Write-Host "A sixel-capable terminal is also recommended to actually view Out-3d's output:" -ForegroundColor Yellow
-Write-Host "  Windows Terminal (sixel enabled), WezTerm, iTerm2, mlterm, or xterm -ti vt340."
+Write-Host "  Windows Terminal (sixel enabled), WezTerm, iTerm2, mlterm,"
+Write-Host "  VS Code (terminal.integrated.enableImages = true), or xterm -ti vt340."
 Write-Host "This script does not install one for you, since terminal choice is a personal preference."

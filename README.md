@@ -260,7 +260,8 @@ Numeric tick labels and line graphs (`New-LineGraph`) don't exist yet - see `PLA
 ## Terminal requirements
 
 `Out-3d` needs a terminal that understands sixel graphics. Known-good options:
-Windows Terminal (with the sixel experimental feature enabled), WezTerm, iTerm2, mlterm, and
+Windows Terminal (with the sixel experimental feature enabled), WezTerm, iTerm2, mlterm,
+VS Code's terminal (with `"terminal.integrated.enableImages": true`, then restart VS Code), and
 xterm started with `-ti vt340`. Running it in a terminal without sixel support produces a clear
 error rather than garbled output.
 
