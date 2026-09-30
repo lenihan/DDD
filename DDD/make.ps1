@@ -44,8 +44,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Build
-#       Creates $root\bin\$config\net10.0\DDD.dll
-#               $root\obj\$config\net10.0\DDD.dll
+#       Creates $root\bin\$config\net8.0\DDD.dll
+#               $root\obj\$config\net8.0\DDD.dll
 $cmd = "dotnet build '$root\DDD.csproj' --configuration $config"
 Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
@@ -69,7 +69,7 @@ Write-Host "# $cmd" -ForegroundColor Green
 Invoke-Expression $cmd
 
 try {
-    $cmd = "Copy-Item '$root\bin\$config\net10.0\DDD.dll' '$root\publish\DDD' -ErrorAction Stop"
+    $cmd = "Copy-Item '$root\bin\$config\net8.0\DDD.dll' '$root\publish\DDD' -ErrorAction Stop"
     Write-Host "# $cmd" -ForegroundColor Green
     Invoke-Expression $cmd    
 } 
@@ -100,6 +100,8 @@ $manifestArgs = [ordered]@{
         CmdletsToExport    = $cmdlets                                                
         Tags               = $tags
         AliasesToExport    = $aliases
+        PowerShellVersion  = '7.4'
+        CompatiblePSEditions = @('Core')
     }
     Write-Host '# $manifestArgs contents: ' -ForegroundColor Green
     $manifestArgs

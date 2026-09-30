@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <RootNamespace>UnitTest_Point</RootNamespace>
+    <!-- Tests run on the SDK's own runtime (see global.json); DDD itself targets net8.0. -->
+    <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

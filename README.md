@@ -26,6 +26,8 @@ Import-Module DDD
 $points | Out-3d
 ```
 
+Requires PowerShell 7.4 or newer (DDD targets .NET 8, which PowerShell 7.4 is built on).
+
 ## Running from source
 
 To build and try DDD without installing from PSGallery, run `make.ps1` from the repo root
